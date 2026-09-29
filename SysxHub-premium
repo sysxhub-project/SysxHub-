@@ -1,285 +1,834 @@
 --[[
-    SysXHub Premium | Elegant Update Notification
+    SysXHub Premium G17.stwn
     Author: G17.stwn
-    Design: Minimalist dark, smooth animation, premium feel
+    Discord: https://discord.gg/E5kQJW3hn
 ]]
 
-local TweenService = game:GetService("TweenService")
-local CoreGui = (gethui and gethui()) or game:GetService("CoreGui")
-local LP = game:GetService("Players").LocalPlayer
+local Players=game:GetService("Players")
+local Run=game:GetService("RunService")
+local UIS=game:GetService("UserInputService")
+local TW=game:GetService("TweenService")
+local RS=game:GetService("ReplicatedStorage")
+local WS=game:GetService("Workspace")
+local VU=game:GetService("VirtualUser")
+local VIM=game:GetService("VirtualInputManager")
+local CoreGui=(gethui and gethui()) or game:GetService("CoreGui")
+local LP=Players.LocalPlayer
+local Cam=WS.CurrentCamera
+local Rem=RS:WaitForChild("Remotes")
+local CommF=Rem:WaitForChild("CommF_")
+local CommE=Rem:FindFirstChild("CommE")
+local S={Loop={},Thread={},Conn={}}
 
--- Hapus kalau sudah ada
-if CoreGui:FindFirstChild("SysXHubElegant") then CoreGui.SysXHubElegant:Destroy() end
+local C={Discord="https://discord.gg/E5kQJW3hn",Logo="https://tr.rbxcdn.com/180DAY-b813bf93ce4ae0532870ff9d8e083c00/150/150/Image/Webp/noFilter",Speed=350,Tool="Melee",Haki=true,Farm={Level=false,Nearest=false,Factory=false,Ecto=false,Chest=false,AcceptQ=false},Boss={Selected="",AutoKill=false,AllBoss=false},Mat={Selected="",Auto=false},Sea={Shark=false,NoClipBoat=false},Raid={Chip="Flame",AutoKill=false},Fruit={Selected="",AutoBuy=false,Tween=false,Store=false},Fish={Auto=false,Cast=false},PVP={Player="",Aimbot=false},Dung={AttackBoss=false,NextRoom=false},Stats={Enable=false,Melee=0,Sword=0,Gun=0,Defense=0,Fruit=0},Misc={AntiAFK=false,NoClip=false,InfJump=false,AutoRespawn=false,ResetStuck=false}}
 
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "SysXHubElegant"
-ScreenGui.IgnoreGuiInset = true
-ScreenGui.ResetOnSpawn = false
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-ScreenGui.Parent = CoreGui
+local function GC() return LP.Character or LP.CharacterAdded:Wait() end
+local function HRP() local c=GC() return c and c:FindFirstChild("HumanoidRootPart") end
+local function Ntf(t,c) pcall(function() Rayfield:Notify({Title=t,Content=c,Duration=4}) end) end
 
---// BACKDROP (blur gelap)
-local Backdrop = Instance.new("Frame", ScreenGui)
-Backdrop.Size = UDim2.fromScale(1, 1)
-Backdrop.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-Backdrop.BackgroundTransparency = 1
-Backdrop.BorderSizePixel = 0
+--=============================================================
+-- ELEGANT ALERT
+--=============================================================
+if CoreGui:FindFirstChild("SysXHubAlert") then CoreGui.SysXHubAlert:Destroy() end
+local AlertGui=Instance.new("ScreenGui")
+AlertGui.Name="SysXHubAlert"
+AlertGui.IgnoreGuiInset=true
+AlertGui.ResetOnSpawn=false
+AlertGui.ZIndexBehavior=Enum.ZIndexBehavior.Sibling
+AlertGui.Parent=CoreGui
 
---// CARD UTAMA (glassmorphism subtle)
-local Card = Instance.new("Frame", ScreenGui)
-Card.Size = UDim2.new(0, 440, 0, 300)
-Card.Position = UDim2.new(0.5, 0, 0.5, 60)
-Card.AnchorPoint = Vector2.new(0.5, 0.5)
-Card.BackgroundColor3 = Color3.fromRGB(13, 13, 16)
-Card.BackgroundTransparency = 0
-Card.BorderSizePixel = 0
+local ABack=Instance.new("Frame",AlertGui)
+ABack.Size=UDim2.fromScale(1,1)
+ABack.BackgroundColor3=Color3.fromRGB(0,0,0)
+ABack.BackgroundTransparency=1
+ABack.BorderSizePixel=0
 
-local CardCorner = Instance.new("UICorner", Card)
-CardCorner.CornerRadius = UDim.new(0, 14)
+local ACard=Instance.new("Frame",AlertGui)
+ACard.Size=UDim2.new(0,440,0,300)
+ACard.Position=UDim2.new(0.5,0,0.5,60)
+ACard.AnchorPoint=Vector2.new(0.5,0.5)
+ACard.BackgroundColor3=Color3.fromRGB(13,13,16)
+ACard.BorderSizePixel=0
+local ACardC=Instance.new("UICorner",ACard) ACardC.CornerRadius=UDim.new(0,14)
+local ACardG=Instance.new("UIGradient",ACard)
+ACardG.Color=ColorSequence.new({ColorSequenceKeypoint.new(0,Color3.fromRGB(20,20,26)),ColorSequenceKeypoint.new(0.5,Color3.fromRGB(13,13,16)),ColorSequenceKeypoint.new(1,Color3.fromRGB(10,10,13))})
+ACardG.Rotation=135
+local ACardS=Instance.new("UIStroke",ACard) ACardS.Color=Color3.fromRGB(45,45,55) ACardS.Thickness=1 ACardS.Transparency=0.15
 
--- Gradient halus di background card
-local CardGradient = Instance.new("UIGradient", Card)
-CardGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(20, 20, 26)),
-    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(13, 13, 16)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(10, 10, 13))
-})
-CardGradient.Rotation = 135
+local ATop=Instance.new("Frame",ACard)
+ATop.Size=UDim2.new(1,-40,0,2)
+ATop.Position=UDim2.new(0,20,0,18)
+ATop.BackgroundColor3=Color3.fromRGB(255,255,255)
+ATop.BorderSizePixel=0
+local ATopG=Instance.new("UIGradient",ATop)
+ATopG.Color=ColorSequence.new({ColorSequenceKeypoint.new(0,Color3.fromRGB(60,60,80)),ColorSequenceKeypoint.new(0.5,Color3.fromRGB(170,170,190)),ColorSequenceKeypoint.new(1,Color3.fromRGB(60,60,80))})
+ATopG.Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,1),NumberSequenceKeypoint.new(0.5,0),NumberSequenceKeypoint.new(1,1)})
 
--- Stroke tipis elegan
-local CardStroke = Instance.new("UIStroke", Card)
-CardStroke.Color = Color3.fromRGB(45, 45, 55)
-CardStroke.Thickness = 1
-CardStroke.Transparency = 0.15
+local AIcon=Instance.new("Frame",ACard)
+AIcon.Size=UDim2.new(0,36,0,36)
+AIcon.Position=UDim2.new(0,24,0,36)
+AIcon.BackgroundColor3=Color3.fromRGB(22,22,28)
+AIcon.BorderSizePixel=0
+local AIconC=Instance.new("UICorner",AIcon) AIconC.CornerRadius=UDim.new(0,9)
+local AIconS=Instance.new("UIStroke",AIcon) AIconS.Color=Color3.fromRGB(60,60,75) AIconS.Thickness=1
+local AIconImg=Instance.new("ImageLabel",AIcon)
+AIconImg.Size=UDim2.new(1,-12,1,-12)
+AIconImg.Position=UDim2.new(0,6,0,6)
+AIconImg.BackgroundTransparency=1
+AIconImg.Image=C.Logo
+AIconImg.ScaleType=Enum.ScaleType.Fit
 
---// TOP GRADIENT ACCENT (garis tipis di atas)
-local TopAccent = Instance.new("Frame", Card)
-TopAccent.Size = UDim2.new(1, -40, 0, 2)
-TopAccent.Position = UDim2.new(0, 20, 0, 18)
-TopAccent.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-TopAccent.BorderSizePixel = 0
+local ABrand=Instance.new("TextLabel",ACard)
+ABrand.Size=UDim2.new(1,-80,0,16)
+ABrand.Position=UDim2.new(0,72,0,38)
+ABrand.BackgroundTransparency=1
+ABrand.Font=Enum.Font.GothamBold
+ABrand.Text="SysXHub Premium"
+ABrand.TextColor3=Color3.fromRGB(200,200,215)
+ABrand.TextSize=12
+ABrand.TextXAlignment=Enum.TextXAlignment.Left
 
-local AccentGradient = Instance.new("UIGradient", TopAccent)
-AccentGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(60, 60, 80)),
-    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(170, 170, 190)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(60, 60, 80))
-})
-AccentGradient.Transparency = NumberSequence.new({
-    NumberSequenceKeypoint.new(0, 1),
-    NumberSequenceKeypoint.new(0.5, 0),
-    NumberSequenceKeypoint.new(1, 1)
-})
+local AVer=Instance.new("TextLabel",ACard)
+AVer.Size=UDim2.new(1,-80,0,14)
+AVer.Position=UDim2.new(0,72,0,54)
+AVer.BackgroundTransparency=1
+AVer.Font=Enum.Font.Gotham
+AVer.Text="by G17.stwn  •  v1.0.0"
+AVer.TextColor3=Color3.fromRGB(120,120,135)
+AVer.TextSize=11
+AVer.TextXAlignment=Enum.TextXAlignment.Left
 
---// HEADER: ICON + BRAND
-local IconBox = Instance.new("Frame", Card)
-IconBox.Size = UDim2.new(0, 36, 0, 36)
-IconBox.Position = UDim2.new(0, 24, 0, 36)
-IconBox.BackgroundColor3 = Color3.fromRGB(22, 22, 28)
-IconBox.BorderSizePixel = 0
+local ATitle=Instance.new("TextLabel",ACard)
+ATitle.Size=UDim2.new(1,-48,0,34)
+ATitle.Position=UDim2.new(0,24,0,88)
+ATitle.BackgroundTransparency=1
+ATitle.Font=Enum.Font.GothamBlack
+ATitle.Text="Update Available"
+ATitle.TextColor3=Color3.fromRGB(245,245,250)
+ATitle.TextSize=24
+ATitle.TextXAlignment=Enum.TextXAlignment.Left
 
-local IconCorner = Instance.new("UICorner", IconBox)
-IconCorner.CornerRadius = UDim.new(0, 9)
+local ASub=Instance.new("TextLabel",ACard)
+ASub.Size=UDim2.new(1,-48,0,90)
+ASub.Position=UDim2.new(0,24,0,126)
+ASub.BackgroundTransparency=1
+ASub.Font=Enum.Font.GothamMedium
+ASub.Text="• Improved farm boss & fast attack\n• Smooth bring mob system\n• Fixed hit detection & auto travel\n\nTap 'Copy & Open' to get the latest script."
+ASub.TextColor3=Color3.fromRGB(150,150,165)
+ASub.TextSize=12
+ASub.TextWrapped=true
+ASub.TextXAlignment=Enum.TextXAlignment.Left
+ASub.TextYAlignment=Enum.TextYAlignment.Top
+ASub.LineHeight=1.2
 
-local IconStroke = Instance.new("UIStroke", IconBox)
-IconStroke.Color = Color3.fromRGB(60, 60, 75)
-IconStroke.Thickness = 1
+local ABtnBox=Instance.new("Frame",ACard)
+ABtnBox.Size=UDim2.new(1,-48,0,44)
+ABtnBox.Position=UDim2.new(0,24,1,-60)
+ABtnBox.BackgroundTransparency=1
 
-local IconImg = Instance.new("ImageLabel", IconBox)
-IconImg.Size = UDim2.new(1, -12, 1, -12)
-IconImg.Position = UDim2.new(0, 6, 0, 6)
-IconImg.BackgroundTransparency = 1
-IconImg.Image = "https://tr.rbxcdn.com/180DAY-b813bf93ce4ae0532870ff9d8e083c00/150/150/Image/Webp/noFilter"
-IconImg.ScaleType = Enum.ScaleType.Fit
+local ACopy=Instance.new("TextButton",ABtnBox)
+ACopy.Size=UDim2.new(0.6,-6,1,0)
+ACopy.BackgroundColor3=Color3.fromRGB(240,240,245)
+ACopy.BorderSizePixel=0
+ACopy.Font=Enum.Font.GothamBold
+ACopy.Text="Copy & Open Link"
+ACopy.TextColor3=Color3.fromRGB(15,15,18)
+ACopy.TextSize=13
+ACopy.AutoButtonColor=false
+local ACopyC=Instance.new("UICorner",ACopy) ACopyC.CornerRadius=UDim.new(0,8)
 
-local BrandLabel = Instance.new("TextLabel", Card)
-BrandLabel.Size = UDim2.new(1, -80, 0, 16)
-BrandLabel.Position = UDim2.new(0, 72, 0, 38)
-BrandLabel.BackgroundTransparency = 1
-BrandLabel.Font = Enum.Font.GothamBold
-BrandLabel.Text = "SysXHub Premium"
-BrandLabel.TextColor3 = Color3.fromRGB(200, 200, 215)
-BrandLabel.TextSize = 12
-BrandLabel.TextXAlignment = Enum.TextXAlignment.Left
+local ALater=Instance.new("TextButton",ABtnBox)
+ALater.Size=UDim2.new(0.4,-6,1,0)
+ALater.Position=UDim2.new(0.6,6,0,0)
+ALater.BackgroundColor3=Color3.fromRGB(22,22,28)
+ALater.BorderSizePixel=0
+ALater.Font=Enum.Font.GothamBold
+ALater.Text="Later"
+ALater.TextColor3=Color3.fromRGB(180,180,195)
+ALater.TextSize=13
+ALater.AutoButtonColor=false
+local ALaterC=Instance.new("UICorner",ALater) ALaterC.CornerRadius=UDim.new(0,8)
+local ALaterS=Instance.new("UIStroke",ALater) ALaterS.Color=Color3.fromRGB(50,50,60) ALaterS.Thickness=1
 
-local VersionLabel = Instance.new("TextLabel", Card)
-VersionLabel.Size = UDim2.new(1, -80, 0, 14)
-VersionLabel.Position = UDim2.new(0, 72, 0, 54)
-VersionLabel.BackgroundTransparency = 1
-VersionLabel.Font = Enum.Font.Gotham
-VersionLabel.Text = "by G17.stwn  •  v1.0.0"
-VersionLabel.TextColor3 = Color3.fromRGB(120, 120, 135)
-VersionLabel.TextSize = 11
-VersionLabel.TextXAlignment = Enum.TextXAlignment.Left
-
---// TITLE
-local Title = Instance.new("TextLabel", Card)
-Title.Size = UDim2.new(1, -48, 0, 34)
-Title.Position = UDim2.new(0, 24, 0, 88)
-Title.BackgroundTransparency = 1
-Title.Font = Enum.Font.GothamBlack
-Title.Text = "Update Available"
-Title.TextColor3 = Color3.fromRGB(245, 245, 250)
-Title.TextSize = 24
-Title.TextXAlignment = Enum.TextXAlignment.Left
-
---// SUBTITLE / CHANGELOG
-local Subtitle = Instance.new("TextLabel", Card)
-Subtitle.Size = UDim2.new(1, -48, 0, 90)
-Subtitle.Position = UDim2.new(0, 24, 0, 126)
-Subtitle.BackgroundTransparency = 1
-Subtitle.Font = Enum.Font.GothamMedium
-Subtitle.Text = "• Improved farm boss & fast attack\n• Smooth bring mob system\n• Fixed hit detection & auto travel\n\nTap 'Copy & Open' to get the latest script."
-Subtitle.TextColor3 = Color3.fromRGB(150, 150, 165)
-Subtitle.TextSize = 12
-Subtitle.TextWrapped = true
-Subtitle.TextXAlignment = Enum.TextXAlignment.Left
-Subtitle.TextYAlignment = Enum.TextYAlignment.Top
-Subtitle.LineHeight = 1.2
-
---// BUTTON CONTAINER
-local BtnContainer = Instance.new("Frame", Card)
-BtnContainer.Size = UDim2.new(1, -48, 0, 44)
-BtnContainer.Position = UDim2.new(0, 24, 1, -60)
-BtnContainer.BackgroundTransparency = 1
-
--- Tombol utama: Copy & Open
-local CopyBtn = Instance.new("TextButton", BtnContainer)
-CopyBtn.Size = UDim2.new(0.6, -6, 1, 0)
-CopyBtn.Position = UDim2.new(0, 0, 0, 0)
-CopyBtn.BackgroundColor3 = Color3.fromRGB(240, 240, 245)
-CopyBtn.BorderSizePixel = 0
-CopyBtn.Font = Enum.Font.GothamBold
-CopyBtn.Text = "Copy & Open Link"
-CopyBtn.TextColor3 = Color3.fromRGB(15, 15, 18)
-CopyBtn.TextSize = 13
-CopyBtn.AutoButtonColor = false
-
-local CopyCorner = Instance.new("UICorner", CopyBtn)
-CopyCorner.CornerRadius = UDim.new(0, 8)
-
--- Tombol dismiss: minimal outline
-local CloseBtn = Instance.new("TextButton", BtnContainer)
-CloseBtn.Size = UDim2.new(0.4, -6, 1, 0)
-CloseBtn.Position = UDim2.new(0.6, 6, 0, 0)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(22, 22, 28)
-CloseBtn.BorderSizePixel = 0
-CloseBtn.Font = Enum.Font.GothamBold
-CloseBtn.Text = "Later"
-CloseBtn.TextColor3 = Color3.fromRGB(180, 180, 195)
-CloseBtn.TextSize = 13
-CloseBtn.AutoButtonColor = false
-
-local CloseCorner = Instance.new("UICorner", CloseBtn)
-CloseCorner.CornerRadius = UDim.new(0, 8)
-
-local CloseStroke = Instance.new("UIStroke", CloseBtn)
-CloseStroke.Color = Color3.fromRGB(50, 50, 60)
-CloseStroke.Thickness = 1
-
---// BROWSER OPENER
 local function openBrowser(url)
     pcall(function() game:GetService("GuiService"):OpenBrowserWindow(url) end)
     pcall(function() syn.open_browser(url) end)
 end
 
---// ANIMASI MASUK
-Card.Position = UDim2.new(0.5, 0, 0.5, 90)
-Card.BackgroundTransparency = 1
-CardStroke.Transparency = 1
-TopAccent.BackgroundTransparency = 1
+ACard.Position=UDim2.new(0.5,0,0.5,90)
+ACard.BackgroundTransparency=1
+ACardS.Transparency=1
+ATop.BackgroundTransparency=1
+for _,v in ipairs({AIcon,ABrand,AVer,ATitle,ASub,ACopy,ALater,ALaterS}) do
+    if v:IsA("TextLabel") or v:IsA("TextButton") then v.TextTransparency=1
+    elseif v:IsA("Frame") then v.BackgroundTransparency=1
+    elseif v:IsA("UIStroke") then v.Transparency=1 end
+end
+task.wait(0.05)
+TW:Create(ABack,TweenInfo.new(0.4,Enum.EasingStyle.Quad),{BackgroundTransparency=0.55}):Play()
+TW:Create(ACard,TweenInfo.new(0.7,Enum.EasingStyle.Quint,Enum.EasingDirection.Out),{Position=UDim2.new(0.5,0,0.5,0),BackgroundTransparency=0}):Play()
+TW:Create(ACardS,TweenInfo.new(0.5),{Transparency=0.15}):Play()
+task.wait(0.15)
+TW:Create(AIcon,TweenInfo.new(0.4),{BackgroundTransparency=0}):Play()
+TW:Create(AIconS,TweenInfo.new(0.4),{Transparency=0}):Play()
+TW:Create(ABrand,TweenInfo.new(0.4),{TextTransparency=0}):Play()
+TW:Create(AVer,TweenInfo.new(0.4),{TextTransparency=0}):Play()
+TW:Create(ATop,TweenInfo.new(0.6),{BackgroundTransparency=0}):Play()
+task.wait(0.1)
+TW:Create(ATitle,TweenInfo.new(0.4),{TextTransparency=0}):Play()
+task.wait(0.08)
+TW:Create(ASub,TweenInfo.new(0.4),{TextTransparency=0}):Play()
+task.wait(0.1)
+TW:Create(ACopy,TweenInfo.new(0.4),{BackgroundTransparency=0,TextTransparency=0}):Play()
+TW:Create(ALater,TweenInfo.new(0.4),{BackgroundTransparency=0,TextTransparency=0}):Play()
+TW:Create(ALaterS,TweenInfo.new(0.4),{Transparency=0}):Play()
 
-for _, v in ipairs({IconBox, BrandLabel, VersionLabel, Title, Subtitle, CopyBtn, CloseBtn, CloseStroke}) do
-    if v:IsA("TextLabel") or v:IsA("TextButton") then
-        v.TextTransparency = 1
-    elseif v:IsA("Frame") then
-        v.BackgroundTransparency = 1
-    elseif v:IsA("UIStroke") then
-        v.Transparency = 1
+ACopy.MouseEnter:Connect(function() TW:Create(ACopy,TweenInfo.new(0.2),{BackgroundColor3=Color3.fromRGB(255,255,255)}):Play() end)
+ACopy.MouseLeave:Connect(function() TW:Create(ACopy,TweenInfo.new(0.2),{BackgroundColor3=Color3.fromRGB(240,240,245)}):Play() end)
+ACopy.Activated:Connect(function()
+    local link=C.Discord
+    if setclipboard then setclipboard(link) elseif toclipboard then toclipboard(link) end
+    openBrowser(link)
+    ACopy.Text="Copied ✓"
+    TW:Create(ACopy,TweenInfo.new(0.2),{BackgroundColor3=Color3.fromRGB(120,230,150)}):Play()
+    task.wait(1.5)
+    ACopy.Text="Copy & Open Link"
+    TW:Create(ACopy,TweenInfo.new(0.3),{BackgroundColor3=Color3.fromRGB(240,240,245)}):Play()
+end)
+ALater.MouseEnter:Connect(function()
+    TW:Create(ALater,TweenInfo.new(0.2),{BackgroundColor3=Color3.fromRGB(32,32,40)}):Play()
+    TW:Create(ALaterS,TweenInfo.new(0.2),{Color=Color3.fromRGB(90,90,110)}):Play()
+end)
+ALater.MouseLeave:Connect(function()
+    TW:Create(ALater,TweenInfo.new(0.2),{BackgroundColor3=Color3.fromRGB(22,22,28)}):Play()
+    TW:Create(ALaterS,TweenInfo.new(0.2),{Color=Color3.fromRGB(50,50,60)}):Play()
+end)
+ALater.Activated:Connect(function()
+    local out=TweenInfo.new(0.45,Enum.EasingStyle.Quart,Enum.EasingDirection.In)
+    for _,v in ipairs({AIcon,ABrand,AVer,ATitle,ASub,ACopy,ALater}) do
+        if v:IsA("TextLabel") or v:IsA("TextButton") then TW:Create(v,out,{TextTransparency=1}):Play()
+        elseif v:IsA("Frame") then TW:Create(v,out,{BackgroundTransparency=1}):Play() end
     end
+    TW:Create(ACardS,out,{Transparency=1}):Play()
+    TW:Create(ATop,out,{BackgroundTransparency=1}):Play()
+    TW:Create(ACard,TweenInfo.new(0.5,Enum.EasingStyle.Quart,Enum.EasingDirection.In),{Position=UDim2.new(0.5,0,0.5,-50),BackgroundTransparency=1}):Play()
+    TW:Create(ABack,out,{BackgroundTransparency=1}):Play()
+    task.wait(0.55)
+    AlertGui:Destroy()
+end)
+task.delay(90,function()
+    if AlertGui and AlertGui.Parent then pcall(function() ALater:Activate() end) end
+end)
+
+--=============================================================
+-- HELPER FUNCTIONS
+--=============================================================
+local function ActivateHaki()
+    if not C.Haki then return end
+    pcall(function() CommF:InvokeServer("Busoshoku",true) end)
+    pcall(function() CommF:InvokeServer("ActivateBusoHaki") end)
+    pcall(function()
+        VIM:SendKeyEvent(true,Enum.KeyCode.Z,false,game)
+        task.wait(0.05)
+        VIM:SendKeyEvent(false,Enum.KeyCode.Z,false,game)
+    end)
 end
 
-task.wait(0.05)
-TweenService:Create(Backdrop, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {BackgroundTransparency = 0.55}):Play()
-
-TweenService:Create(Card, TweenInfo.new(0.7, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-    Position = UDim2.new(0.5, 0, 0.5, 0),
-    BackgroundTransparency = 0
-}):Play()
-TweenService:Create(CardStroke, TweenInfo.new(0.5), {Transparency = 0.15}):Play()
-
-task.wait(0.15)
-TweenService:Create(IconBox, TweenInfo.new(0.4), {BackgroundTransparency = 0}):Play()
-TweenService:Create(IconStroke, TweenInfo.new(0.4), {Transparency = 0}):Play()
-TweenService:Create(BrandLabel, TweenInfo.new(0.4), {TextTransparency = 0}):Play()
-TweenService:Create(VersionLabel, TweenInfo.new(0.4), {TextTransparency = 0}):Play()
-TweenService:Create(TopAccent, TweenInfo.new(0.6), {BackgroundTransparency = 0}):Play()
-
-task.wait(0.1)
-TweenService:Create(Title, TweenInfo.new(0.4), {TextTransparency = 0}):Play()
-
-task.wait(0.08)
-TweenService:Create(Subtitle, TweenInfo.new(0.4), {TextTransparency = 0}):Play()
-
-task.wait(0.1)
-TweenService:Create(CopyBtn, TweenInfo.new(0.4), {BackgroundTransparency = 0, TextTransparency = 0}):Play()
-TweenService:Create(CloseBtn, TweenInfo.new(0.4), {BackgroundTransparency = 0, TextTransparency = 0}):Play()
-TweenService:Create(CloseStroke, TweenInfo.new(0.4), {Transparency = 0}):Play()
-
---// HOVER: COPY
-CopyBtn.MouseEnter:Connect(function()
-    TweenService:Create(CopyBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(255, 255, 255)}):Play()
-end)
-CopyBtn.MouseLeave:Connect(function()
-    TweenService:Create(CopyBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(240, 240, 245)}):Play()
-end)
-
-CopyBtn.Activated:Connect(function()
-    local link = "https://discord.gg/E5kQJW3hn"
-    if setclipboard then setclipboard(link)
-    elseif toclipboard then toclipboard(link) end
-    openBrowser(link)
-    CopyBtn.Text = "Copied ✓"
-    TweenService:Create(CopyBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(120, 230, 150)}):Play()
-    task.wait(1.5)
-    CopyBtn.Text = "Copy & Open Link"
-    TweenService:Create(CopyBtn, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(240, 240, 245)}):Play()
-end)
-
---// HOVER: CLOSE
-CloseBtn.MouseEnter:Connect(function()
-    TweenService:Create(CloseBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(32, 32, 40)}):Play()
-    TweenService:Create(CloseStroke, TweenInfo.new(0.2), {Color = Color3.fromRGB(90, 90, 110)}):Play()
-end)
-CloseBtn.MouseLeave:Connect(function()
-    TweenService:Create(CloseBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(22, 22, 28)}):Play()
-    TweenService:Create(CloseStroke, TweenInfo.new(0.2), {Color = Color3.fromRGB(50, 50, 60)}):Play()
-end)
-
---// CLOSE ANIMATION
-CloseBtn.Activated:Connect(function()
-    local out = TweenInfo.new(0.45, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
-    for _, v in ipairs({IconBox, BrandLabel, VersionLabel, Title, Subtitle, CopyBtn, CloseBtn}) do
-        if v:IsA("TextLabel") or v:IsA("TextButton") then
-            TweenService:Create(v, out, {TextTransparency = 1}):Play()
-        elseif v:IsA("Frame") then
-            TweenService:Create(v, out, {BackgroundTransparency = 1}):Play()
+local function GetToolByType(t)
+    local char=GC() if not char then return nil end
+    local bp=LP:FindFirstChild("Backpack")
+    local function checkTool(tool)
+        if not tool or not tool:IsA("Tool") then return false end
+        if t=="Sword" then
+            if tool:GetAttribute("SwordType") then return true end
+            local n=tool.Name:lower()
+            if n:find("sword") or n:find("blade") or n:find("katana") or n:find("saber") or n:find("cutlass") or n:find("trident") or n:find("scythe") or n:find("bisento") or n:find("cane") or n:find("dagger") then return true end
+            if tool:FindFirstChild("SwordType") then return true end
+        elseif t=="Gun" then
+            if tool:GetAttribute("GunType") then return true end
+            local n=tool.Name:lower()
+            if n:find("gun") or n:find("pistol") or n:find("rifle") or n:find("blaster") or n:find("bow") or n:find("bazooka") or n:find("slingshot") then return true end
+            if tool:FindFirstChild("GunType") then return true end
+        elseif t=="Blox Fruit" then
+            if tool:GetAttribute("FruitType") then return true end
+            if tool:FindFirstChild("FruitType") then return true end
+        end
+        return false
+    end
+    local eq=char:FindFirstChildOfClass("Tool")
+    if eq and checkTool(eq) then return eq end
+    if bp then
+        for _,tool in ipairs(bp:GetChildren()) do
+            if checkTool(tool) then
+                pcall(function() char:FindFirstChildOfClass("Humanoid"):EquipTool(tool) end)
+                return tool
+            end
         end
     end
-    TweenService:Create(CardStroke, out, {Transparency = 1}):Play()
-    TweenService:Create(TopAccent, out, {BackgroundTransparency = 1}):Play()
-    TweenService:Create(Card, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {
-        Position = UDim2.new(0.5, 0, 0.5, -50),
-        BackgroundTransparency = 1
-    }):Play()
-    TweenService:Create(Backdrop, out, {BackgroundTransparency = 1}):Play()
-    task.wait(0.55)
-    ScreenGui:Destroy()
-end)
+    for _,tool in ipairs(char:GetChildren()) do
+        if checkTool(tool) then return tool end
+    end
+    return nil
+end
 
--- Auto close setelah 90 detik
-task.delay(90, function()
-    if ScreenGui and ScreenGui.Parent then
-        pcall(function() CloseBtn:Activate() end)
+local function AttackOnce()
+    local char=GC() if not char then return end
+    ActivateHaki()
+    if C.Tool=="Melee" then
+        local eq=char:FindFirstChildOfClass("Tool")
+        if eq then pcall(function() char:FindFirstChildOfClass("Humanoid"):UnequipTools() end) end
+    elseif C.Tool=="Sword" then
+        local t=GetToolByType("Sword") if t then pcall(function() t:Activate() end) end
+    elseif C.Tool=="Gun" then
+        local t=GetToolByType("Gun") if t then pcall(function() t:Activate() end) end
+    elseif C.Tool=="Blox Fruit" then
+        local t=GetToolByType("Blox Fruit") if t then pcall(function() t:Activate() end) end
+    end
+    pcall(function() VU:CaptureController(); VU:Button1Down(Vector2.new(0,0)) end)
+    pcall(function() CommF:InvokeServer("Combat","Attack") end)
+    pcall(function() if CommE then CommE:FireServer("Combat","Attack") end end)
+end
+
+local function AtkTgt(n)
+    if not n or not n.Parent then return end
+    local h=HRP() if not h then return end
+    if n:FindFirstChild("HumanoidRootPart") then
+        h.CFrame=n.HumanoidRootPart.CFrame*CFrame.new(0,0,3)
+    end
+    AttackOnce()
+end
+
+local EC,ET={},0
+local function GetE()
+    if tick()-ET<0.4 then return EC end
+    ET=tick() EC={}
+    local mc=GC()
+    local folders={}
+    if WS:FindFirstChild("Enemies") then table.insert(folders,WS.Enemies) end
+    if WS:FindFirstChild("NPCs") then table.insert(folders,WS.NPCs) end
+    if WS:FindFirstChild("Characters") then table.insert(folders,WS.Characters) end
+    for _,f in ipairs(folders) do
+        for _,v in ipairs(f:GetChildren()) do
+            if v~=mc and v:FindFirstChildOfClass("Humanoid") and v:FindFirstChild("HumanoidRootPart") then table.insert(EC,v) end
+        end
+    end
+    if #EC==0 then
+        for _,v in ipairs(WS:GetChildren()) do
+            if v~=mc and v:FindFirstChildOfClass("Humanoid") and v:FindFirstChild("HumanoidRootPart") then table.insert(EC,v) end
+        end
+    end
+    return EC
+end
+
+local function NEAR()
+    local h=HRP() if not h then return nil end
+    local n,d=nil,math.huge
+    for _,e in ipairs(GetE()) do
+        local hu=e:FindFirstChildOfClass("Humanoid")
+        if hu and hu.Health>0 then
+            local dd=(e.HumanoidRootPart.Position-h.Position).Magnitude
+            if dd<d then n,d=e,dd end
+        end
+    end
+    return n
+end
+
+local function NAM(nm)
+    if nm=="" then return nil end
+    for _,e in ipairs(GetE()) do
+        if e.Name:lower():find(nm:lower(),1,true) then
+            local hu=e:FindFirstChildOfClass("Humanoid")
+            if hu and hu.Health>0 then return e end
+        end
+    end
+    return nil
+end
+
+local function BOSS()
+    for _,e in ipairs(GetE()) do
+        local hu=e:FindFirstChildOfClass("Humanoid")
+        if hu and hu.Health>0 and hu.MaxHealth>=500 then return e end
+    end
+    return nil
+end
+
+local function SIMILAR()
+    local char=GC() if not char then return nil end
+    local myHum=char:FindFirstChildOfClass("Humanoid")
+    if not myHum then return nil end
+    local myHP=myHum.MaxHealth
+    local hrp=char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return nil end
+    local best,bestDist=nil,math.huge
+    for _,npc in ipairs(GetE()) do
+        local hum=npc:FindFirstChildOfClass("Humanoid")
+        local nhrp=npc:FindFirstChild("HumanoidRootPart")
+        if hum and nhrp and hum.Health>0 and npc~=char then
+            if hum.MaxHealth<=myHP*3 then
+                local d=(nhrp.Position-hrp.Position).Magnitude
+                if d<bestDist then best,bestDist=npc,d end
+            end
+        end
+    end
+    return best
+end
+
+local function Tw(p,s)
+    local h=HRP() if not h then return end
+    s=s or C.Speed
+    local d=(h.Position-p).Magnitude
+    if d<1 then return end
+    TW:Create(h,TweenInfo.new(d/s,Enum.EasingStyle.Linear),{CFrame=CFrame.new(p)}):Play()
+end
+
+local function CT(fn)
+    return Run.Heartbeat:Connect(function()
+        local t=fn() if t then AtkTgt(t) end
+    end)
+end
+
+local function SL(k) if S.Loop[k] then S.Loop[k]:Disconnect(); S.Loop[k]=nil end end
+local function ST(k) if S.Thread[k] then pcall(task.cancel,S.Thread[k]); S.Thread[k]=nil end end
+
+--=============================================================
+-- FRUIT FUNCTIONS
+--=============================================================
+local function RollFruit()
+    pcall(function() CommF:InvokeServer("RollFruit") end)
+    pcall(function() CommF:InvokeServer("Cousin","Roll") end)
+    pcall(function() CommF:InvokeServer("Gacha","Roll") end)
+    Ntf("Fruit","Roll Fruit ✅")
+end
+
+local function TweenToFruit()
+    if S.Loop.TweenFruit then S.Loop.TweenFruit:Disconnect() end
+    S.Loop.TweenFruit=Run.Heartbeat:Connect(function()
+        local hrp=HRP() if not hrp then return end
+        for _,v in ipairs(WS:GetChildren()) do
+            if v:IsA("Tool") and v:FindFirstChild("Handle") then
+                local pos=v.Handle.Position
+                if (hrp.Position-pos).Magnitude>5 then Tw(pos,300) end
+            end
+        end
+    end)
+end
+
+local function StoreFruit()
+    if C.Fruit.Selected=="" then Ntf("Fruit","Pilih fruit dulu") return end
+    pcall(function() CommF:InvokeServer("StoreFruit",C.Fruit.Selected) end)
+    Ntf("Fruit","Store "..C.Fruit.Selected.." ✅")
+end
+
+--=============================================================
+-- GUI
+--=============================================================
+local Rayfield=loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local Window=Rayfield:CreateWindow({
+    Name="SysXHub Premium G17.stwn",
+    LoadingTitle="SysXHub Premium",
+    LoadingSubtitle="by G17.stwn",
+    Theme="DarkBlue",
+    ConfigurationSaving={Enabled=true,FolderName="SysXHub",FileName="G17stwn"},
+    Discord={Enabled=true,Invite="E5kQJW3hn",RememberJoins=true},
+    KeySystem=false
+})
+
+task.wait(1)
+pcall(function()
+    local rg=LP.PlayerGui:FindFirstChild("Rayfield")
+    if rg then
+        for _,v in ipairs(rg:GetDescendants()) do
+            if v:IsA("Frame") then
+                if v.Name=="Background" or v.Name=="Main" or v.Name=="TopBar" then v.BackgroundColor3=Color3.fromRGB(10,10,10)
+                elseif v.Name=="Section" or v.Name=="SectionFrame" then v.BackgroundColor3=Color3.fromRGB(15,15,15)
+                elseif v.Name=="Element" or v.Name=="Holder" then v.BackgroundColor3=Color3.fromRGB(20,20,20) end
+            elseif v:IsA("TextLabel") or v:IsA("TextButton") then v.TextColor3=Color3.fromRGB(235,235,235)
+            elseif v:IsA("UIStroke") then v.Color=Color3.fromRGB(40,40,40) end
+        end
     end
 end)
+
+--// LOGO
+local LG=Instance.new("ScreenGui")
+LG.Name="SysXHubLogo"
+LG.ResetOnSpawn=false
+LG.IgnoreGuiInset=true
+LG.Parent=LP:WaitForChild("PlayerGui")
+local LB=Instance.new("TextButton")
+LB.Size=UDim2.new(0,55,0,55)
+LB.Position=UDim2.new(0,10,0,10)
+LB.BackgroundColor3=Color3.fromRGB(8,8,8)
+LB.BackgroundTransparency=0.1
+LB.BorderSizePixel=0
+LB.Text=""
+LB.AutoButtonColor=false
+LB.Active=true
+LB.Parent=LG
+local C1=Instance.new("UICorner",LB) C1.CornerRadius=UDim.new(0,12)
+local S1=Instance.new("UIStroke",LB) S1.Color=Color3.fromRGB(200,200,200) S1.Thickness=1.5
+local LI=Instance.new("ImageLabel",LB)
+LI.Size=UDim2.new(1,-8,1,-8)
+LI.Position=UDim2.new(0,4,0,4)
+LI.BackgroundTransparency=1
+LI.Image=C.Logo
+LI.ScaleType=Enum.ScaleType.Fit
+local dg,ds,sp=false,nil,nil
+LB.InputBegan:Connect(function(i)
+    if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then
+        dg,ds,sp=true,i.Position,LB.Position
+        i.Changed:Connect(function() if i.UserInputState==Enum.UserInputState.End then dg=false end end)
+    end
+end)
+UIS.InputChanged:Connect(function(i)
+    if dg and (i.UserInputType==Enum.UserInputType.MouseMovement or i.UserInputType==Enum.UserInputType.Touch) then
+        local d=i.Position-ds
+        LB.Position=UDim2.new(sp.X.Scale,sp.X.Offset+d.X,sp.Y.Scale,sp.Y.Offset+d.Y)
+    end
+end)
+local mD,wD=nil,false
+LB.MouseButton1Down:Connect(function() mD=UIS:GetMouseLocation() wD=false end)
+LB.MouseButton1Up:Connect(function()
+    if mD and (UIS:GetMouseLocation()-mD).Magnitude>8 then wD=true end
+    if not wD then
+        pcall(function()
+            local rg=LP.PlayerGui:FindFirstChild("Rayfield")
+            if rg then rg.Enabled=not rg.Enabled end
+        end)
+    end
+    mD,wD=nil,false
+end)
+
+--// TABS
+local DT=Window:CreateTab("DISCORD",4483362458)
+local FT=Window:CreateTab("FARM",4483362458)
+local BT=Window:CreateTab("BOSS",4483362458)
+local MT=Window:CreateTab("MATERIAL",4483362458)
+local STab=Window:CreateTab("SEA",4483362458)
+local QT=Window:CreateTab("QUESTS / ITEMS",4483362458)
+local RDT=Window:CreateTab("FRUIT / RAID",4483362458)
+local FhT=Window:CreateTab("FISHING",4483362458)
+local StT=Window:CreateTab("STATUS",4483362458)
+local PT=Window:CreateTab("PVP",4483362458)
+local DgT=Window:CreateTab("DUNGEON",4483362458)
+local StsT=Window:CreateTab("STATS",4483362458)
+local MiT=Window:CreateTab("MISC",4483362458)
+
+DT:CreateButton({Name="Join Discord",Callback=function() setclipboard(C.Discord) Ntf("Discord","Copied") end})
+
+FT:CreateDropdown({Name="Select Tool",Options={"Melee","Sword","Gun","Blox Fruit"},CurrentOption={"Melee"},Callback=function(o) C.Tool=o[1] Ntf("Tool","Pakai: "..C.Tool) end})
+FT:CreateToggle({Name="Auto Haki Aktif",CurrentValue=true,Callback=function(v) C.Haki=v end})
+FT:CreateToggle({Name="Auto Farm Level",CurrentValue=false,Callback=function(v)
+    C.Farm.Level=v
+    if v then
+        S.Loop.Level=CT(SIMILAR)
+        S.Thread.LQ=task.spawn(function()
+            while C.Farm.Level do pcall(function() CommF:InvokeServer("StartQuest") end) task.wait(4) end
+        end)
+    else SL("Level") ST("LQ") end
+end})
+FT:CreateToggle({Name="Auto Farm Nearest",CurrentValue=false,Callback=function(v)
+    C.Farm.Nearest=v
+    if v then S.Loop.Nearest=CT(NEAR) else SL("Nearest") end
+end})
+FT:CreateToggle({Name="Auto Factory",CurrentValue=false,Callback=function(v)
+    C.Farm.Factory=v
+    if v then
+        S.Thread.Factory=task.spawn(function()
+            while C.Farm.Factory do
+                for _,o in ipairs(WS:GetDescendants()) do
+                    if o:IsA("BasePart") and (o.Name:lower():find("crate") or o.Name:lower():find("box")) then Tw(o.Position) task.wait(0.2) end
+                end
+                task.wait(1)
+            end
+        end)
+    else ST("Factory") end
+end})
+FT:CreateToggle({Name="Auto Ectoplasm",CurrentValue=false,Callback=function(v)
+    C.Farm.Ecto=v
+    if v then
+        S.Thread.Ecto=task.spawn(function()
+            while C.Farm.Ecto do
+                for _,o in ipairs(WS:GetDescendants()) do
+                    if o:IsA("BasePart") and o.Name:lower():find("ectoplasm") then Tw(o.Position) task.wait(0.15) end
+                end
+                task.wait(0.8)
+            end
+        end)
+    else ST("Ecto") end
+end})
+FT:CreateToggle({Name="Auto Accept Quest",CurrentValue=false,Callback=function(v)
+    C.Farm.AcceptQ=v
+    if v then
+        S.Thread.AQ=task.spawn(function()
+            while C.Farm.AcceptQ do pcall(function() CommF:InvokeServer("StartQuest") end) task.wait(3) end
+        end)
+    else ST("AQ") end
+end})
+FT:CreateToggle({Name="Auto Chest",CurrentValue=false,Callback=function(v)
+    C.Farm.Chest=v
+    if v then
+        S.Thread.Chest=task.spawn(function()
+            while C.Farm.Chest do
+                for _,o in ipairs(WS:GetChildren()) do
+                    if o.Name=="Chest" and o:FindFirstChild("HumanoidRootPart") then Tw(o.HumanoidRootPart.Position) task.wait(0.4) end
+                end
+                task.wait(0.4)
+            end
+        end)
+    else ST("Chest") end
+end})
+
+local BL={"The Gorilla King","Bobby","Yeti","Mob Leader","Vice Admiral","Saber Expert","Cursed Captain","Greybeard","The Saw","Don Swan","Order","Cake Queen","Dough King","Indra","Longma","Soul Reaper"}
+BT:CreateButton({Name="Update Boss List",Callback=function()
+    BL={}
+    for _,v in ipairs(GetE()) do
+        local h=v:FindFirstChildOfClass("Humanoid")
+        if h and h.MaxHealth>=500 then table.insert(BL,v.Name) end
+    end
+    Ntf("Boss","Updated: "..#BL)
+end})
+BT:CreateDropdown({Name="Boss List [Select Boss]",Options=BL,CurrentOption={""},Callback=function(o) C.Boss.Selected=o[1] end})
+BT:CreateToggle({Name="Auto Kill Selected Boss",CurrentValue=false,Callback=function(v)
+    C.Boss.AutoKill=v
+    if v then S.Loop.Boss=CT(function() return NAM(C.Boss.Selected) end) else SL("Boss") end
+end})
+BT:CreateToggle({Name="Auto Farm All Bosses",CurrentValue=false,Callback=function(v)
+    C.Boss.AllBoss=v
+    if v then S.Loop.AllBoss=CT(BOSS) else SL("AllBoss") end
+end})
+
+MT:CreateDropdown({Name="Material List",Options={"Leather","Scrap Metal","Angel Wings","Magic Crystal","Mystic Droplet","Vampire Fang","Dragon Scale","Fish Tail","Mini Tusk"},CurrentOption={""},Callback=function(o) C.Mat.Selected=o[1] end})
+MT:CreateToggle({Name="Auto Farm Material",CurrentValue=false,Callback=function(v)
+    C.Mat.Auto=v
+    if v then S.Loop.Mat=CT(function() return NAM(C.Mat.Selected) end) else SL("Mat") end
+end})
+
+STab:CreateButton({Name="Teleport to Tiki Outpost",Callback=function() local h=HRP() if h then h.CFrame=CFrame.new(-1300,100,-15000) Ntf("Sea","TP ke Tiki Outpost") end end})
+STab:CreateButton({Name="Buy & Spawn Boat",Callback=function() pcall(function() CommF:InvokeServer("BuyBoat") end) task.wait(0.5) Ntf("Sea","Boat dibeli") end})
+STab:CreateToggle({Name="Auto Sea Farm [Shark/Piranha]",CurrentValue=false,Callback=function(v)
+    C.Sea.Shark=v
+    if v then
+        S.Loop.Shark=CT(function()
+            for _,e in ipairs(GetE()) do
+                local nm=e.Name:lower()
+                if nm:find("shark") or nm:find("piranha") or nm:find("fish") or nm:find("sea beast") or nm:find("terror") then
+                    local hu=e:FindFirstChildOfClass("Humanoid")
+                    if hu and hu.Health>0 then return e end
+                end
+            end
+            return nil
+        end)
+    else SL("Shark") end
+end})
+STab:CreateToggle({Name="Auto No-Clip Boat",CurrentValue=false,Callback=function(v)
+    C.Sea.NoClipBoat=v
+    if v then
+        S.Loop.NCB=Run.Stepped:Connect(function()
+            local b=WS:FindFirstChild(LP.Name.."Boat")
+            if b then for _,p in ipairs(b:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide=false end end end
+        end)
+    else SL("NCB") end
+end})
+
+local function AKB(nm,k)
+    return function(v)
+        C[k]=v
+        if v then
+            S.Thread[k]=task.spawn(function()
+                while C[k] do local e=NAM(nm) if e then AtkTgt(e) end task.wait(0.15) end
+            end)
+        else ST(k) end
+    end
+end
+QT:CreateToggle({Name="Auto Get Yama",CurrentValue=false,Callback=AKB("Mob Leader","QY")})
+QT:CreateToggle({Name="Auto Get Tushita",CurrentValue=false,Callback=AKB("Longma","QT")})
+QT:CreateToggle({Name="Auto Get Buddy Sword",CurrentValue=false,Callback=AKB("Don Swan","QB")})
+QT:CreateToggle({Name="Auto Kill Cake Prince",CurrentValue=false,Callback=AKB("Cake Prince","QC")})
+QT:CreateToggle({Name="Auto Spawn & Kill Indra",CurrentValue=false,Callback=AKB("Indra","QI")})
+QT:CreateToggle({Name="Auto Spawn Dough King",CurrentValue=false,Callback=AKB("Dough King","QD")})
+
+RDT:CreateDropdown({Name="Select Chip",Options={"Flame","Ice","Quake","Light","Dark","Spider","Rumble","Magma","Buddha","Love","Rubber","Barrier","Ghost","Dough","Shadow","Venom","Control","Spirit","Dragon","Leopard","Kitsune"},CurrentOption={"Flame"},Callback=function(o) C.Raid.Chip=o[1] end})
+RDT:CreateButton({Name="Start Raid",Callback=function() pcall(function() CommF:InvokeServer("RaidsNpc","Select",C.Raid.Chip) end) end})
+RDT:CreateToggle({Name="Auto Kill Raid",CurrentValue=false,Callback=function(v) C.Raid.AutoKill=v if v then S.Loop.Raid=CT(NEAR) else SL("Raid") end end})
+RDT:CreateDropdown({Name="Select Fruit",Options={"Dragon","Leopard","Kitsune","Dough","Venom","Shadow","Control","Spirit","Mammoth","T-Rex","Portal","Pain","Blizzard","Gas","Yeti","Buddha","Rubber","Magma","Quake","Light","Dark","Spider","Rumble","Love","Barrier","Ghost","Flame","Ice","Sand","Diamond","Door","Chop","Spring","Bomb","Spike","Smoke","Revive"},CurrentOption={""},Callback=function(o) C.Fruit.Selected=o[1] end})
+RDT:CreateToggle({Name="Auto Buy Selected Fruit",CurrentValue=false,Callback=function(v)
+    C.Fruit.AutoBuy=v
+    if v then
+        S.Thread.BuyFruit=task.spawn(function()
+            while C.Fruit.AutoBuy do pcall(function() CommF:InvokeServer("PurchaseFruit",C.Fruit.Selected) end) task.wait(1) end
+        end)
+    else ST("BuyFruit") end
+end})
+RDT:CreateButton({Name="Roll Fruit",Callback=function() RollFruit() end})
+RDT:CreateToggle({Name="Tween Fruit",CurrentValue=false,Callback=function(v) C.Fruit.Tween=v if v then TweenToFruit() else SL("TweenFruit") end end})
+RDT:CreateButton({Name="Store Fruit",Callback=function() StoreFruit() end})
+
+FhT:CreateToggle({Name="Auto Fish",CurrentValue=false,Callback=function(v)
+    C.Fish.Auto=v
+    if v then
+        S.Thread.Fish=task.spawn(function()
+            while C.Fish.Auto do pcall(function() CommF:InvokeServer("Fish") end) task.wait(1) end
+        end)
+    else ST("Fish") end
+end})
+FhT:CreateToggle({Name="Auto Cast",CurrentValue=false,Callback=function(v)
+    C.Fish.Cast=v
+    if v then
+        S.Thread.Cast=task.spawn(function()
+            while C.Fish.Cast do
+                local ch=GC()
+                local tl=ch and ch:FindFirstChildOfClass("Tool")
+                if tl and tl.Name:lower():find("rod") then pcall(function() tl:Activate() end) end
+                task.wait(2)
+            end
+        end)
+    else ST("Cast") end
+end})
+
+local SLbl=StT:CreateParagraph({Title="Status",Content="Fruit Spawn: Checking...\nServer Time: "..os.date("%H:%M:%S")})
+task.spawn(function()
+    while task.wait(5) do
+        local fs="No"
+        for _,v in ipairs(WS:GetChildren()) do if v:IsA("Tool") and v:FindFirstChild("Handle") then fs="Yes" break end end
+        pcall(function() SLbl:Set({Title="Status",Content="Fruit Spawn: "..fs.."\nServer Time: "..os.date("%H:%M:%S")}) end)
+    end
+end)
+
+local function PL()
+    local t={}
+    for _,p in ipairs(Players:GetPlayers()) do if p~=LP then table.insert(t,p.Name) end end
+    return t
+end
+PT:CreateDropdown({Name="Select Player",Options=PL(),CurrentOption={""},Callback=function(o) C.PVP.Player=o[1] end})
+PT:CreateToggle({Name="Aimbot",CurrentValue=false,Callback=function(v)
+    C.PVP.Aimbot=v
+    if v then
+        S.Loop.AB=Run.RenderStepped:Connect(function()
+            local t=Players:FindFirstChild(C.PVP.Player)
+            if t and t.Character and t.Character:FindFirstChild("HumanoidRootPart") then
+                Cam.CFrame=CFrame.new(Cam.CFrame.Position,t.Character.HumanoidRootPart.Position)
+            end
+        end)
+    else SL("AB") end
+end})
+PT:CreateButton({Name="Teleport to Player",Callback=function()
+    local t=Players:FindFirstChild(C.PVP.Player)
+    if t and t.Character and t.Character:FindFirstChild("HumanoidRootPart") then Tw(t.Character.HumanoidRootPart.Position,500) end
+end})
+
+DgT:CreateButton({Name="Start Dungeon",Callback=function() pcall(function() CommF:InvokeServer("StartDungeon") end) end})
+DgT:CreateButton({Name="Exit Dungeon",Callback=function() pcall(function() CommF:InvokeServer("ExitDungeon") end) end})
+DgT:CreateToggle({Name="Auto Next Room",CurrentValue=false,Callback=function(v)
+    C.Dung.NextRoom=v
+    if v then
+        S.Thread.NextRoom=task.spawn(function()
+            while C.Dung.NextRoom do
+                local portal=WS:FindFirstChild("Portal") or WS:FindFirstChild("DungeonPortal")
+                if portal and portal:IsA("BasePart") then Tw(portal.Position) end
+                task.wait(1)
+            end
+        end)
+    else ST("NextRoom") end
+end})
+DgT:CreateToggle({Name="Auto Attack Boss",CurrentValue=false,Callback=function(v)
+    C.Dung.AttackBoss=v
+    if v then S.Loop.Dg=CT(BOSS) else SL("Dg") end
+end})
+
+StsT:CreateToggle({Name="Start Add Stats",CurrentValue=false,Callback=function(v)
+    C.Stats.Enable=v
+    if v then
+        S.Thread.St=task.spawn(function()
+            while C.Stats.Enable do
+                if C.Stats.Melee>0 then pcall(function() CommF:InvokeServer("AddPoint","Melee",C.Stats.Melee) end) end
+                if C.Stats.Defense>0 then pcall(function() CommF:InvokeServer("AddPoint","Defense",C.Stats.Defense) end) end
+                if C.Stats.Sword>0 then pcall(function() CommF:InvokeServer("AddPoint","Sword",C.Stats.Sword) end) end
+                if C.Stats.Gun>0 then pcall(function() CommF:InvokeServer("AddPoint","Gun",C.Stats.Gun) end) end
+                if C.Stats.Fruit>0 then pcall(function() CommF:InvokeServer("AddPoint","Demon Fruit",C.Stats.Fruit) end) end
+                task.wait(0.5)
+            end
+        end)
+    else ST("St") end
+end})
+StsT:CreateSlider({Name="Melee",Range={0,100},Increment=1,CurrentValue=0,Callback=function(v) C.Stats.Melee=v end})
+StsT:CreateSlider({Name="Sword",Range={0,100},Increment=1,CurrentValue=0,Callback=function(v) C.Stats.Sword=v end})
+StsT:CreateSlider({Name="Gun",Range={0,100},Increment=1,CurrentValue=0,Callback=function(v) C.Stats.Gun=v end})
+StsT:CreateSlider({Name="Defense",Range={0,100},Increment=1,CurrentValue=0,Callback=function(v) C.Stats.Defense=v end})
+StsT:CreateSlider({Name="Blox Fruit",Range={0,100},Increment=1,CurrentValue=0,Callback=function(v) C.Stats.Fruit=v end})
+
+MiT:CreateToggle({Name="Anti AFK",CurrentValue=false,Callback=function(v)
+    C.Misc.AntiAFK=v
+    if v then
+        S.Conn.AFK=LP.Idled:Connect(function() VU:CaptureController() VU:ClickButton2(Vector2.new()) end)
+    else
+        if S.Conn.AFK then S.Conn.AFK:Disconnect() S.Conn.AFK=nil end
+    end
+end})
+MiT:CreateToggle({Name="No Clip",CurrentValue=false,Callback=function(v)
+    C.Misc.NoClip=v
+    if v then
+        S.Loop.NC=Run.Stepped:Connect(function()
+            local ch=GC()
+            if ch then for _,p in ipairs(ch:GetDescendants()) do if p:IsA("BasePart") and p.CanCollide then p.CanCollide=false end end end
+        end)
+    else SL("NC") end
+end})
+MiT:CreateToggle({Name="Infinite Jump",CurrentValue=false,Callback=function(v)
+    C.Misc.InfJump=v
+    if v then
+        S.Conn.IJ=UIS.JumpRequest:Connect(function()
+            local ch=GC()
+            if ch then local h=ch:FindFirstChildOfClass("Humanoid") if h then h:ChangeState("Jumping") end end
+        end)
+    else
+        if S.Conn.IJ then S.Conn.IJ:Disconnect() S.Conn.IJ=nil end
+    end
+end})
+MiT:CreateButton({Name="Reset Character / Respawn",Callback=function()
+    local ch=GC()
+    if ch then
+        local h=ch:FindFirstChildOfClass("Humanoid")
+        if h then h.Health=0 Ntf("Respawn","Character di-reset ✅") else ch:BreakJoints() end
+    else LP:LoadCharacter() end
+end})
+MiT:CreateToggle({Name="Auto Respawn Instan",CurrentValue=false,Callback=function(v)
+    C.Misc.AutoRespawn=v
+    if v then
+        S.Conn.Respawn=LP.CharacterAdded:Connect(function(ch)
+            local h=ch:WaitForChild("Humanoid")
+            h.Died:Connect(function() task.wait(0.1) LP:LoadCharacter() end)
+        end)
+        local ch=LP.Character
+        if ch then
+            local h=ch:FindFirstChildOfClass("Humanoid")
+            if h then h.Died:Connect(function() task.wait(0.1) LP:LoadCharacter() end) end
+        end
+    else
+        if S.Conn.Respawn then S.Conn.Respawn:Disconnect() S.Conn.Respawn=nil end
+    end
+end})
+MiT:CreateToggle({Name="Auto Reset When Stuck",CurrentValue=false,Callback=function(v)
+    C.Misc.ResetStuck=v
+    if v then
+        S.Thread.Stuck=task.spawn(function()
+            local lp,st=nil,0
+            while C.Misc.ResetStuck do
+                local h=HRP()
+                if h then
+                    if lp and (h.Position-lp).Magnitude<1 then
+                        st=st+0.5
+                        if st>=5 then
+                            local hu=GC():FindFirstChildOfClass("Humanoid")
+                            if hu then hu.Health=0 end
+                            st=0 Ntf("Auto Reset","Stuck terdeteksi ✅")
+                        end
+                    else st=0 end
+                    lp=h.Position
+                end
+                task.wait(0.5)
+            end
+        end)
+    else ST("Stuck") end
+end})
+
+Ntf("SysXHub Premium G17.stwn","Loaded ✅")
