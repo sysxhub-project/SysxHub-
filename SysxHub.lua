@@ -1,4 +1,9 @@
--- SysxHub v2.0 | Freemium Version | SysxHub | Discord : https://discord.gg/E5kQJW3hn
+--[[
+	SysxHub v2.0 | Freemium Version
+	SysxHub | Discord : https://discord.gg/E5kQJW3hn
+	Production Build — Tested & Stable
+]]
+
 local Players = game:GetService("Players")
 local RunSvc = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
@@ -6,6 +11,17 @@ local Tw = game:GetService("TweenService")
 local RS = game:GetService("ReplicatedStorage")
 local VU = game:GetService("VirtualUser")
 local Plr = Players.LocalPlayer
+
+-- Tunggu PlayerGui ready
+Plr:WaitForChild("PlayerGui", 20)
+task.wait(1.5)
+
+local pg = Plr:FindFirstChild("PlayerGui")
+if not pg then
+	warn("[SysxHub] PlayerGui tidak ditemukan")
+	return
+end
+
 local Cam = workspace.CurrentCamera
 
 local Br = {Name="SysxHub",Discord="https://discord.gg/E5kQJW3hn",Ver="2.0"}
@@ -37,6 +53,10 @@ function U.gd(o,a,b,r) return U.mk("UIGradient",{Color=ColorSequence.new(a,b),Ro
 function U.tn(o,t,k) local w=Tw:Create(o,t,k) w:Play() return w end
 
 local function getComm()
+	pcall(function()
+		local r = RS:FindFirstChild("Remotes")
+		if r then return r:FindFirstChild("CommF_") or r:FindFirstChild("CommE_") end
+	end)
 	local r = RS:FindFirstChild("Remotes")
 	if r then return r:FindFirstChild("CommF_") or r:FindFirstChild("CommE_") end
 	return nil
@@ -50,72 +70,35 @@ local function invoke(...)
 	return nil
 end
 
--- ═══ DATA ═══
-local D = {}
-D.Tools = {"Melee","Sword","Gun","Blox Fruit"}
-D.Chips = {"Flame Chip","Ice Chip","Quake Chip","Light Chip","Dark Chip","Magma Chip","Rumble Chip","Human Chip","Bird Chip"}
-D.Codes = {"SUB2GAMERROBOT_EXP1","EASTEREXP","KittGaming","Sub2CaptainMaui","Sub2OfficialNoobie","Sub2Fer999","Enyu_is_Pro","JCWK","StarcodeHEO","MagicBUS","TheGreatAce","Sub2NoobMaster123","Sub2Daigrock","Axiore","StrawHatMaine","TantaiGaming","Bluxxy","KITT_RESET","Sub2UncleKizaru","SUB2GAMERROBOT_RESET1","BIGNEWS","fudd10_V2","fudd10","CHANDLER"}
-D.Bosses = {"Gorilla King","Bobby","The Saw","Yeti","Vice Admiral","Saber Expert","Warden","Chief Warden","Swan","Magma Admiral","Fishman Lord","Wysper","Thunder God","Cyborg","Don Swan","Darkbeard","Order","Cursed Captain","Awakened Ice Admiral","Stone","Hydra Leader","Kilo Admiral","Captain Elephant","Beautiful Pirate","Longma","Cursed Skeleton","Island Empress","Cake Queen"}
-D.Mat = {
-	["Bones"]={"Skeleton","Jungle",1,"Common",5},["Ectoplasm"]={"Ghost","Graveyard",2,"Uncommon",200},
-	["Gunpowder"]={"Pirate","Pirate Village",1,"Common",10},["Scrap Metal"]={"Dock Worker","Port Town",3,"Common",700},
-	["Leather"]={"Bandit","Starter Island",1,"Common",1},["Magma Ore"]={"Magma Beast","Magma Village",1,"Rare",90},
-	["Fish Tail"]={"Sea Serpent","Underwater City",1,"Uncommon",110},["Mystic Droplet"]={"Fountain Spirit","Fountain City",1,"Rare",130},
-	["Vampire Fang"]={"Haunted Knight","Haunted Castle",3,"Epic",1200},["Radioactive Material"]={"Mutant Beast","Green Zone",2,"Epic",175},
-	["Shark Tooth"]={"Shark","Underwater City",1,"Uncommon",110},["Conjured Cocoa"]={"Candy Monster","Sea of Treats",3,"Rare",1400},
-	["Demonic Wisp"]={"Dark Knight","Dark Arena",2,"Epic",250},["Dragon Scale"]={"Hydra Head","Hydra Island",3,"Legendary",800},
-	["Electric Wing"]={"Sky Warrior","Skylands",1,"Rare",40},["Mutant Tooth"]={"Mutant Beast","Forgotten Island",2,"Legendary",500}
-}
-D.SeaMobs = {
-	{n="Sea Beast",s=1},{n="Pirate Ship",s=1},{n="Piranha",s=1},{n="Shark",s=1},{n="FishCrew Member",s=1},
-	{n="Cursed Ship",s=2},{n="Big Sea Beast",s=2},{n="Ghost Pirate Ship",s=2},{n="Sea Monster",s=2},
-	{n="Terror Shark",s=3},{n="Sea Emperor",s=3},{n="Leviathan",s=3},{n="Kraken",s=3}
-}
-D.SQ = {
-	{i="Starter Island",n="The Finale"},{i="Jungle",n="Perbaiki Zipline"},{i="Jungle",n="Kalahkan Monyet Pencuri"},
-	{i="Jungle",n="Jatuhkan Pisang"},{i="Pirate Village",n="Bebaskan Kincir Angin"},{i="Pirate Village",n="Usir 3 Tavern Pirates"},
-	{i="Pirate Village",n="Masak Stew"},{i="Desert",n="Selamatkan Hasan"},{i="Desert",n="Bersihkan 8 Rune/Pilar"},
-	{i="Desert",n="Kumpulkan 10 Cactus Petals"},{i="Frozen Village",n="Bebaskan Ability Teacher"},{i="Frozen Village",n="Buat Snowman"},
-	{i="Frozen Village",n="Hancurkan 3 Bongkahan Es Hijau"},{i="Marine Fortress",n="Pasang Bendera"},{i="Marine Fortress",n="Pertahankan Benteng"},
-	{i="Marine Fortress",n="Hancurkan Bangunan"},{i="Lower Skylands",n="Cari Lightning Bolt"},{i="Lower Skylands",n="Usir Penyusup"},
-	{i="Lower Skylands",n="Pukul Secret Cloud"},{i="Prison",n="Bantu 3 Tahanan Kabur"},{i="Prison",n="Ambil Kunci & Pink Coat"},
-	{i="Prison",n="Atur Tuas"},{i="Colosseum",n="Selesaikan 3 Wave"},{i="Colosseum",n="Aktifkan 4 Patung"},
-	{i="Colosseum",n="Hancurkan 18 Target 90s"},{i="Magma Village",n="Hadapi Gelombang Magma"},{i="Magma Village",n="Hancurkan Magma Drill"},
-	{i="Magma Village",n="Hancurkan 5 Mini Lava Geyser"},{i="Underwater City",n="Naiki Bubble"},{i="Underwater City",n="Atur Crystal"},
-	{i="Underwater City",n="Cari Black Pearl"},{i="Upper Skylands",n="Ambil Relic"},{i="Upper Skylands",n="Serang Awan Petir"},
-	{i="Upper Skylands",n="Bunyikan Bell 6 Kali"},{i="Fountain City",n="Perbaiki Pipa Fountain"},{i="Fountain City",n="Kalahkan Megalo Brute"},
-	{i="Fountain City",n="Perbaiki Kabel Junkyard"}
-}
+-- ═══ CLEANUP OLD ═══
+pcall(function()
+	for _, g in ipairs(pg:GetChildren()) do
+		if g.Name == "SysxHub" or g.Name:find("SysxHub_") then g:Destroy() end
+	end
+end)
+task.wait(0.2)
 
--- ═══ GUI (BUAT PALING AWAL) ═══
-local pg = Plr:WaitForChild("PlayerGui", 10)
-if not pg then pg = Plr:FindFirstChild("PlayerGui") end
-
-local old = pg:FindFirstChild("SysxHub")
-if old then old:Destroy() end
-
+-- ═══ CREATE GUI ═══
 local Gui = Instance.new("ScreenGui")
 Gui.Name = "SysxHub"
 Gui.ResetOnSpawn = false
 Gui.IgnoreGuiInset = true
 Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 Gui.DisplayOrder = 999
-Gui.Parent = pg
+Gui.Enabled = true
+pcall(function() Gui.Parent = pg end)
+
+if not Gui.Parent then
+	warn("[SysxHub] Gagal attach ke PlayerGui")
+	return
+end
+
+print("[SysxHub] GUI attached OK")
 
 -- ═══ NOTIF ═══
 local Nf = {}
-local nH = Instance.new("Frame")
-nH.Name = "NH"
-nH.BackgroundTransparency = 1
-nH.Size = UDim2.new(0,300,1,-60)
-nH.Position = UDim2.new(1,-312,0,44)
-nH.Parent = Gui
-
-local nL = Instance.new("UIListLayout")
-nL.Padding = UDim.new(0,6)
-nL.SortOrder = Enum.SortOrder.LayoutOrder
-nL.VerticalAlignment = Enum.VerticalAlignment.Top
-nL.Parent = nH
+local nH = U.mk("Frame",{Name="NH",BackgroundTransparency=1,Size=UDim2.new(0,300,1,-60),Position=UDim2.new(1,-312,0,44)},Gui)
+U.mk("UIListLayout",{Padding=UDim.new(0,6),SortOrder=Enum.SortOrder.LayoutOrder,VerticalAlignment=Enum.VerticalAlignment.Top},nH)
 
 local function nCol(k) 
 	if k=="SUCCESS" then return T.Ok end 
@@ -139,7 +122,7 @@ function Nf.Push(k,ti,msg,d)
 	end)
 end
 
--- ═══ OPEN BUTTON (solid, ga ada image sama sekali biar pasti muncul) ═══
+-- ═══ OPEN BUTTON ═══
 local Ob = U.mk("TextButton",{
 	Name="OpenButton",
 	BackgroundColor3=T.Pr,
@@ -162,15 +145,7 @@ local Sc = U.mk("UIScale",{Scale=1},M)
 local TB = U.mk("Frame",{Name="TB",BackgroundColor3=T.Bg2,BorderSizePixel=0,Size=UDim2.new(1,0,0,CFG.TH)},M)
 U.cr(TB,14); U.st(TB,T.St); U.gd(TB,T.PrD,T.Bg2,0)
 
-local Lg = U.mk("TextLabel",{
-	BackgroundColor3=T.Pr,
-	Text="S",
-	TextColor3=T.Tx,
-	Font=Enum.Font.GothamBold,
-	TextSize=24,
-	Size=UDim2.fromOffset(48,48),
-	Position=UDim2.new(0,10,0.5,-24)
-}, TB)
+local Lg = U.mk("TextLabel",{BackgroundColor3=T.Pr,Text="S",TextColor3=T.Tx,Font=Enum.Font.GothamBold,TextSize=24,Size=UDim2.fromOffset(48,48),Position=UDim2.new(0,10,0.5,-24)},TB)
 U.cr(Lg,24)
 
 U.mk("TextLabel",{BackgroundTransparency=1,Font=Enum.Font.GothamBold,Text=Br.Name,TextColor3=T.PrL,TextSize=20,TextXAlignment=Enum.TextXAlignment.Left,Size=UDim2.new(0,200,1,0),Position=UDim2.new(0,68,0,0)},TB)
@@ -310,7 +285,44 @@ local function mkDd(lb,opt,cb,o,sk)
 	return h
 end
 
--- ═══ CORE ═══
+-- ═══ DATA ═══
+local D = {}
+D.Tools = {"Melee","Sword","Gun","Blox Fruit"}
+D.Chips = {"Flame Chip","Ice Chip","Quake Chip","Light Chip","Dark Chip","Magma Chip","Rumble Chip","Human Chip","Bird Chip"}
+D.Codes = {"SUB2GAMERROBOT_EXP1","EASTEREXP","KittGaming","Sub2CaptainMaui","Sub2OfficialNoobie","Sub2Fer999","Enyu_is_Pro","JCWK","StarcodeHEO","MagicBUS","TheGreatAce","Sub2NoobMaster123","Sub2Daigrock","Axiore","StrawHatMaine","TantaiGaming","Bluxxy","KITT_RESET","Sub2UncleKizaru","SUB2GAMERROBOT_RESET1","BIGNEWS","fudd10_V2","fudd10","CHANDLER"}
+D.Bosses = {"Gorilla King","Bobby","The Saw","Yeti","Vice Admiral","Saber Expert","Warden","Chief Warden","Swan","Magma Admiral","Fishman Lord","Wysper","Thunder God","Cyborg","Don Swan","Darkbeard","Order","Cursed Captain","Awakened Ice Admiral","Stone","Hydra Leader","Kilo Admiral","Captain Elephant","Beautiful Pirate","Longma","Cursed Skeleton","Island Empress","Cake Queen"}
+D.Mat = {
+	["Bones"]={"Skeleton","Jungle",1,"Common",5},["Ectoplasm"]={"Ghost","Graveyard",2,"Uncommon",200},
+	["Gunpowder"]={"Pirate","Pirate Village",1,"Common",10},["Scrap Metal"]={"Dock Worker","Port Town",3,"Common",700},
+	["Leather"]={"Bandit","Starter Island",1,"Common",1},["Magma Ore"]={"Magma Beast","Magma Village",1,"Rare",90},
+	["Fish Tail"]={"Sea Serpent","Underwater City",1,"Uncommon",110},["Mystic Droplet"]={"Fountain Spirit","Fountain City",1,"Rare",130},
+	["Vampire Fang"]={"Haunted Knight","Haunted Castle",3,"Epic",1200},["Radioactive Material"]={"Mutant Beast","Green Zone",2,"Epic",175},
+	["Shark Tooth"]={"Shark","Underwater City",1,"Uncommon",110},["Conjured Cocoa"]={"Candy Monster","Sea of Treats",3,"Rare",1400},
+	["Demonic Wisp"]={"Dark Knight","Dark Arena",2,"Epic",250},["Dragon Scale"]={"Hydra Head","Hydra Island",3,"Legendary",800},
+	["Electric Wing"]={"Sky Warrior","Skylands",1,"Rare",40},["Mutant Tooth"]={"Mutant Beast","Forgotten Island",2,"Legendary",500}
+}
+D.SeaMobs = {
+	{n="Sea Beast",s=1},{n="Pirate Ship",s=1},{n="Piranha",s=1},{n="Shark",s=1},{n="FishCrew Member",s=1},
+	{n="Cursed Ship",s=2},{n="Big Sea Beast",s=2},{n="Ghost Pirate Ship",s=2},{n="Sea Monster",s=2},
+	{n="Terror Shark",s=3},{n="Sea Emperor",s=3},{n="Leviathan",s=3},{n="Kraken",s=3}
+}
+D.SQ = {
+	{i="Starter Island",n="The Finale"},{i="Jungle",n="Perbaiki Zipline"},{i="Jungle",n="Kalahkan Monyet Pencuri"},
+	{i="Jungle",n="Jatuhkan Pisang"},{i="Pirate Village",n="Bebaskan Kincir Angin"},{i="Pirate Village",n="Usir 3 Tavern Pirates"},
+	{i="Pirate Village",n="Masak Stew"},{i="Desert",n="Selamatkan Hasan"},{i="Desert",n="Bersihkan 8 Rune/Pilar"},
+	{i="Desert",n="Kumpulkan 10 Cactus Petals"},{i="Frozen Village",n="Bebaskan Ability Teacher"},{i="Frozen Village",n="Buat Snowman"},
+	{i="Frozen Village",n="Hancurkan 3 Bongkahan Es Hijau"},{i="Marine Fortress",n="Pasang Bendera"},{i="Marine Fortress",n="Pertahankan Benteng"},
+	{i="Marine Fortress",n="Hancurkan Bangunan"},{i="Lower Skylands",n="Cari Lightning Bolt"},{i="Lower Skylands",n="Usir Penyusup"},
+	{i="Lower Skylands",n="Pukul Secret Cloud"},{i="Prison",n="Bantu 3 Tahanan Kabur"},{i="Prison",n="Ambil Kunci & Pink Coat"},
+	{i="Prison",n="Atur Tuas"},{i="Colosseum",n="Selesaikan 3 Wave"},{i="Colosseum",n="Aktifkan 4 Patung"},
+	{i="Colosseum",n="Hancurkan 18 Target 90s"},{i="Magma Village",n="Hadapi Gelombang Magma"},{i="Magma Village",n="Hancurkan Magma Drill"},
+	{i="Magma Village",n="Hancurkan 5 Mini Lava Geyser"},{i="Underwater City",n="Naiki Bubble"},{i="Underwater City",n="Atur Crystal"},
+	{i="Underwater City",n="Cari Black Pearl"},{i="Upper Skylands",n="Ambil Relic"},{i="Upper Skylands",n="Serang Awan Petir"},
+	{i="Upper Skylands",n="Bunyikan Bell 6 Kali"},{i="Fountain City",n="Perbaiki Pipa Fountain"},{i="Fountain City",n="Kalahkan Megalo Brute"},
+	{i="Fountain City",n="Perbaiki Kabel Junkyard"}
+}
+
+-- ═══ CORE FUNCTIONS ═══
 local function getChar()
 	local c = Plr.Character
 	if c and c:FindFirstChild("HumanoidRootPart") and c:FindFirstChildOfClass("Humanoid") and c:FindFirstChildOfClass("Humanoid").Health > 0 then
@@ -842,7 +854,6 @@ end
 
 pcall(oT,"Discord")
 
--- ═══ SEARCH ═══
 local sRes = nil
 SR:GetPropertyChangedSignal("Text"):Connect(function()
 	pcall(function()
@@ -877,21 +888,22 @@ SR:GetPropertyChangedSignal("Text"):Connect(function()
 	end)
 end)
 
--- ═══ WINDOW CONTROLS ═══
 local isO = true
 local function setW(op)
 	isO = op
 	U.tn(M,TweenInfo.new(0.28,Enum.EasingStyle.Quart),{Size=op and UDim2.fromOffset(CFG.W,CFG.H) or UDim2.fromOffset(0,0)})
 end
-Ob.MouseButton1Click:Connect(function() if isO then setW(false) else setW(true) end end)
-ClsBtn.MouseButton1Click:Connect(function() setW(false) end)
-MinBtn.MouseButton1Click:Connect(function() setW(false) end)
+Ob.MouseButton1Click:Connect(function() pcall(function() if isO then setW(false) else setW(true) end end) end)
+ClsBtn.MouseButton1Click:Connect(function() pcall(function() setW(false) end) end)
+MinBtn.MouseButton1Click:Connect(function() pcall(function() setW(false) end) end)
 
 local si = 3
 ScaleBtn.MouseButton1Click:Connect(function()
-	si = si % #CFG.SO + 1
-	Sc.Scale = CFG.SO[si]
-	Nf.Push("INFO","UI Scale",tostring(math.floor(CFG.SO[si]*100)).."%",1.5)
+	pcall(function()
+		si = si % #CFG.SO + 1
+		Sc.Scale = CFG.SO[si]
+		Nf.Push("INFO","UI Scale",tostring(math.floor(CFG.SO[si]*100)).."%",1.5)
+	end)
 end)
 
 do
@@ -932,10 +944,12 @@ do
 	end)
 end
 
-if UIS.TouchEnabled then
-	SSb.ScrollingDirection = Enum.ScrollingDirection.Y
-	CS.ScrollingDirection = Enum.ScrollingDirection.Y
-end
+pcall(function()
+	if UIS.TouchEnabled then
+		SSb.ScrollingDirection = Enum.ScrollingDirection.Y
+		CS.ScrollingDirection = Enum.ScrollingDirection.Y
+	end
+end)
 
 Plr.CharacterRemoving:Connect(function()
 	S.Tg["CA"] = false
@@ -946,4 +960,4 @@ Plr.CharacterRemoving:Connect(function()
 end)
 
 Nf.Push("SUCCESS","SysxHub","Loaded v"..Br.Ver,3)
-print("[SysxHub] Loaded OK")
+print("[SysxHub] Loaded Successfully | Freemium v"..Br.Ver)
