@@ -8,7 +8,7 @@ local VU = game:GetService("VirtualUser")
 local Plr = Players.LocalPlayer
 local Cam = workspace.CurrentCamera
 
-local Br = {Name="SysxHub",Discord="https://discord.gg/E5kQJW3hn",Asset="rbxassetid://103903232431017",Ver="2.0"}
+local Br = {Name="SysxHub",Discord="https://discord.gg/E5kQJW3hn",Asset="rbxassetid://104799849587740",Ver="2.0"}
 
 local T = {
 	Bg=Color3.fromRGB(16,8,24),Bg2=Color3.fromRGB(24,13,35),BgG=Color3.fromRGB(38,18,58),
@@ -20,18 +20,16 @@ local T = {
 	Wn=Color3.fromRGB(230,190,80),Er=Color3.fromRGB(220,80,100)
 }
 local CFG = {W=680,H=500,SW=160,TH=54,CR=12,SO={0.75,0.85,1.0,1.10,1.25}}
-local S = {Tool="Melee",Sea=1,Boss=nil,Mat=nil,SeaMob=nil,Plr=nil,Chip=nil,SQ=nil,SQI=nil,Tg={},ChestRange=300,FarmRange=500,FruitTP=false}
+local S = {Tool="Melee",Sea=1,Boss=nil,Mat=nil,SeaMob=nil,Plr=nil,Chip=nil,SQ=nil,SQI=nil,Tg={},ChestRange=300,FarmRange=500}
 
--- ═══════════════ UTILS ═══════════════
 local U = {}
-function U.mk(c,p,par) local o=Instance.new(c) for k,v in pairs(p or {}) do o[k]=v end if par then o.Parent=par end return o end
+function U.mk(c,p,par) local o=Instance.new(c) for k,v in pairs(p or {}) do pcall(function() o[k]=v end) end if par then o.Parent=par end return o end
 function U.cr(o,r) return U.mk("UICorner",{CornerRadius=UDim.new(0,r or CFG.CR)},o) end
 function U.st(o,c,t) return U.mk("UIStroke",{Color=c or T.St,Thickness=t or 1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},o) end
 function U.pd(o,p) local x=U.mk("UIPadding",{},o) local u=UDim.new(0,p or 8) x.PaddingTop,x.PaddingBottom,x.PaddingLeft,x.PaddingRight=u,u,u,u return x end
 function U.gd(o,a,b,r) return U.mk("UIGradient",{Color=ColorSequence.new(a,b),Rotation=r or 90},o) end
 function U.tn(o,t,k) local w=Tw:Create(o,t,k) w:Play() return w end
 
--- ═══════════════ REMOTE HELPER ═══════════════
 local function getComm()
 	local r = RS:FindFirstChild("Remotes")
 	if r then return r:FindFirstChild("CommF_") or r:FindFirstChild("CommE_") end
@@ -46,7 +44,6 @@ local function invoke(...)
 	return nil
 end
 
--- ═══════════════ DATA ═══════════════
 local D = {}
 D.Tools = {"Melee","Sword","Gun","Blox Fruit"}
 D.Chips = {"Flame Chip","Ice Chip","Quake Chip","Light Chip","Dark Chip","Magma Chip","Rumble Chip","Human Chip","Bird Chip"}
@@ -83,7 +80,6 @@ D.SQ = {
 	{i="Fountain City",n="Perbaiki Kabel Junkyard"}
 }
 
--- ═══════════════ NOTIF ═══════════════
 local Nf = {}
 local nH
 function Nf.Init(par)
@@ -107,13 +103,21 @@ function Nf.Push(k,ti,msg,d)
 	end)
 end
 
--- ═══════════════ GUI ═══════════════
 local Gui = U.mk("ScreenGui",{Name="SysxHub",ResetOnSpawn=false,IgnoreGuiInset=true,ZIndexBehavior=Enum.ZIndexBehavior.Sibling,DisplayOrder=999},Plr:WaitForChild("PlayerGui"))
 Nf.Init(Gui)
 
-local Ob = U.mk("ImageButton",{Name="OpenButton",Image=Br.Asset,BackgroundTransparency=1,Size=UDim2.fromOffset(76,76),Position=UDim2.new(0,20,0.5,-38),AnchorPoint=Vector2.new(0,0),ScaleType=Enum.ScaleType.Fit},Gui)
-U.cr(Ob,38)
-U.mk("UIAspectRatioConstraint",{AspectRatio=1,AspectType=Enum.AspectType.FitWithinMaxSize,DominantAxis=Enum.DominantAxis.Width},Ob)
+-- Open Button (pakai gambar default Roblox + bg solid biar pasti muncul)
+local Ob = U.mk("ImageButton",{
+	Name="OpenButton",
+	BackgroundColor3=T.Pr,
+	Size=UDim2.fromOffset(76,76),
+	Position=UDim2.new(0,20,0.5,-38),
+	AnchorPoint=Vector2.new(0,0),
+	AutoButtonColor=false,
+	Image="rbxassetid://104799849587740",
+	ScaleType=Enum.ScaleType.Fit
+}, Gui)
+U.cr(Ob,38); U.st(Ob,T.PrL,2)
 
 local M = U.mk("Frame",{Name="MW",BackgroundColor3=T.Bg,BorderSizePixel=0,Size=UDim2.fromOffset(CFG.W,CFG.H),Position=UDim2.new(0.5,-CFG.W/2,0.5,-CFG.H/2)},Gui)
 U.cr(M,14); U.st(M,T.St); U.gd(M,T.Bg,T.BgG,120); M.ClipsDescendants=true
@@ -121,8 +125,15 @@ local Sc = U.mk("UIScale",{Scale=1},M)
 
 local TB = U.mk("Frame",{Name="TB",BackgroundColor3=T.Bg2,BorderSizePixel=0,Size=UDim2.new(1,0,0,CFG.TH)},M)
 U.cr(TB,14); U.st(TB,T.St); U.gd(TB,T.PrD,T.Bg2,0)
-local Lg = U.mk("ImageLabel",{Image=Br.Asset,BackgroundTransparency=1,Size=UDim2.fromOffset(60,60),Position=UDim2.new(0,6,0.5,-30),ScaleType=Enum.ScaleType.Fit},TB)
-U.mk("UIAspectRatioConstraint",{AspectRatio=1,AspectType=Enum.AspectType.FitWithinMaxSize,DominantAxis=Enum.DominantAxis.Width},Lg)
+
+local Lg = U.mk("ImageLabel",{
+	BackgroundColor3=T.Pr,
+	Image="rbxassetid://104799849587740",
+	Size=UDim2.fromOffset(60,60),
+	Position=UDim2.new(0,6,0.5,-30),
+	ScaleType=Enum.ScaleType.Fit
+}, TB)
+U.cr(Lg,30)
 U.mk("TextLabel",{BackgroundTransparency=1,Font=Enum.Font.GothamBold,Text=Br.Name,TextColor3=T.PrL,TextSize=20,TextXAlignment=Enum.TextXAlignment.Left,Size=UDim2.new(0,200,1,0),Position=UDim2.new(0,72,0,0)},TB)
 
 local function tBt(t,x,c)
@@ -140,8 +151,8 @@ local Sb = U.mk("Frame",{BackgroundColor3=T.Bg2,BorderSizePixel=0,Size=UDim2.new
 U.st(Sb,T.St)
 local SLH = U.mk("Frame",{BackgroundColor3=T.Bg,BorderSizePixel=0,Size=UDim2.new(1,-12,0,112),Position=UDim2.new(0,6,0,6)},Sb)
 U.cr(SLH,10)
-local SLg = U.mk("ImageLabel",{Image=Br.Asset,BackgroundTransparency=1,Size=UDim2.fromOffset(100,100),Position=UDim2.new(0.5,0,0.5,0),AnchorPoint=Vector2.new(0.5,0.5),ScaleType=Enum.ScaleType.Fit},SLH)
-U.mk("UIAspectRatioConstraint",{AspectRatio=1,AspectType=Enum.AspectType.FitWithinMaxSize,DominantAxis=Enum.DominantAxis.Width},SLg)
+local SLg = U.mk("ImageLabel",{Image="rbxassetid://104799849587740",BackgroundColor3=T.Pr,Size=UDim2.fromOffset(100,100),Position=UDim2.new(0.5,0,0.5,0),AnchorPoint=Vector2.new(0.5,0.5),ScaleType=Enum.ScaleType.Fit},SLH)
+U.cr(SLg,50)
 
 local SSb = U.mk("ScrollingFrame",{BackgroundTransparency=1,BorderSizePixel=0,Size=UDim2.new(1,0,1,-124),Position=UDim2.new(0,0,0,124),CanvasSize=UDim2.new(0,0,0,0),AutomaticCanvasSize=Enum.AutomaticSize.Y,ScrollBarThickness=3,ScrollBarImageColor3=T.Pr},Sb)
 U.mk("UIListLayout",{Padding=UDim.new(0,4),SortOrder=Enum.SortOrder.LayoutOrder},SSb)
@@ -260,7 +271,6 @@ local function mkDd(lb,opt,cb,o,sk)
 	return h
 end
 
--- ═══════════════ CORE ═══════════════
 local function getChar()
 	local c = Plr.Character
 	if c and c:FindFirstChild("HumanoidRootPart") and c:FindFirstChildOfClass("Humanoid") and c:FindFirstChildOfClass("Humanoid").Health > 0 then
@@ -329,7 +339,6 @@ local function interactPrompt(obj)
 	return false
 end
 
--- ═══════════════ AUTO FARM LOOP ═══════════════
 task.spawn(function()
 	while true do
 		if S.Tg["F_L"] or S.Tg["F_N"] or S.Tg["F_Fa"] or S.Tg["F_E"] or S.Tg["AKB"] or S.Tg["AFM"] or S.Tg["AFS"] then
@@ -349,7 +358,6 @@ task.spawn(function()
 	end
 end)
 
--- ═══════════════ AUTO CHEST LOOP (RANDOM SEMUA TIER) ═══════════════
 task.spawn(function()
 	while true do
 		if S.Tg["AC"] then
@@ -372,7 +380,6 @@ task.spawn(function()
 	end
 end)
 
--- ═══════════════ AUTO ATTACK LOOP ═══════════════
 task.spawn(function()
 	while true do
 		if S.Tg["CA"] or S.Tg["AAT"] or S.Tg["AAM"] then
@@ -382,7 +389,6 @@ task.spawn(function()
 	end
 end)
 
--- ═══════════════ AIMBOT ═══════════════
 RunSvc.RenderStepped:Connect(function(dt)
 	if not S.Tg["Aim"] then return end
 	if not S.Plr or S.Plr == "None" then return end
@@ -402,7 +408,6 @@ RunSvc.RenderStepped:Connect(function(dt)
 	if S.Tg["AAT"] then activateTool() end
 end)
 
--- ═══════════════ INFINITE JUMP ═══════════════
 UIS.JumpRequest:Connect(function()
 	if not S.Tg["IJ"] then return end
 	local c = getChar()
@@ -412,7 +417,6 @@ UIS.JumpRequest:Connect(function()
 	end
 end)
 
--- ═══════════════ ANTI AFK ═══════════════
 task.spawn(function()
 	while true do
 		if S.Tg["AAF"] then
@@ -423,7 +427,6 @@ task.spawn(function()
 	end
 end)
 
--- ═══════════════ NOCLIP ═══════════════
 task.spawn(function()
 	while true do
 		if S.Tg["NC"] then
@@ -438,7 +441,6 @@ task.spawn(function()
 	end
 end)
 
--- ═══════════════ FRUIT HELPERS ═══════════════
 local function getFruitsInChar()
 	local out = {}
 	local char = Plr.Character
@@ -456,7 +458,6 @@ local function getFruitsInChar()
 	return out
 end
 
--- Random Fruit (real remote)
 local function randomFruit()
 	local r1 = invoke("Cousin", "Buy")
 	local r2 = invoke("Cousin", "Buy", "Random")
@@ -467,7 +468,6 @@ local function randomFruit()
 	end
 end
 
--- Store Fruit (real remote)
 local function storeFruit(tool)
 	if not tool or not tool.Parent then return end
 	local name = tool.Name
@@ -479,9 +479,7 @@ local function storeFruit(tool)
 	end
 end
 
--- ═══════════════ TWEEN FRUIT KE FRUIT YANG SPAWN ═══════════════
 local function findSpawnedFruit()
-	-- Cari fruit yang spawn di workspace (bukan di backpack/char)
 	local best, dist = nil, math.huge
 	local c = getChar()
 	if not c then return nil end
@@ -505,37 +503,23 @@ local function tweenFruitToSpawn(tool)
 	if not hrp then return end
 	local handle = tool:FindFirstChild("Handle")
 	if not handle then return end
-	
-	-- Target: fruit yang spawn di map
 	local targetFruit = findSpawnedFruit()
 	local targetPos = targetFruit and targetFruit:FindFirstChild("Handle") and targetFruit.Handle.Position or (hrp.Position + Vector3.new(0, 20, 0))
-	
-	-- Buat clone visual dari fruit milik player
 	local clone = handle:Clone()
 	clone.Parent = workspace
 	clone.CanCollide = false
 	clone.Anchored = true
 	clone.CFrame = hrp.CFrame * CFrame.new(0, -2, -2)
-	clone.Transparency = 0
-	
-	-- Tween terbang ke fruit yang spawn
-	local tw = Tw:Create(clone, TweenInfo.new(1.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-		CFrame = CFrame.new(targetPos)
-	})
+	local tw = Tw:Create(clone, TweenInfo.new(1.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {CFrame = CFrame.new(targetPos)})
 	tw:Play()
 	tw.Completed:Wait()
-	
-	-- Efek fade + destroy
 	local fade = Tw:Create(clone, TweenInfo.new(0.3), {Transparency = 1})
 	fade:Play()
 	fade.Completed:Wait()
 	clone:Destroy()
-	
-	-- Kirim remote store
 	storeFruit(tool)
 end
 
--- Loop auto store/tween
 task.spawn(function()
 	while true do
 		if S.Tg["ASF"] then
@@ -554,21 +538,12 @@ task.spawn(function()
 	end
 end)
 
--- ═══════════════ SECRET QUEST ═══════════════
 local function startQuest(questName, level)
 	if not questName then return end
 	invoke("StartQuest", questName, level or 1)
 	Nf.Push("SUCCESS","Quest","Start: "..questName,2)
 end
 
-local function autoAcceptQuest()
-	local info = invoke("getQuestInfo")
-	if info and info.name and info.name ~= "" then
-		Nf.Push("INFO","Quest","Aktif: "..tostring(info.name),2)
-	end
-end
-
--- ═══════════════ TABS ═══════════════
 local TBU = {}
 
 TBU["Discord"] = function()
@@ -591,11 +566,8 @@ TBU["Farm"] = function()
 	mkTg("Auto Farm Nearest","F_N",false,function(on) Nf.Push(on and "SUCCESS" or "INFO","Farm Nearest",on and "ON" or "OFF",2) end,12)
 	mkTg("Auto Factory","F_Fa",false,function(on) Nf.Push(on and "SUCCESS" or "INFO","Factory",on and "ON" or "OFF",2) end,13)
 	mkTg("Auto Farm Ectoplasm","F_E",false,function(on) Nf.Push(on and "SUCCESS" or "INFO","Ectoplasm",on and "ON" or "OFF",2) end,14)
-	mkTg("Auto Accept Quest","Q",false,function(on)
-		if on then task.spawn(function() while S.Tg["Q"] do autoAcceptQuest() task.wait(5) end end) end
-	end,15)
 	secL("Chest Farm",20)
-	mkTg("Auto Chest (Random Tier)","AC",false,function(on) Nf.Push(on and "SUCCESS" or "INFO","Chest",on and "ON" or "OFF",2) end,21)
+	mkTg("Auto Chest","AC",false,function(on) Nf.Push(on and "SUCCESS" or "INFO","Chest",on and "ON" or "OFF",2) end,21)
 	mkSl("Max Chest Range",50,500,300,function(v) S.ChestRange=v end,22)
 	secL("Combat",40)
 	mkTg("Auto Haki","CH",false,function(on) Nf.Push(on and "SUCCESS" or "INFO","Haki",on and "ON" or "OFF",2) end,41)
@@ -644,8 +616,6 @@ TBU["Sea"] = function()
 	end,3,"SeaMob")
 	secL("Sea Farm",10)
 	mkTg("Auto Farm Sea","AFS",false,function(on) Nf.Push(on and "SUCCESS" or "INFO","Sea Farm",on and "ON" or "OFF",2) end,11)
-	mkSl("Boat Height",0,100,10,function(v) end,18)
-	mkSl("Boat Speed",0,200,50,function(v) end,19)
 end
 
 TBU["Quests / Items"] = function()
@@ -675,7 +645,7 @@ TBU["Quests / Items"] = function()
 		local q = qm[v]
 		if q then S.SQ = q.n S.SQI = q.i Nf.Push("INFO","Secret",q.n,4) end
 	end,3,"SQ")
-	mkBt("Start Selected Quest (Real)",function()
+	mkBt("Start Selected Quest",function()
 		if not S.SQ then Nf.Push("WARNING","Quest","Pilih dulu",2) return end
 		startQuest(S.SQ, 1)
 	end,4)
@@ -697,7 +667,7 @@ TBU["Fruit / Raid"] = function()
 	mkBt("Random Fruit",function() randomFruit() end,11)
 	secL("Fruit Store",20)
 	mkTg("Auto Store Fruit","ASF",false,function(on) Nf.Push(on and "SUCCESS" or "INFO","Store",on and "ON" or "OFF",2) end,21)
-	mkTg("Tween Fruit → Spawn Fruit","TweenF",false,function(on) Nf.Push(on and "SUCCESS" or "INFO","Tween Fruit",on and "ON" or "OFF",2) end,22)
+	mkTg("Tween Fruit → Spawn","TweenF",false,function(on) Nf.Push(on and "SUCCESS" or "INFO","Tween Fruit",on and "ON" or "OFF",2) end,22)
 end
 
 TBU["Fishing"] = function()
@@ -726,7 +696,7 @@ TBU["PvP"] = function()
 	end
 	mkDd("Select Player",pn,function(v) S.Plr = v end,2,"Plr")
 	mkTg("Aimbot (Smooth Cam)","Aim",false,function(on)
-		Nf.Push(on and "SUCCESS" or "INFO","Aimbot",on and S.Plr or "OFF",2)
+		Nf.Push(on and "SUCCESS" or "INFO","Aimbot",on and (S.Plr or "None") or "OFF",2)
 	end,3)
 	mkTg("Auto Attack Target","AAT",false,function(on) Nf.Push(on and "SUCCESS" or "INFO","Auto Attack",on and "ON" or "OFF",2) end,4)
 end
@@ -775,13 +745,12 @@ TBU["Misc"] = function()
 	end))
 end
 
--- ═══════════════ NAV ═══════════════
 local TAB_FEAT = {
 	Discord={"Join Discord","Version"},
-	Farm={"Select Tool","UI Scale","Farm Range","Auto Farm Level","Auto Farm Nearest","Auto Factory","Auto Farm Ectoplasm","Auto Accept Quest","Auto Chest","Max Chest Range","Auto Haki","Auto Ken","Auto Attack"},
+	Farm={"Select Tool","UI Scale","Farm Range","Auto Farm Level","Auto Farm Nearest","Auto Factory","Auto Farm Ectoplasm","Auto Chest","Max Chest Range","Auto Haki","Auto Ken","Auto Attack"},
 	Boss={"Select Boss","Auto Kill Selected Boss"},
 	Material={"Select Material","Auto Farm Material"},
-	Sea={"Select Sea","Enemies","Auto Farm Sea","Boat Height","Boat Speed"},
+	Sea={"Select Sea","Enemies","Auto Farm Sea"},
 	["Quests / Items"]={"Secret Quest","Select Island","Select Quest","Start Selected Quest","Kill Cake Prince","Dough King","Soul Reaper","rip_indra"},
 	["Fruit / Raid"]={"Select Chip","Start Raid","Random Fruit","Auto Store Fruit","Tween Fruit"},
 	Fishing={"Auto Fish","Auto Cast"},
@@ -815,7 +784,6 @@ end
 
 oT("Discord")
 
--- ═══════════════ SEARCH ═══════════════
 local sRes = nil
 SR:GetPropertyChangedSignal("Text"):Connect(function()
 	local q = string.lower(SR.Text)
@@ -848,7 +816,6 @@ SR:GetPropertyChangedSignal("Text"):Connect(function()
 	end
 end)
 
--- ═══════════════ WINDOW CONTROLS ═══════════════
 local isO = true
 local function setW(op)
 	isO = op
