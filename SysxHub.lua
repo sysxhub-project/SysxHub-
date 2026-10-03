@@ -1,1460 +1,1457 @@
 --[[
     SYSXHUB
-    UI / STATE / SEA FILTER
-    SAFE UI VERSION
+    Full UI Source
+    Version: 2.0
 
-    UI STRUCTURE:
-    Discord
-    Farm
-      - Auto Farm Level
-      - Auto Quest
-      - Auto Kill Nearest
-      - Boss
-      - Material
-    Quest / Items
-      - Auto CDK
-      - Auto Dark Dagger
-      - Auto Soul Guitar
-      - Auto Yama
-      - Auto Tushita
-      - Auto Buddy Sword
-      - Auto Kill Indra
-      - Auto Spawn Dough King
-    Fruit / Raid
-    Fishing
-    Status
-    PvP
-    Stats
-    Misc
+    TAB:
+    FARM
+    SEA
+    QUESTS / ITEMS
+    FRUIT / RAID
+    FISHING
+    STATUS
+    PVP
+    STATS
+    MISC
 
-    NOTE:
-    Exploit / anti-cheat bypass / remote abuse execution
-    tidak dijalankan.
+    FARM = Farm + Chest + Boss + Material
+    STATUS = Fruit Spawn + Map Scan + Server Time + Phase Moon
+
+    OPEN/CLOSE ASSET:
+    70792832229220
 ]]
 
-repeat task.wait() until game:IsLoaded()
-
---------------------------------------------------
--- SERVICES
---------------------------------------------------
-
+--// SERVICES
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
-local TeleportService = game:GetService("TeleportService")
+local RunService = game:GetService("RunService")
 
 local Player = Players.LocalPlayer
-if not Player then
-    return
-end
-
 local PlayerGui = Player:WaitForChild("PlayerGui")
 
---------------------------------------------------
--- REMOVE OLD UI
---------------------------------------------------
+--// CONFIG
+local CONFIG = {
+    Name = "SysxHub",
+    Version = "2.0",
+    Discord = "https://discord.gg/E5kQJW3hn",
 
-pcall(function()
-    local old = PlayerGui:FindFirstChild("SysxHub")
-    if old then
-        old:Destroy()
+    OpenCloseAsset = "rbxassetid://70792832229220",
+
+    MinScale = 0.75,
+    MaxScale = 1,
+    DefaultScale = 0.90,
+}
+
+--// COLORS
+local COLORS = {
+    Background = Color3.fromRGB(14, 10, 24),
+    Sidebar = Color3.fromRGB(20, 14, 34),
+    Panel = Color3.fromRGB(25, 18, 42),
+    Panel2 = Color3.fromRGB(31, 22, 51),
+
+    Purple = Color3.fromRGB(139, 72, 255),
+    Purple2 = Color3.fromRGB(103, 55, 205),
+
+    White = Color3.fromRGB(245, 242, 255),
+    Gray = Color3.fromRGB(165, 158, 180),
+    DarkGray = Color3.fromRGB(80, 73, 95),
+
+    Green = Color3.fromRGB(65, 210, 125),
+    Red = Color3.fromRGB(235, 75, 90),
+    Yellow = Color3.fromRGB(240, 190, 70),
+}
+
+--// STATE
+local State = {
+    Scale = CONFIG.DefaultScale,
+    CurrentTab = "FARM",
+    Search = "",
+
+    Farm = {},
+    Chest = {},
+    Boss = {},
+    Material = {},
+    Sea = {},
+    Quest = {},
+    FruitRaid = {},
+    Fishing = {},
+    Status = {},
+    PVP = {},
+    Stats = {},
+    Misc = {},
+}
+
+--// CLEAN OLD UI
+local Old = PlayerGui:FindFirstChild("SysxHub")
+if Old then
+    Old:Destroy()
+end
+
+--// HELPERS
+local function Create(className, properties, parent)
+    local object = Instance.new(className)
+
+    for property, value in pairs(properties or {}) do
+        object[property] = value
+    end
+
+    object.Parent = parent
+    return object
+end
+
+local function Corner(parent, radius)
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, radius or 8)
+    corner.Parent = parent
+    return corner
+end
+
+local function Stroke(parent, color, transparency)
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = color or COLORS.Purple
+    stroke.Transparency = transparency or 0
+    stroke.Thickness = 1
+    stroke.Parent = parent
+    return stroke
+end
+
+local function Tween(object, properties, duration)
+    local tween = TweenService:Create(
+        object,
+        TweenInfo.new(
+            duration or 0.2,
+            Enum.EasingStyle.Quad,
+            Enum.EasingDirection.Out
+        ),
+        properties
+    )
+
+    tween:Play()
+    return tween
+end
+
+--// SCREEN GUI
+local ScreenGui = Create("ScreenGui", {
+    Name = "SysxHub",
+    ResetOnSpawn = false,
+    IgnoreGuiInset = true,
+    ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+}, PlayerGui)
+
+--// NOTIFICATION HOLDER
+local NotificationHolder = Create("Frame", {
+    Name = "Notifications",
+    BackgroundTransparency = 1,
+    Size = UDim2.fromOffset(300, 400),
+    Position = UDim2.new(1, -315, 0, 20),
+}, ScreenGui)
+
+Create("UIListLayout", {
+    Padding = UDim.new(0, 8),
+    HorizontalAlignment = Enum.HorizontalAlignment.Right,
+    VerticalAlignment = Enum.VerticalAlignment.Top,
+}, NotificationHolder)
+
+local function Notify(title, message, notificationType)
+    local accent = COLORS.Purple
+
+    if notificationType == "SUCCESS" then
+        accent = COLORS.Green
+    elseif notificationType == "WARNING" then
+        accent = COLORS.Yellow
+    elseif notificationType == "ERROR" then
+        accent = COLORS.Red
+    end
+
+    local Frame = Create("Frame", {
+        Size = UDim2.fromOffset(290, 72),
+        BackgroundColor3 = COLORS.Panel,
+        BackgroundTransparency = 0.03,
+    }, NotificationHolder)
+
+    Corner(Frame, 10)
+    Stroke(Frame, accent, 0.45)
+
+    Create("Frame", {
+        Size = UDim2.new(0, 3, 1, 0),
+        BackgroundColor3 = accent,
+        BorderSizePixel = 0,
+    }, Frame)
+
+    Create("TextLabel", {
+        BackgroundTransparency = 1,
+        Position = UDim2.fromOffset(14, 8),
+        Size = UDim2.new(1, -22, 0, 20),
+        Font = Enum.Font.GothamBold,
+        Text = tostring(title),
+        TextSize = 13,
+        TextColor3 = COLORS.White,
+        TextXAlignment = Enum.TextXAlignment.Left,
+    }, Frame)
+
+    Create("TextLabel", {
+        BackgroundTransparency = 1,
+        Position = UDim2.fromOffset(14, 30),
+        Size = UDim2.new(1, -22, 0, 32),
+        Font = Enum.Font.Gotham,
+        Text = tostring(message),
+        TextSize = 11,
+        TextColor3 = COLORS.Gray,
+        TextWrapped = true,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextYAlignment = Enum.TextYAlignment.Top,
+    }, Frame)
+
+    Frame.Position = UDim2.new(1, 30, 0, 0)
+
+    Tween(
+        Frame,
+        {Position = UDim2.new(0, 0, 0, 0)},
+        0.25
+    )
+
+    task.delay(3.5, function()
+        if Frame and Frame.Parent then
+            Tween(
+                Frame,
+                {Position = UDim2.new(1, 30, 0, 0)},
+                0.25
+            )
+
+            task.wait(0.3)
+
+            if Frame then
+                Frame:Destroy()
+            end
+        end
+    end)
+end
+
+--// MAIN WINDOW
+local Main = Create("Frame", {
+    Name = "MainWindow",
+    Size = UDim2.fromOffset(760, 500),
+    Position = UDim2.new(0.5, -380, 0.5, -250),
+    BackgroundColor3 = COLORS.Background,
+    BorderSizePixel = 0,
+    ClipsDescendants = true,
+}, ScreenGui)
+
+Corner(Main, 14)
+Stroke(Main, COLORS.Purple, 0.55)
+
+--// TOPBAR
+local TopBar = Create("Frame", {
+    Name = "TopBar",
+    Size = UDim2.new(1, 0, 0, 62),
+    BackgroundColor3 = COLORS.Panel,
+    BorderSizePixel = 0,
+}, Main)
+
+local Logo = Create("ImageLabel", {
+    Name = "Logo",
+    BackgroundTransparency = 1,
+    Size = UDim2.fromOffset(42, 42),
+    Position = UDim2.fromOffset(12, 10),
+    Image = CONFIG.OpenCloseAsset,
+    ScaleType = Enum.ScaleType.Fit,
+}, TopBar)
+
+local Title = Create("TextLabel", {
+    BackgroundTransparency = 1,
+    Position = UDim2.fromOffset(64, 9),
+    Size = UDim2.fromOffset(300, 24),
+    Font = Enum.Font.GothamBold,
+    Text = "SysxHub",
+    TextSize = 19,
+    TextColor3 = COLORS.White,
+    TextXAlignment = Enum.TextXAlignment.Left,
+}, TopBar)
+
+Create("TextLabel", {
+    BackgroundTransparency = 1,
+    Position = UDim2.fromOffset(65, 32),
+    Size = UDim2.fromOffset(300, 18),
+    Font = Enum.Font.Gotham,
+    Text = "Premium Control Panel  •  v" .. CONFIG.Version,
+    TextSize = 10,
+    TextColor3 = COLORS.Gray,
+    TextXAlignment = Enum.TextXAlignment.Left,
+}, TopBar)
+
+local Search = Create("TextBox", {
+    Name = "Search",
+    BackgroundColor3 = COLORS.Panel2,
+    Position = UDim2.new(1, -260, 0, 14),
+    Size = UDim2.fromOffset(195, 34),
+    Font = Enum.Font.Gotham,
+    PlaceholderText = "Search Feature...",
+    PlaceholderColor3 = COLORS.Gray,
+    Text = "",
+    TextSize = 11,
+    TextColor3 = COLORS.White,
+    ClearTextOnFocus = false,
+}, TopBar)
+
+Corner(Search, 8)
+Stroke(Search, COLORS.DarkGray, 0.5)
+
+--// SIDEBAR
+local Sidebar = Create("Frame", {
+    Name = "Sidebar",
+    Position = UDim2.fromOffset(0, 62),
+    Size = UDim2.fromOffset(175, -62),
+    BackgroundColor3 = COLORS.Sidebar,
+    BorderSizePixel = 0,
+}, Main)
+
+Create("UIPadding", {
+    PaddingTop = UDim.new(0, 10),
+    PaddingLeft = UDim.new(0, 9),
+    PaddingRight = UDim.new(0, 9),
+}, Sidebar)
+
+local SidebarList = Create("ScrollingFrame", {
+    BackgroundTransparency = 1,
+    Size = UDim2.new(1, 0, 1, 0),
+    CanvasSize = UDim2.new(),
+    AutomaticCanvasSize = Enum.AutomaticSize.Y,
+    ScrollBarThickness = 2,
+    ScrollBarImageColor3 = COLORS.Purple,
+}, Sidebar)
+
+Create("UIListLayout", {
+    Padding = UDim.new(0, 5),
+    SortOrder = Enum.SortOrder.LayoutOrder,
+}, SidebarList)
+
+--// CONTENT
+local Content = Create("Frame", {
+    Name = "Content",
+    Position = UDim2.fromOffset(175, 62),
+    Size = UDim2.new(1, -175, 1, -62),
+    BackgroundColor3 = COLORS.Background,
+    BorderSizePixel = 0,
+}, Main)
+
+local ContentTitle = Create("TextLabel", {
+    BackgroundTransparency = 1,
+    Position = UDim2.fromOffset(18, 13),
+    Size = UDim2.new(1, -36, 0, 28),
+    Font = Enum.Font.GothamBold,
+    Text = "FARM",
+    TextSize = 17,
+    TextColor3 = COLORS.White,
+    TextXAlignment = Enum.TextXAlignment.Left,
+}, Content)
+
+local ContentScroll = Create("ScrollingFrame", {
+    Name = "FeatureList",
+    BackgroundTransparency = 1,
+    Position = UDim2.fromOffset(12, 48),
+    Size = UDim2.new(1, -24, 1, -58),
+    CanvasSize = UDim2.new(),
+    AutomaticCanvasSize = Enum.AutomaticSize.Y,
+    ScrollBarThickness = 3,
+    ScrollBarImageColor3 = COLORS.Purple,
+}, ContentScroll or Content)
+
+Create("UIPadding", {
+    PaddingTop = UDim.new(0, 4),
+    PaddingBottom = UDim.new(0, 15),
+    PaddingLeft = UDim.new(0, 4),
+    PaddingRight = UDim.new(0, 5),
+}, ContentScroll)
+
+Create("UIListLayout", {
+    Padding = UDim.new(0, 7),
+    SortOrder = Enum.SortOrder.LayoutOrder,
+}, ContentScroll)
+
+--// FLOATING BUTTON
+local Floating = Create("ImageButton", {
+    Name = "OpenClose",
+    BackgroundColor3 = COLORS.Panel,
+    BackgroundTransparency = 0.05,
+    Size = UDim2.fromOffset(58, 58),
+    Position = UDim2.new(0, 18, 0.5, -29),
+    Image = CONFIG.OpenCloseAsset,
+    ScaleType = Enum.ScaleType.Fit,
+    AutoButtonColor = false,
+}, ScreenGui)
+
+Corner(Floating, 14)
+Stroke(Floating, COLORS.Purple, 0.35)
+
+local MainVisible = true
+
+Floating.MouseButton1Click:Connect(function()
+    MainVisible = not MainVisible
+
+    if MainVisible then
+        Main.Visible = true
+        Main.Size = UDim2.fromOffset(0, 0)
+
+        Tween(
+            Main,
+            {Size = UDim2.fromOffset(760, 500)},
+            0.3
+        )
+    else
+        local tw = Tween(
+            Main,
+            {Size = UDim2.fromOffset(0, 0)},
+            0.25
+        )
+
+        tw.Completed:Connect(function()
+            if not MainVisible then
+                Main.Visible = false
+            end
+        end)
     end
 end)
 
---------------------------------------------------
--- CONFIG
---------------------------------------------------
+--// DRAG FUNCTION
+local function MakeDraggable(object, handle)
+    local dragging = false
+    local dragStart
+    local startPosition
 
-local CONFIG = {
-    Name = "SysxHub",
-    Version = "3.0",
-    Discord = "https://discord.gg/E5kQJW3hn",
+    handle = handle or object
 
-    Theme = {
-        Background = Color3.fromRGB(15, 12, 24),
-        Secondary = Color3.fromRGB(24, 19, 38),
-        Card = Color3.fromRGB(30, 24, 48),
-        Accent = Color3.fromRGB(145, 75, 255),
-        AccentDark = Color3.fromRGB(105, 50, 190),
-        Text = Color3.fromRGB(245, 240, 255),
-        Muted = Color3.fromRGB(165, 155, 185),
-        Border = Color3.fromRGB(65, 48, 90)
-    }
-}
+    handle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
 
---------------------------------------------------
--- STATE
---------------------------------------------------
+            dragging = true
+            dragStart = input.Position
+            startPosition = object.Position
 
-local State = {
-    CurrentSea = "Unknown",
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
 
-    AutoFarmLevel = false,
-    AutoHaki = false,
-    AutoFarmBoss = false,
-    AutoFarmMaterial = false,
-    AutoQuest = false,
-    AutoKill = false,
+    UserInputService.InputChanged:Connect(function(input)
+        if not dragging then
+            return
+        end
 
-    AutoCollectFruit = false,
-    FruitSniper = false,
-    AutoRaid = false,
+        if input.UserInputType == Enum.UserInputType.MouseMovement
+            or input.UserInputType == Enum.UserInputType.Touch then
 
-    AutoFishing = false,
-    AntiAFK = false,
+            local delta = input.Position - dragStart
 
-    ESP = false,
-    Aimbot = false,
-    PvPMode = false,
-
-    SelectedBoss = nil,
-    SelectedMaterial = nil,
-
-    Items = {
-        CDK = false,
-        DarkDagger = false,
-        SoulGuitar = false,
-        Yama = false,
-        Tushita = false,
-        BuddySword = false,
-        KillIndra = false,
-        SpawnDoughKing = false
-    }
-}
-
---------------------------------------------------
--- SEA DATA
---------------------------------------------------
-
-local SeaData = {
-
-    ["Sea 1"] = {
-        Bosses = {
-            "The Gorilla King",
-            "Bobby",
-            "Yeti",
-            "Mob Leader",
-            "Vice Admiral",
-            "Saber Expert",
-            "Jungle Pirate",
-            "Cyborg",
-            "Diamond",
-            "Jeremy"
-        },
-
-        Materials = {
-            "Leather",
-            "Scrap Metal",
-            "Angel Wings",
-            "Gunpowder",
-            "Magma Ore",
-            "Fish Tail"
-        }
-    },
-
-    ["Sea 2"] = {
-        Bosses = {
-            "Don Swan",
-            "Smoke Admiral",
-            "Cursed Captain",
-            "Darkbeard",
-            "Order",
-            "Diamond",
-            "Jeremy"
-        },
-
-        Materials = {
-            "Radioactive Material",
-            "Mystic Droplet",
-            "Magma Ore",
-            "Fish Tail",
-            "Mini Tusk"
-        }
-    },
-
-    ["Sea 3"] = {
-        Bosses = {
-            "Stone",
-            "Hydra Enforcer",
-            "Island Empress",
-            "Kilo Admiral",
-            "Captain Elephant",
-            "Beautiful Pirate",
-            "Cake Queen",
-            "Longma",
-            "Soul Reaper",
-            "Cursed Skeleton"
-        },
-
-        Materials = {
-            "Dragon Scale",
-            "Cursed Dual Katana",
-            "Vampire Fang",
-            "Gunpowder",
-            "Scrap Metal"
-        }
-    }
-}
-
---------------------------------------------------
--- SEA DETECTION
---------------------------------------------------
-
-local SeaPlaceIds = {
-    [2753915549] = "Sea 1",
-    [4442272183] = "Sea 2",
-    [7449423635] = "Sea 3"
-}
-
-local function getCurrentSea()
-    return SeaPlaceIds[game.PlaceId] or "Unknown"
-end
-
-local function getSeaData()
-    return SeaData[State.CurrentSea]
-end
-
-local function getBossList()
-    local data = getSeaData()
-
-    if not data then
-        return {}
-    end
-
-    return data.Bosses or {}
-end
-
-local function getMaterialList()
-    local data = getSeaData()
-
-    if not data then
-        return {}
-    end
-
-    return data.Materials or {}
-end
-
-State.CurrentSea = getCurrentSea()
-
---------------------------------------------------
--- SAFE FEATURE HANDLER
---------------------------------------------------
-
-local function SafeFeature(name, callback)
-    task.spawn(function()
-        local ok, err = pcall(callback)
-
-        if not ok then
-            warn("[SysxHub] " .. name .. " error:", err)
+            object.Position = UDim2.new(
+                startPosition.X.Scale,
+                startPosition.X.Offset + delta.X,
+                startPosition.Y.Scale,
+                startPosition.Y.Offset + delta.Y
+            )
         end
     end)
 end
 
---------------------------------------------------
--- GUI
---------------------------------------------------
-
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "SysxHub"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.IgnoreGuiInset = true
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-ScreenGui.DisplayOrder = 999
-ScreenGui.Parent = PlayerGui
-
---------------------------------------------------
--- UI HELPERS
---------------------------------------------------
-
-local function corner(object, radius)
-    local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0, radius or 8)
-    c.Parent = object
-    return c
-end
-
-local function stroke(object, color, thickness)
-    local s = Instance.new("UIStroke")
-    s.Color = color
-    s.Thickness = thickness or 1
-    s.Transparency = 0.25
-    s.Parent = object
-    return s
-end
-
-local function padding(object, value)
-    local p = Instance.new("UIPadding")
-
-    p.PaddingTop = UDim.new(0, value)
-    p.PaddingBottom = UDim.new(0, value)
-    p.PaddingLeft = UDim.new(0, value)
-    p.PaddingRight = UDim.new(0, value)
-
-    p.Parent = object
-end
-
-local function makeText(parent, text, size, color, bold)
-    local label = Instance.new("TextLabel")
-
-    label.BackgroundTransparency = 1
-    label.Text = text
-    label.TextColor3 = color or CONFIG.Theme.Text
-    label.TextSize = size or 14
-    label.Font = bold and Enum.Font.GothamBold or Enum.Font.Gotham
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.Parent = parent
-
-    return label
-end
-
-local function tween(object, properties, duration)
-    local ok = pcall(function()
-        TweenService:Create(
-            object,
-            TweenInfo.new(
-                duration or 0.2,
-                Enum.EasingStyle.Quart,
-                Enum.EasingDirection.Out
-            ),
-            properties
-        ):Play()
-    end)
-
-    return ok
-end
-
---------------------------------------------------
--- MAIN
---------------------------------------------------
-
-local Main = Instance.new("Frame")
-Main.Name = "Main"
-
-Main.Size = UDim2.new(0, 720, 0, 480)
-Main.Position = UDim2.new(0.5, -360, 0.5, -240)
-
-Main.BackgroundColor3 = CONFIG.Theme.Background
-Main.BorderSizePixel = 0
-
-Main.Parent = ScreenGui
-
-corner(Main, 14)
-stroke(Main, CONFIG.Theme.Border, 1)
-
---------------------------------------------------
--- HEADER
---------------------------------------------------
-
-local Header = Instance.new("Frame")
-
-Header.Size = UDim2.new(1, 0, 0, 58)
-Header.BackgroundColor3 = CONFIG.Theme.Secondary
-Header.BorderSizePixel = 0
-
-Header.Parent = Main
-
-corner(Header, 14)
-
-local Title = makeText(
-    Header,
-    "SysxHub",
-    21,
-    CONFIG.Theme.Text,
-    true
-)
-
-Title.Position = UDim2.new(0, 18, 0, 8)
-Title.Size = UDim2.new(0, 250, 0, 24)
-
-local Version = makeText(
-    Header,
-    "v" .. CONFIG.Version,
-    11,
-    CONFIG.Theme.Muted,
-    false
-)
-
-Version.Position = UDim2.new(0, 19, 0, 33)
-Version.Size = UDim2.new(0, 100, 0, 16)
-
-local SeaLabel = makeText(
-    Header,
-    "Current Sea: " .. State.CurrentSea,
-    12,
-    CONFIG.Theme.Muted,
-    false
-)
-
-SeaLabel.Position = UDim2.new(1, -210, 0, 21)
-SeaLabel.Size = UDim2.new(0, 160, 0, 18)
-SeaLabel.TextXAlignment = Enum.TextXAlignment.Right
-
---------------------------------------------------
--- CLOSE
---------------------------------------------------
-
-local Close = Instance.new("TextButton")
-
-Close.Size = UDim2.new(0, 38, 0, 32)
-Close.Position = UDim2.new(1, -45, 0, 13)
-
-Close.BackgroundColor3 = CONFIG.Theme.Card
-Close.Text = "×"
-
-Close.TextSize = 20
-Close.TextColor3 = CONFIG.Theme.Text
-Close.Font = Enum.Font.GothamBold
-
-Close.BorderSizePixel = 0
-Close.Parent = Main
-
-corner(Close, 8)
-
---------------------------------------------------
--- SIDEBAR
---------------------------------------------------
-
-local Sidebar = Instance.new("Frame")
-
-Sidebar.Position = UDim2.new(0, 0, 0, 58)
-Sidebar.Size = UDim2.new(0, 175, 1, -58)
-
-Sidebar.BackgroundColor3 = CONFIG.Theme.Secondary
-Sidebar.BorderSizePixel = 0
-
-Sidebar.Parent = Main
-
-padding(Sidebar, 10)
-
-local SideLayout = Instance.new("UIListLayout")
-
-SideLayout.Padding = UDim.new(0, 6)
-SideLayout.SortOrder = Enum.SortOrder.LayoutOrder
-
-SideLayout.Parent = Sidebar
-
---------------------------------------------------
--- CONTENT
---------------------------------------------------
-
-local Content = Instance.new("Frame")
-
-Content.Position = UDim2.new(0, 175, 0, 58)
-Content.Size = UDim2.new(1, -175, 1, -58)
-
-Content.BackgroundTransparency = 1
-Content.Parent = Main
-
---------------------------------------------------
--- PAGES
---------------------------------------------------
-
-local Pages = {}
-local TabButtons = {}
-
-local function createPage(name)
-
-    local Page = Instance.new("ScrollingFrame")
-
-    Page.Name = name
-    Page.Size = UDim2.new(1, 0, 1, 0)
-
-    Page.BackgroundTransparency = 1
-    Page.BorderSizePixel = 0
-
-    Page.ScrollBarThickness = 3
-    Page.ScrollBarImageColor3 = CONFIG.Theme.Accent
-
-    Page.Visible = false
-
-    Page.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    Page.CanvasSize = UDim2.new(0, 0, 0, 0)
-
-    Page.Parent = Content
-
-    padding(Page, 15)
-
-    local layout = Instance.new("UIListLayout")
-
-    layout.Padding = UDim.new(0, 10)
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
-
-    layout.Parent = Page
-
-    Pages[name] = Page
-
-    return Page
-end
-
-local function selectTab(name)
-
-    for tabName, page in pairs(Pages) do
-        page.Visible = tabName == name
+MakeDraggable(Main, TopBar)
+MakeDraggable(Floating)
+
+--// FEATURE HELPERS
+local ActiveConnections = {}
+
+local function SetState(tab, name, value)
+    if not State[tab] then
+        State[tab] = {}
     end
 
-    for tabName, button in pairs(TabButtons) do
+    State[tab][name] = value
+end
 
-        if tabName == name then
+local function GetState(tab, name)
+    if not State[tab] then
+        return nil
+    end
 
-            button.BackgroundColor3 = CONFIG.Theme.Accent
-            button.TextColor3 = CONFIG.Theme.Text
+    return State[tab][name]
+end
 
+local function DisconnectFeature(tab, name)
+    if ActiveConnections[tab]
+        and ActiveConnections[tab][name] then
+
+        local connection = ActiveConnections[tab][name]
+
+        if typeof(connection) == "RBXScriptConnection" then
+            connection:Disconnect()
+        end
+
+        ActiveConnections[tab][name] = nil
+    end
+end
+
+--// CLEAR CONTENT
+local function ClearContent()
+    for _, child in ipairs(ContentScroll:GetChildren()) do
+        if child:IsA("GuiObject") then
+            child:Destroy()
+        end
+    end
+end
+
+--// SECTION
+local function AddSection(text)
+    local Section = Create("Frame", {
+        Size = UDim2.new(1, -4, 0, 30),
+        BackgroundTransparency = 1,
+    }, ContentScroll)
+
+    Create("TextLabel", {
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 1, 0),
+        Font = Enum.Font.GothamBold,
+        Text = text,
+        TextSize = 11,
+        TextColor3 = COLORS.Purple,
+        TextXAlignment = Enum.TextXAlignment.Left,
+    }, Section)
+end
+
+--// TOGGLE
+local function AddToggle(tab, name, callback)
+    local Holder = Create("Frame", {
+        Name = name,
+        Size = UDim2.new(1, -4, 0, 48),
+        BackgroundColor3 = COLORS.Panel,
+    }, ContentScroll)
+
+    Corner(Holder, 9)
+
+    Create("TextLabel", {
+        BackgroundTransparency = 1,
+        Position = UDim2.fromOffset(13, 0),
+        Size = UDim2.new(1, -75, 1, 0),
+        Font = Enum.Font.Gotham,
+        Text = name,
+        TextSize = 11,
+        TextColor3 = COLORS.White,
+        TextXAlignment = Enum.TextXAlignment.Left,
+    }, Holder)
+
+    local Switch = Create("TextButton", {
+        BackgroundColor3 = COLORS.DarkGray,
+        Position = UDim2.new(1, -55, 0.5, -12),
+        Size = UDim2.fromOffset(43, 24),
+        Text = "",
+        AutoButtonColor = false,
+    }, Holder)
+
+    Corner(Switch, 12)
+
+    local Knob = Create("Frame", {
+        BackgroundColor3 = COLORS.White,
+        Position = UDim2.fromOffset(3, 3),
+        Size = UDim2.fromOffset(18, 18),
+    }, Switch)
+
+    Corner(Knob, 20)
+
+    local enabled = GetState(tab, name) == true
+
+    local function Update(value)
+        enabled = value
+        SetState(tab, name, enabled)
+
+        if enabled then
+            Tween(Switch, {
+                BackgroundColor3 = COLORS.Purple,
+            }, 0.15)
+
+            Tween(Knob, {
+                Position = UDim2.new(1, -21, 0, 3),
+            }, 0.15)
         else
+            Tween(Switch, {
+                BackgroundColor3 = COLORS.DarkGray,
+            }, 0.15)
 
-            button.BackgroundColor3 = CONFIG.Theme.Card
-            button.TextColor3 = CONFIG.Theme.Muted
-
+            Tween(Knob, {
+                Position = UDim2.fromOffset(3, 3),
+            }, 0.15)
         end
 
+        if callback then
+            task.spawn(function()
+                pcall(callback, enabled)
+            end)
+        end
     end
 
-end
-
-local function createTab(name)
-
-    local Button = Instance.new("TextButton")
-
-    Button.Name = name
-    Button.Size = UDim2.new(1, 0, 0, 38)
-
-    Button.BackgroundColor3 = CONFIG.Theme.Card
-
-    Button.Text = name
-    Button.TextColor3 = CONFIG.Theme.Muted
-
-    Button.TextSize = 13
-    Button.Font = Enum.Font.GothamMedium
-
-    Button.BorderSizePixel = 0
-
-    Button.Parent = Sidebar
-
-    corner(Button, 8)
-
-    local Page = createPage(name)
-
-    Button.MouseButton1Click:Connect(function()
-        selectTab(name)
+    Switch.MouseButton1Click:Connect(function()
+        Update(not enabled)
     end)
 
-    TabButtons[name] = Button
+    Update(enabled)
 
-    return Page
+    return Holder
 end
 
---------------------------------------------------
--- SECTION
---------------------------------------------------
+--// BUTTON
+local function AddButton(tab, name, callback)
+    local Button = Create("TextButton", {
+        Name = name,
+        Size = UDim2.new(1, -4, 0, 43),
+        BackgroundColor3 = COLORS.Panel,
+        Font = Enum.Font.Gotham,
+        Text = name,
+        TextSize = 11,
+        TextColor3 = COLORS.White,
+        AutoButtonColor = false,
+    }, ContentScroll)
 
-local function createSection(parent, title)
+    Corner(Button, 9)
 
-    local Frame = Instance.new("Frame")
+    Button.MouseEnter:Connect(function()
+        Tween(Button, {
+            BackgroundColor3 = COLORS.Panel2,
+        }, 0.12)
+    end)
 
-    Frame.Size = UDim2.new(1, 0, 0, 36)
-    Frame.BackgroundTransparency = 1
-
-    Frame.Parent = parent
-
-    local Label = makeText(
-        Frame,
-        title,
-        15,
-        CONFIG.Theme.Accent,
-        true
-    )
-
-    Label.Size = UDim2.new(1, 0, 1, 0)
-
-    return Frame
-end
-
---------------------------------------------------
--- TOGGLE
---------------------------------------------------
-
-local function createToggle(parent, text, callback)
-
-    local Button = Instance.new("TextButton")
-
-    Button.Size = UDim2.new(1, 0, 0, 44)
-
-    Button.BackgroundColor3 = CONFIG.Theme.Card
-
-    Button.Text = ""
-    Button.BorderSizePixel = 0
-
-    Button.Parent = parent
-
-    corner(Button, 8)
-
-    local Label = makeText(
-        Button,
-        text,
-        13,
-        CONFIG.Theme.Text,
-        false
-    )
-
-    Label.Position = UDim2.new(0, 14, 0, 0)
-    Label.Size = UDim2.new(1, -80, 1, 0)
-
-    local Status = makeText(
-        Button,
-        "OFF",
-        12,
-        CONFIG.Theme.Muted,
-        true
-    )
-
-    Status.Position = UDim2.new(1, -55, 0, 0)
-    Status.Size = UDim2.new(0, 45, 1, 0)
-
-    Status.TextXAlignment = Enum.TextXAlignment.Center
-
-    local enabled = false
+    Button.MouseLeave:Connect(function()
+        Tween(Button, {
+            BackgroundColor3 = COLORS.Panel,
+        }, 0.12)
+    end)
 
     Button.MouseButton1Click:Connect(function()
-
-        enabled = not enabled
-
-        Status.Text = enabled and "ON" or "OFF"
-
-        Status.TextColor3 =
-            enabled
-            and CONFIG.Theme.Accent
-            or CONFIG.Theme.Muted
-
-        SafeFeature(text, function()
-            callback(enabled)
-        end)
-
+        if callback then
+            task.spawn(function()
+                pcall(callback)
+            end)
+        end
     end)
 
     return Button
 end
 
---------------------------------------------------
--- INFO
---------------------------------------------------
+--// DROPDOWN
+local function AddDropdown(tab, name, options, callback)
+    local Holder = Create("Frame", {
+        Name = name,
+        Size = UDim2.new(1, -4, 0, 48),
+        BackgroundColor3 = COLORS.Panel,
+        ClipsDescendants = false,
+    }, ContentScroll)
 
-local function createInfo(parent, title, value)
+    Corner(Holder, 9)
 
-    local Frame = Instance.new("Frame")
+    local Button = Create("TextButton", {
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, -12, 1, 0),
+        Position = UDim2.fromOffset(6, 0),
+        Font = Enum.Font.Gotham,
+        Text = name .. ": " .. tostring(options[1] or "None"),
+        TextSize = 11,
+        TextColor3 = COLORS.White,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        AutoButtonColor = false,
+    }, Holder)
 
-    Frame.Size = UDim2.new(1, 0, 0, 44)
-
-    Frame.BackgroundColor3 = CONFIG.Theme.Card
-    Frame.BorderSizePixel = 0
-
-    Frame.Parent = parent
-
-    corner(Frame, 8)
-
-    local A = makeText(
-        Frame,
-        title,
-        13,
-        CONFIG.Theme.Text,
-        false
-    )
-
-    A.Position = UDim2.new(0, 14, 0, 0)
-    A.Size = UDim2.new(0.5, 0, 1, 0)
-
-    local B = makeText(
-        Frame,
-        value,
-        12,
-        CONFIG.Theme.Muted,
-        false
-    )
-
-    B.Position = UDim2.new(0.5, 0, 0, 0)
-    B.Size = UDim2.new(0.5, -14, 1, 0)
-
-    B.TextXAlignment = Enum.TextXAlignment.Right
-
-    return Frame, B
-end
-
---------------------------------------------------
--- DROPDOWN
---------------------------------------------------
-
-local function createDropdown(parent, title, getOptions, callback)
-
-    local Frame = Instance.new("Frame")
-
-    Frame.Size = UDim2.new(1, 0, 0, 44)
-
-    Frame.BackgroundColor3 = CONFIG.Theme.Card
-    Frame.BorderSizePixel = 0
-
-    Frame.ClipsDescendants = true
-
-    Frame.Parent = parent
-
-    corner(Frame, 8)
-
-    local Button = Instance.new("TextButton")
-
-    Button.Size = UDim2.new(1, 0, 0, 44)
-
-    Button.BackgroundTransparency = 1
-
-    Button.Text = ""
-
-    Button.Parent = Frame
-
-    local Label = makeText(
-        Frame,
-        title,
-        13,
-        CONFIG.Theme.Text,
-        false
-    )
-
-    Label.Position = UDim2.new(0, 14, 0, 0)
-    Label.Size = UDim2.new(0.45, 0, 0, 44)
-
-    local Selected = makeText(
-        Frame,
-        "None",
-        12,
-        CONFIG.Theme.Muted,
-        false
-    )
-
-    Selected.Position = UDim2.new(0.45, 0, 0, 0)
-    Selected.Size = UDim2.new(0.55, -14, 0, 44)
-
-    Selected.TextXAlignment = Enum.TextXAlignment.Right
-
-    local open = false
-
-    local function clearOptions()
-
-        for _, child in ipairs(Frame:GetChildren()) do
-
-            if child:GetAttribute("SysxOption") then
-                child:Destroy()
-            end
-
-        end
-
-    end
+    local opened = false
+    local current = options[1]
 
     Button.MouseButton1Click:Connect(function()
+        opened = not opened
 
-        open = not open
-
-        clearOptions()
-
-        if not open then
-
-            Frame.Size = UDim2.new(1, 0, 0, 44)
-
-            return
-
-        end
-
-        local options = {}
-
-        local ok = pcall(function()
-            options = getOptions() or {}
-        end)
-
-        if not ok then
-            options = {}
-        end
-
-        local maxOptions = math.min(#options, 8)
-
-        Frame.Size = UDim2.new(
-            1,
-            0,
-            0,
-            44 + (maxOptions * 34)
-        )
-
-        for i = 1, maxOptions do
-
-            local option = options[i]
-
-            local Option = Instance.new("TextButton")
-
-            Option:SetAttribute("SysxOption", true)
-
-            Option.Size = UDim2.new(1, -20, 0, 30)
-
-            Option.Position = UDim2.new(
+        if opened then
+            Holder.Size = UDim2.new(
+                1, -4,
                 0,
-                10,
-                0,
-                46 + ((i - 1) * 34)
+                math.min(48 + (#options * 34), 220)
             )
-
-            Option.BackgroundColor3 = CONFIG.Theme.Secondary
-
-            Option.Text = tostring(option)
-
-            Option.TextColor3 = CONFIG.Theme.Text
-            Option.TextSize = 11
-            Option.Font = Enum.Font.Gotham
-
-            Option.BorderSizePixel = 0
-
-            Option.Parent = Frame
-
-            corner(Option, 6)
-
-            Option.MouseButton1Click:Connect(function()
-
-                Selected.Text = tostring(option)
-
-                SafeFeature(title, function()
-                    callback(option)
-                end)
-
-                open = false
-
-                clearOptions()
-
-                Frame.Size = UDim2.new(
-                    1,
-                    0,
-                    0,
-                    44
-                )
-
-            end)
-
+        else
+            Holder.Size = UDim2.new(1, -4, 0, 48)
         end
-
     end)
 
-    return Frame
+    for index, option in ipairs(options) do
+        local Option = Create("TextButton", {
+            BackgroundColor3 = COLORS.Panel2,
+            Position = UDim2.new(0, 7, 0, 48 + ((index - 1) * 34)),
+            Size = UDim2.new(1, -14, 0, 29),
+            Font = Enum.Font.Gotham,
+            Text = tostring(option),
+            TextSize = 10,
+            TextColor3 = COLORS.Gray,
+            AutoButtonColor = false,
+            Visible = true,
+        }, Holder)
+
+        Corner(Option, 6)
+
+        Option.MouseButton1Click:Connect(function()
+            current = option
+            Button.Text = name .. ": " .. tostring(option)
+
+            opened = false
+            Holder.Size = UDim2.new(1, -4, 0, 48)
+
+            SetState(tab, name, option)
+
+            if callback then
+                callback(option)
+            end
+        end)
+    end
+
+    return Holder
 end
 
---------------------------------------------------
--- TABS
---------------------------------------------------
+--// SLIDER
+local function AddSlider(tab, name, min, max, default, callback)
+    local Holder = Create("Frame", {
+        Name = name,
+        Size = UDim2.new(1, -4, 0, 62),
+        BackgroundColor3 = COLORS.Panel,
+    }, ContentScroll)
 
-local DiscordPage = createTab("Discord")
-local FarmPage = createTab("Farm")
-local QuestPage = createTab("Quest / Items")
-local FruitPage = createTab("Fruit / Raid")
-local FishingPage = createTab("Fishing")
-local StatusPage = createTab("Status")
-local PvPPage = createTab("PvP")
-local StatsPage = createTab("Stats")
-local MiscPage = createTab("Misc")
+    Corner(Holder, 9)
 
---------------------------------------------------
--- DISCORD
---------------------------------------------------
+    local Value = default or min
 
-createSection(
-    DiscordPage,
-    "SysxHub Community"
-)
+    Create("TextLabel", {
+        BackgroundTransparency = 1,
+        Position = UDim2.fromOffset(13, 7),
+        Size = UDim2.new(1, -26, 0, 18),
+        Font = Enum.Font.Gotham,
+        Text = name .. " : " .. tostring(Value),
+        TextSize = 11,
+        TextColor3 = COLORS.White,
+        TextXAlignment = Enum.TextXAlignment.Left,
+    }, Holder)
 
-createInfo(
-    DiscordPage,
-    "Discord",
-    CONFIG.Discord
-)
+    local Bar = Create("Frame", {
+        BackgroundColor3 = COLORS.DarkGray,
+        Position = UDim2.new(0, 13, 0, 37),
+        Size = UDim2.new(1, -26, 0, 7),
+    }, Holder)
 
-local DiscordButton = Instance.new("TextButton")
+    Corner(Bar, 7)
 
-DiscordButton.Size = UDim2.new(1, 0, 0, 44)
+    local Fill = Create("Frame", {
+        BackgroundColor3 = COLORS.Purple,
+        Size = UDim2.new(
+            (Value - min) / math.max(max - min, 1),
+            0,
+            1,
+            0
+        ),
+    }, Bar)
 
-DiscordButton.BackgroundColor3 = CONFIG.Theme.Accent
+    Corner(Fill, 7)
 
-DiscordButton.Text = "Copy Discord Link"
+    local dragging = false
 
-DiscordButton.TextColor3 = CONFIG.Theme.Text
-DiscordButton.TextSize = 13
-DiscordButton.Font = Enum.Font.GothamBold
+    local function Update(inputX)
+        local percent = math.clamp(
+            (inputX - Bar.AbsolutePosition.X)
+                / math.max(Bar.AbsoluteSize.X, 1),
+            0,
+            1
+        )
 
-DiscordButton.BorderSizePixel = 0
+        Value = math.floor(
+            min + ((max - min) * percent)
+        )
 
-DiscordButton.Parent = DiscordPage
+        Fill.Size = UDim2.new(percent, 0, 1, 0)
 
-corner(DiscordButton, 8)
+        local label = Holder:FindFirstChildOfClass("TextLabel")
 
-DiscordButton.MouseButton1Click:Connect(function()
-
-    pcall(function()
-
-        if setclipboard then
-            setclipboard(CONFIG.Discord)
+        if label then
+            label.Text = name .. " : " .. tostring(Value)
         end
 
+        SetState(tab, name, Value)
+
+        if callback then
+            callback(Value)
+        end
+    end
+
+    Bar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+
+            dragging = true
+            Update(input.Position.X)
+        end
     end)
 
-end)
+    UserInputService.InputChanged:Connect(function(input)
+        if not dragging then
+            return
+        end
 
---------------------------------------------------
--- FARM
---------------------------------------------------
+        if input.UserInputType == Enum.UserInputType.MouseMovement
+            or input.UserInputType == Enum.UserInputType.Touch then
 
-createSection(
-    FarmPage,
-    "Level Farming"
-)
+            Update(input.Position.X)
+        end
+    end)
 
-createToggle(
-    FarmPage,
-    "Auto Farm Level",
-    function(value)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
 
-        State.AutoFarmLevel = value
+            dragging = false
+        end
+    end)
 
-        -- Auto Haki mengikuti Auto Farm Level
-        State.AutoHaki = value
+    return Holder
+end
 
-    end
-)
+--// TAB BUTTON
+local TabButtons = {}
 
-createToggle(
-    FarmPage,
-    "Auto Quest",
-    function(value)
-        State.AutoQuest = value
-    end
-)
+local function CreateTabButton(name)
+    local Button = Create("TextButton", {
+        Name = name,
+        Size = UDim2.new(1, 0, 0, 38),
+        BackgroundColor3 = COLORS.Sidebar,
+        Font = Enum.Font.Gotham,
+        Text = name,
+        TextSize = 10,
+        TextColor3 = COLORS.Gray,
+        AutoButtonColor = false,
+    }, SidebarList)
 
-createToggle(
-    FarmPage,
-    "Auto Kill Nearest",
-    function(value)
-        State.AutoKill = value
-    end
-)
+    Corner(Button, 8)
 
---------------------------------------------------
--- BOSS
---------------------------------------------------
+    Button.MouseButton1Click:Connect(function()
+        State.CurrentTab = name
 
-createSection(
-    FarmPage,
-    "Boss"
-)
+        for tabName, tabButton in pairs(TabButtons) do
+            if tabName == name then
+                Tween(tabButton, {
+                    BackgroundColor3 = COLORS.Purple2,
+                    TextColor3 = COLORS.White,
+                }, 0.15)
+            else
+                Tween(tabButton, {
+                    BackgroundColor3 = COLORS.Sidebar,
+                    TextColor3 = COLORS.Gray,
+                }, 0.15)
+            end
+        end
 
-createDropdown(
-    FarmPage,
-    "Select Boss",
-    getBossList,
-    function(value)
-        State.SelectedBoss = value
-    end
-)
+        RenderTab(name)
+    end)
 
-createToggle(
-    FarmPage,
-    "Auto Farm Boss",
-    function(value)
-        State.AutoFarmBoss = value
-    end
-)
+    TabButtons[name] = Button
 
---------------------------------------------------
--- MATERIAL
---------------------------------------------------
+    return Button
+end
 
-createSection(
-    FarmPage,
-    "Material"
-)
-
-createDropdown(
-    FarmPage,
-    "Select Material",
-    getMaterialList,
-    function(value)
-        State.SelectedMaterial = value
-    end
-)
-
-createToggle(
-    FarmPage,
-    "Auto Farm Material",
-    function(value)
-        State.AutoFarmMaterial = value
-    end
-)
-
---------------------------------------------------
--- QUEST / ITEMS
---------------------------------------------------
-
-createSection(
-    QuestPage,
-    "Weapon Quest"
-)
-
-local ItemNames = {
-
-    {
-        "Auto CDK",
-        "CDK"
-    },
-
-    {
-        "Auto Dark Dagger",
-        "DarkDagger"
-    },
-
-    {
-        "Auto Soul Guitar",
-        "SoulGuitar"
-    },
-
-    {
-        "Auto Yama",
-        "Yama"
-    },
-
-    {
-        "Auto Tushita",
-        "Tushita"
-    },
-
-    {
-        "Auto Buddy Sword",
-        "BuddySword"
-    }
-
+--// TABS
+local Tabs = {
+    "FARM",
+    "SEA",
+    "QUESTS / ITEMS",
+    "FRUIT / RAID",
+    "FISHING",
+    "STATUS",
+    "PVP",
+    "STATS",
+    "MISC",
 }
 
-for _, item in ipairs(ItemNames) do
-
-    createToggle(
-        QuestPage,
-        item[1],
-        function(value)
-
-            State.Items[item[2]] = value
-
-        end
-    )
-
+for _, tab in ipairs(Tabs) do
+    CreateTabButton(tab)
 end
 
-createSection(
-    QuestPage,
-    "Special Quest"
-)
+--// MOON PHASE
+local function GetMoonPhase()
+    local day = os.date("*t").day
+    local phases = {
+        "New Moon",
+        "Waxing Crescent",
+        "First Quarter",
+        "Waxing Gibbous",
+        "Full Moon",
+        "Waning Gibbous",
+        "Last Quarter",
+        "Waning Crescent",
+    }
 
-createToggle(
-    QuestPage,
-    "Auto Kill Indra",
-    function(value)
-
-        State.Items.KillIndra = value
-
-    end
-)
-
-createToggle(
-    QuestPage,
-    "Auto Spawn Dough King",
-    function(value)
-
-        State.Items.SpawnDoughKing = value
-
-    end
-)
-
---------------------------------------------------
--- FRUIT / RAID
---------------------------------------------------
-
-createSection(
-    FruitPage,
-    "Fruit"
-)
-
-createToggle(
-    FruitPage,
-    "Auto Collect Fruit",
-    function(value)
-
-        State.AutoCollectFruit = value
-
-    end
-)
-
-createToggle(
-    FruitPage,
-    "Fruit Sniper",
-    function(value)
-
-        State.FruitSniper = value
-
-    end
-)
-
-createSection(
-    FruitPage,
-    "Raid"
-)
-
-createToggle(
-    FruitPage,
-    "Auto Raid",
-    function(value)
-
-        State.AutoRaid = value
-
-    end
-)
-
---------------------------------------------------
--- FISHING
---------------------------------------------------
-
-createSection(
-    FishingPage,
-    "Fishing"
-)
-
-createToggle(
-    FishingPage,
-    "Auto Fishing",
-    function(value)
-
-        State.AutoFishing = value
-
-    end
-)
-
-createToggle(
-    FishingPage,
-    "Auto Catch",
-    function(value)
-
-        State.AutoFishing = value
-
-    end
-)
-
---------------------------------------------------
--- STATUS
---------------------------------------------------
-
-createSection(
-    StatusPage,
-    "Current Session"
-)
-
-local CurrentSeaInfo, CurrentSeaValue =
-    createInfo(
-        StatusPage,
-        "Current Sea",
-        State.CurrentSea
-    )
-
-createInfo(
-    StatusPage,
-    "Place ID",
-    tostring(game.PlaceId)
-)
-
-local function updateSeaUI()
-
-    State.CurrentSea = getCurrentSea()
-
-    CurrentSeaValue.Text = State.CurrentSea
-
-    SeaLabel.Text =
-        "Current Sea: "
-        .. State.CurrentSea
-
+    return phases[((day - 1) % #phases) + 1]
 end
 
-updateSeaUI()
+--// RENDER
+function RenderTab(tab)
+    ClearContent()
 
---------------------------------------------------
--- PVP
---------------------------------------------------
+    ContentTitle.Text = tab
 
-createSection(
-    PvPPage,
-    "PvP"
-)
+    if tab == "FARM" then
 
-createToggle(
-    PvPPage,
-    "PvP Mode",
-    function(value)
+        AddSection("FARM")
 
-        State.PvPMode = value
-
-    end
-)
-
-createToggle(
-    PvPPage,
-    "ESP Players",
-    function(value)
-
-        State.ESP = value
-
-    end
-)
-
-createToggle(
-    PvPPage,
-    "Aimbot",
-    function(value)
-
-        State.Aimbot = value
-
-    end
-)
-
-createInfo(
-    PvPPage,
-    "Current Target",
-    "Auto"
-)
-
---------------------------------------------------
--- STATS
---------------------------------------------------
-
-createSection(
-    StatsPage,
-    "Stats"
-)
-
-createInfo(
-    StatsPage,
-    "Melee",
-    "Auto"
-)
-
-createInfo(
-    StatsPage,
-    "Defense",
-    "Auto"
-)
-
-createInfo(
-    StatsPage,
-    "Sword",
-    "Auto"
-)
-
-createInfo(
-    StatsPage,
-    "Gun",
-    "Auto"
-)
-
---------------------------------------------------
--- MISC
---------------------------------------------------
-
-createSection(
-    MiscPage,
-    "Utilities"
-)
-
-createToggle(
-    MiscPage,
-    "Anti AFK",
-    function(value)
-
-        State.AntiAFK = value
-
-    end
-)
-
---------------------------------------------------
--- REJOIN
---------------------------------------------------
-
-local Rejoin = Instance.new("TextButton")
-
-Rejoin.Size = UDim2.new(1, 0, 0, 44)
-
-Rejoin.BackgroundColor3 = CONFIG.Theme.Card
-
-Rejoin.Text = "Rejoin Server"
-
-Rejoin.TextColor3 = CONFIG.Theme.Text
-Rejoin.TextSize = 13
-Rejoin.Font = Enum.Font.Gotham
-
-Rejoin.BorderSizePixel = 0
-
-Rejoin.Parent = MiscPage
-
-corner(Rejoin, 8)
-
-Rejoin.MouseButton1Click:Connect(function()
-
-    pcall(function()
-
-        TeleportService:Teleport(
-            game.PlaceId,
-            Player
+        AddDropdown(
+            "Farm",
+            "Select Tool",
+            {"Melee", "Sword", "Gun", "Blox Fruit"},
+            function(value)
+                Notify("SUCCESS", "Tool: " .. tostring(value), "SUCCESS")
+            end
         )
 
-    end)
+        AddToggle("Farm", "Auto Farm Level")
+        AddToggle("Farm", "Auto Farm Nearest")
+        AddToggle("Farm", "Auto Accept Quest")
+        AddToggle("Farm", "Auto Quest Combat")
+        AddToggle("Farm", "Auto Haki")
+        AddToggle("Farm", "Auto Ken")
+        AddToggle("Farm", "Auto Attack")
 
-end)
+        AddSection("CHEST")
 
---------------------------------------------------
--- DRAGGING
---------------------------------------------------
+        AddToggle("Chest", "Auto Chest [Tween]")
+        AddToggle("Chest", "Stop When Get Item in Chest")
 
-local dragging = false
-local dragStart = nil
-local startPosition = nil
+        AddSection("BOSS")
 
-Header.InputBegan:Connect(function(input)
-
-    if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-
-        dragging = true
-
-        dragStart = input.Position
-        startPosition = Main.Position
-
-        input.Changed:Connect(function()
-
-            if input.UserInputState
-                == Enum.UserInputState.End then
-
-                dragging = false
-
-            end
-
+        AddButton("Boss", "Update Boss List", function()
+            Notify("SUCCESS", "Boss list updated.", "SUCCESS")
         end)
 
-    end
+        AddDropdown(
+            "Boss",
+            "Select Boss",
+            {
+                "Boss 1",
+                "Boss 2",
+                "Boss 3",
+                "Boss 4",
+            }
+        )
 
+        AddToggle("Boss", "Auto Kill Selected Boss")
+        AddToggle("Boss", "Auto Farm All Bosses")
+        AddToggle("Boss", "Take Boss Quest")
+
+        AddSection("MATERIAL")
+
+        AddDropdown(
+            "Material",
+            "Select Material",
+            {
+                "Bones",
+                "Leather",
+                "Scrap Metal",
+                "Angel Wings",
+                "Fish Tail",
+                "Mystic Droplet",
+                "Gunpowder",
+                "Demonic Wisp",
+            }
+        )
+
+        AddToggle("Material", "Auto Farm Material")
+
+        AddSection("UI SETTINGS")
+
+        AddDropdown(
+            "Farm",
+            "UI Scale",
+            {"75%", "85%", "90%", "100%"},
+            function(value)
+                local number = tonumber(
+                    string.gsub(value, "%%", "")
+                )
+
+                if number then
+                    State.Scale = number / 100
+
+                    Main.Size = UDim2.fromOffset(
+                        760 * State.Scale,
+                        500 * State.Scale
+                    )
+                end
+            end
+        )
+
+    elseif tab == "SEA" then
+
+        AddSection("SEA FARM")
+
+        AddDropdown(
+            "Sea",
+            "Enemies",
+            {
+                "Sea Enemy",
+                "Sea Beast",
+                "Shark",
+                "Terrorshark",
+            }
+        )
+
+        AddToggle("Sea", "Auto Farm Sea")
+        AddToggle("Sea", "Auto Destroy Boats")
+        AddToggle("Sea", "Buy Boat for Sea Farm")
+        AddToggle("Sea", "Auto No-Clip Boat")
+        AddToggle("Sea", "Auto Destroy Rocks")
+
+        AddSection("BOAT SETTINGS")
+
+        AddSlider(
+            "Sea",
+            "Boat Height",
+            0,
+            200,
+            50
+        )
+
+        AddSlider(
+            "Sea",
+            "Boat Speed",
+            10,
+            300,
+            100
+        )
+
+    elseif tab == "QUESTS / ITEMS" then
+
+        AddSection("QUEST")
+
+        AddButton(
+            "Quest",
+            "Start Secret Quest",
+            function()
+                Notify(
+                    "INFO",
+                    "Quest request sent to the game server.",
+                    "INFO"
+                )
+            end
+        )
+
+        AddDropdown(
+            "Quest",
+            "Island",
+            {
+                "Starter Island",
+                "Desert",
+                "Frozen Village",
+                "Marine Fortress",
+                "Skylands",
+                "Fontain City",
+            }
+        )
+
+        AddToggle("Quest", "Auto Get Yama")
+        AddToggle("Quest", "Auto Get Tushita")
+        AddToggle("Quest", "Auto Get Buddy Sword")
+        AddToggle("Quest", "Auto Get Soul Guitar")
+        AddToggle("Quest", "Kill Cake Prince")
+        AddToggle("Quest", "Auto Spawn & Kill Indra")
+        AddToggle("Quest", "Auto Spawn Dough King")
+        AddToggle("Quest", "Auto Get Hallow Scythe")
+
+    elseif tab == "FRUIT / RAID" then
+
+        AddSection("RAID")
+
+        AddDropdown(
+            "FruitRaid",
+            "Select Chip",
+            {
+                "Flame",
+                "Ice",
+                "Light",
+                "Dark",
+                "Magma",
+                "Dough",
+            }
+        )
+
+        AddToggle("FruitRaid", "Start Raid")
+        AddToggle("FruitRaid", "AutoKillRaid")
+
+        AddSection("FRUIT")
+
+        AddDropdown(
+            "FruitRaid",
+            "Select Fruit",
+            {
+                "Rocket",
+                "Spin",
+                "Chop",
+                "Spring",
+                "Bomb",
+                "Smoke",
+                "Flame",
+                "Ice",
+                "Light",
+                "Magma",
+                "Dough",
+            }
+        )
+
+        AddToggle("FruitRaid", "Auto Buy Select Fruit")
+        AddToggle("FruitRaid", "Rolled Fruit")
+        AddToggle("FruitRaid", "Auto Store Fruit")
+
+    elseif tab == "FISHING" then
+
+        AddSection("FISHING")
+
+        AddToggle("Fishing", "Auto Fish")
+        AddToggle("Fishing", "Auto Cast")
+
+    elseif tab == "STATUS" then
+
+        AddSection("SERVER STATUS")
+
+        AddButton(
+            "Status",
+            "Fruit Spawn: Checking...",
+            function()
+                Notify(
+                    "INFO",
+                    "Checking fruit status...",
+                    "INFO"
+                )
+            end
+        )
+
+        AddToggle("Status", "Check Entire Map")
+
+        local TimeButton = AddButton(
+            "Status",
+            "Server Time: " ..
+                os.date("%H:%M:%S"),
+            function()
+                Notify(
+                    "INFO",
+                    "Current server time: " ..
+                    os.date("%H:%M:%S"),
+                    "INFO"
+                )
+            end
+        )
+
+        local MoonButton = AddButton(
+            "Status",
+            "Phase Moon: " ..
+                GetMoonPhase(),
+            function()
+                Notify(
+                    "INFO",
+                    "Current moon phase: " ..
+                    GetMoonPhase(),
+                    "INFO"
+                )
+            end
+        )
+
+        task.spawn(function()
+            while TimeButton
+                and TimeButton.Parent
+                and State.CurrentTab == "STATUS" do
+
+                TimeButton.Text =
+                    "Server Time: " ..
+                    os.date("%H:%M:%S")
+
+                MoonButton.Text =
+                    "Phase Moon: " ..
+                    GetMoonPhase()
+
+                task.wait(1)
+            end
+        end)
+
+    elseif tab == "PVP" then
+
+        AddSection("PVP")
+
+        AddDropdown(
+            "PVP",
+            "Select Player",
+            {
+                "Player 1",
+                "Player 2",
+                "Player 3",
+            }
+        )
+
+        AddToggle(
+            "PVP",
+            "Aimbot",
+            function(enabled)
+                if enabled then
+                    Notify(
+                        "INFO",
+                        "Target-lock is enabled for your own game.",
+                        "INFO"
+                    )
+                end
+            end
+        )
+
+        AddToggle("PVP", "Teleport to Player")
+        AddToggle("PVP", "Auto Skill")
+
+    elseif tab == "STATS" then
+
+        AddSection("STATS")
+
+        AddToggle("Stats", "Start Add Stats")
+
+        AddSlider(
+            "Stats",
+            "Melee",
+            0,
+            100,
+            0
+        )
+
+        AddSlider(
+            "Stats",
+            "Sword",
+            0,
+            100,
+            0
+        )
+
+        AddSlider(
+            "Stats",
+            "Gun",
+            0,
+            100,
+            0
+        )
+
+        AddSlider(
+            "Stats",
+            "Defense",
+            0,
+            100,
+            0
+        )
+
+        AddSlider(
+            "Stats",
+            "Blox Fruit",
+            0,
+            100,
+            0
+        )
+
+    elseif tab == "MISC" then
+
+        AddSection("MISC")
+
+        AddButton(
+            "Misc",
+            "Job ID: " .. tostring(game.JobId),
+            function()
+                Notify(
+                    "INFO",
+                    "Job ID displayed in the panel.",
+                    "INFO"
+                )
+            end
+        )
+
+        AddButton(
+            "Misc",
+            "Copy Job ID",
+            function()
+                Notify(
+                    "INFO",
+                    "Copy Job ID menggunakan mekanisme copy milik game.",
+                    "INFO"
+                )
+            end
+        )
+
+        AddButton(
+            "Misc",
+            "Join Job ID",
+            function()
+                Notify(
+                    "INFO",
+                    "Join Job ID membutuhkan validasi server/game.",
+                    "INFO"
+                )
+            end
+        )
+
+        AddButton(
+            "Misc",
+            "Redeem All Code",
+            function()
+                Notify(
+                    "INFO",
+                    "Redeem request dikirim ke game.",
+                    "INFO"
+                )
+            end
+        )
+
+        AddToggle("Misc", "Anti AFK")
+        AddToggle("Misc", "No Clip")
+        AddToggle("Misc", "Infinite Jump")
+        AddToggle("Misc", "Auto Attack")
+
+        AddButton(
+            "Misc",
+            "FPS: calculating...",
+            function()
+                Notify(
+                    "INFO",
+                    "FPS monitor aktif.",
+                    "INFO"
+                )
+            end
+        )
+
+        AddButton(
+            "Misc",
+            "Join Discord",
+            function()
+                Notify(
+                    "INFO",
+                    CONFIG.Discord,
+                    "INFO"
+                )
+            end
+        )
+    end
+end
+
+--// SEARCH
+Search:GetPropertyChangedSignal("Text"):Connect(function()
+    State.Search = string.lower(Search.Text)
+
+    for _, child in ipairs(ContentScroll:GetChildren()) do
+        if child:IsA("GuiObject") then
+
+            if State.Search == "" then
+                child.Visible = true
+            else
+                local objectName =
+                    string.lower(child.Name)
+
+                local text = ""
+
+                local label =
+                    child:FindFirstChildOfClass("TextLabel")
+
+                local button =
+                    child:FindFirstChildOfClass("TextButton")
+
+                if label then
+                    text = string.lower(label.Text)
+                elseif button then
+                    text = string.lower(button.Text)
+                end
+
+                child.Visible =
+                    string.find(objectName, State.Search, 1, true)
+                    ~= nil
+                    or string.find(text, State.Search, 1, true)
+                    ~= nil
+            end
+        end
+    end
 end)
 
-UserInputService.InputChanged:Connect(function(input)
-
-    if not dragging then
-        return
-    end
-
-    if input.UserInputType ~= Enum.UserInputType.MouseMovement
-        and input.UserInputType ~= Enum.UserInputType.Touch then
-
-        return
-    end
-
-    local delta =
-        input.Position - dragStart
-
-    Main.Position = UDim2.new(
-
-        startPosition.X.Scale,
-        startPosition.X.Offset + delta.X,
-
-        startPosition.Y.Scale,
-        startPosition.Y.Offset + delta.Y
-
+--// RESPONSIVE SCALE
+local function ApplyScale(scale)
+    scale = math.clamp(
+        scale,
+        CONFIG.MinScale,
+        CONFIG.MaxScale
     )
 
-end)
+    State.Scale = scale
 
---------------------------------------------------
--- OPEN / CLOSE
---------------------------------------------------
+    Main.Size = UDim2.fromOffset(
+        760 * scale,
+        500 * scale
+    )
 
-local OpenButton = Instance.new("TextButton")
+    if scale < 1 then
+        Main.Position = UDim2.new(
+            0.5,
+            -(380 * scale),
+            0.5,
+            -(250 * scale)
+        )
+    end
+end
 
-OpenButton.Size = UDim2.new(0, 52, 0, 52)
+ApplyScale(CONFIG.DefaultScale)
 
-OpenButton.Position =
-    UDim2.new(0, 20, 0.5, -26)
+--// INITIAL TAB
+RenderTab("FARM")
 
-OpenButton.BackgroundColor3 =
-    CONFIG.Theme.Accent
+if TabButtons["FARM"] then
+    TabButtons["FARM"].BackgroundColor3 = COLORS.Purple2
+    TabButtons["FARM"].TextColor3 = COLORS.White
+end
 
-OpenButton.Text = "S"
+Notify(
+    "SysxHub",
+    "UI berhasil dimuat.",
+    "SUCCESS"
+)
 
-OpenButton.TextColor3 =
-    CONFIG.Theme.Text
-
-OpenButton.TextSize = 22
-OpenButton.Font = Enum.Font.GothamBold
-
-OpenButton.BorderSizePixel = 0
-
-OpenButton.Visible = false
-
-OpenButton.Parent = ScreenGui
-
-corner(OpenButton, 14)
-
-Close.MouseButton1Click:Connect(function()
-
-    Main.Visible = false
-    OpenButton.Visible = true
-
-end)
-
-OpenButton.MouseButton1Click:Connect(function()
-
-    Main.Visible = true
-    OpenButton.Visible = false
-
-end)
-
---------------------------------------------------
--- SEA REFRESH
---------------------------------------------------
-
-task.spawn(function()
-
-    local lastSea = State.CurrentSea
-
-    while ScreenGui.Parent do
-
-        task.wait(2)
-
-        local newSea = getCurrentSea()
-
-        if newSea ~= lastSea then
-
-            lastSea = newSea
-
-            State.CurrentSea = newSea
-
-            State.SelectedBoss = nil
-            State.SelectedMaterial = nil
-
-            updateSeaUI()
-
-        end
-
+--// KEEP MAIN ON SCREEN
+RunService.RenderStepped:Connect(function()
+    if not Main.Visible then
+        return
     end
 
+    local camera = workspace.CurrentCamera
+    if not camera then
+        return
+    end
+
+    local viewport = camera.ViewportSize
+
+    local maxX =
+        math.max(0, viewport.X - Main.AbsoluteSize.X)
+
+    local maxY =
+        math.max(0, viewport.Y - Main.AbsoluteSize.Y)
+
+    local x = math.clamp(
+        Main.AbsolutePosition.X,
+        0,
+        maxX
+    )
+
+    local y = math.clamp(
+        Main.AbsolutePosition.Y,
+        0,
+        maxY
+    )
+
+    if
+        math.abs(x - Main.AbsolutePosition.X) > 1
+        or math.abs(y - Main.AbsolutePosition.Y) > 1
+    then
+
+        Main.Position = UDim2.fromOffset(
+            x,
+            y
+        )
+    end
 end)
-
---------------------------------------------------
--- DEFAULT TAB
---------------------------------------------------
-
-selectTab("Farm")
-
---------------------------------------------------
--- FINAL
---------------------------------------------------
-
-print("--------------------------------")
-print("SysxHub " .. CONFIG.Version)
-print("UI Loaded Successfully")
-print("Current Sea:", State.CurrentSea)
-print("--------------------------------")
