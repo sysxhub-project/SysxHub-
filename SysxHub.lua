@@ -1,7 +1,7 @@
 --[[
 ================================================================
  SYSX HUB | Freemium Version | v0.1 | Created by Ramanotsugarr
- Clean UI + Full CommF_ + Auto Haki Integration
+ Full Feature + Fixed Farm Level + ESP Distance|Name
 ================================================================
 ]]
 
@@ -32,8 +32,7 @@ local CONFIG = {
     Blue2 = Color3.fromRGB(80,180,255),
     White = Color3.fromRGB(255,255,255),
     Radius = 8,
-    LevelTolerance = 50,
-    TweenMobSpeed = 250,
+    TweenMobSpeed = 300,
 }
 
 local State = {
@@ -42,15 +41,23 @@ local State = {
     AutoGacha=false, StoreFruit=false, AutoFish=false, AutoAddStats=false,
     AutoRaceV2=false, AutoRaceV3=false, CousinBuy=false,
     AutoFarmSea=false, AutoKillSeaBeast=false,
+    AutoBuyBoat=false, AutoRemoveRock=false,
+    FindMirage=false, FindKitsune=false, KitsuneLevel=35,
+    FindPrehistoric=false, AutoKillGolem=false,
+    AutoCollectBone=false, AutoCollectDinoEgg=false,
+    FindFrozenDim=false, AutoHitLeviathan=false,
+    AutoShootHeart=false, AutoDriveTiki=false,
+    BoatSpeed=100, BoatHeight=5,
     SelectedWeapon=nil, SelectedCategory=nil,
     SelectedBoss=nil, SelectedRaid=nil, SelectedPlayer=nil,
     SelectedIsland="Starter Island", SelectedMelee=nil, SelectedSword=nil,
     SelectedGun=nil, SelectedAbility=nil, SelectedItem=nil,
+    SelectedSeaMob="Sea Beast",
     BringMob=false, BringMobRange=50, InfiniteJump=false, BoostFPS=false,
     Hitbox=false, HitboxPart=nil, Aimbot=false,
     LastBring=0, AntiAFK=true, Notifications=true,
     StatsMelee=0, StatsSword=0, StatsGun=0, StatsBloxFruit=0,
-    OriginalLighting=nil,
+    OriginalLighting=nil, FirstRunChest=true, UncheckedChests={},
     ESPPlayer=false, ESPIsland=false, ESPFruit=false, ESPBlueGear=false,
     ESPChest=false, ESPFlower=false, ESPObjects={},
 }
@@ -64,14 +71,12 @@ local function Create(cls, props)
     for k,v in pairs(props or {}) do pcall(function() o[k]=v end) end
     return o
 end
-
 local function Corner(p, r)
     local c = Instance.new("UICorner")
     c.CornerRadius = UDim.new(0, r or CONFIG.Radius)
     c.Parent = p
     return c
 end
-
 local function Stroke(p, c, t, tr)
     local s = Instance.new("UIStroke")
     s.Color = c or CONFIG.Blue
@@ -80,7 +85,6 @@ local function Stroke(p, c, t, tr)
     s.Parent = p
     return s
 end
-
 local function Gradient(p, c1, c2, rot)
     local g = Instance.new("UIGradient")
     g.Color = ColorSequence.new(c1 or CONFIG.Blue, c2 or CONFIG.Blue2)
@@ -88,18 +92,14 @@ local function Gradient(p, c1, c2, rot)
     g.Parent = p
     return g
 end
-
 local function Tween(o, props, time)
     TweenService:Create(o, TweenInfo.new(time or 0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), props):Play()
 end
-
 local function GetHRP()
     local c = Player.Character
     return c and c:FindFirstChild("HumanoidRootPart")
 end
-
 local function GetDist(a, b) return (a - b).Magnitude end
-
 local function SafeCall(fn, ...)
     local ok, err = pcall(fn, ...)
     if not ok then warn("[SysxHub]", err) return false end
@@ -108,7 +108,6 @@ end
 
 --// REMOTE
 local CommF = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
-
 local function Invoke(...)
     if not CommF then return nil end
     local ok, res = pcall(function(...) return CommF:InvokeServer(...) end, ...)
@@ -118,11 +117,6 @@ end
 
 --// NPC FILTER
 local PASSIVE = {"dealer","shop","vendor","merchant","quest","giver","bartender","chef","captain","scientist","teacher","guide","trainer","banker","blacksmith","smith","farmer","villager","elder"}
-
-local function IsAlive(m)
-    local h = m and m:FindFirstChildOfClass("Humanoid")
-    return h and h.Health > 0
-end
 
 local function IsNPC(m)
     if not m or m == Player.Character then return false end
@@ -139,7 +133,6 @@ local function IsNPC(m)
     return true
 end
 
---// SCAN
 local function ScanEnemies()
     local list = {}
     for _, obj in ipairs(workspace:GetChildren()) do
@@ -151,6 +144,19 @@ end
 local function FindBoss(name)
     for _, obj in ipairs(workspace:GetChildren()) do
         if obj.Name == name and obj:FindFirstChildOfClass("Humanoid") then return obj end
+    end
+    return nil
+end
+
+local function FindMobByName(mobs)
+    for _, name in ipairs(mobs) do
+        for _, obj in ipairs(workspace:GetChildren()) do
+            if obj.Name == name then
+                local hum = obj:FindFirstChildOfClass("Humanoid")
+                local hrp = obj:FindFirstChild("HumanoidRootPart")
+                if hum and hrp and hum.Health > 0 then return obj end
+            end
+        end
     end
     return nil
 end
@@ -178,55 +184,41 @@ local function GetHeldFruit()
     return nil
 end
 
---// FARM CHEST (Adaptasi dari kode user)
+--// FARM CHEST
 local MaxSpeed = 300
-
 local function getCharacter()
-    if not Player.Character then
-        Player.CharacterAdded:Wait()
-    end
+    if not Player.Character then Player.CharacterAdded:Wait() end
     Player.Character:WaitForChild("HumanoidRootPart")
     return Player.Character
 end
-
 local function toggleNoclip(toggle)
     for _, v in pairs(getCharacter():GetChildren()) do
-        if v:IsA("BasePart") then
-            v.CanCollide = not toggle
-        end
+        if v:IsA("BasePart") then v.CanCollide = not toggle end
     end
 end
-
 local function DistanceFromPlrSort(list)
     local root = getCharacter().HumanoidRootPart
     table.sort(list, function(a, b)
-        local pos = root.Position
-        return (pos - a.Position).Magnitude < (pos - b.Position).Magnitude
+        return (root.Position - a.Position).Magnitude < (root.Position - b.Position).Magnitude
     end)
 end
-
-local UncheckedChests = {}
-local FirstRunChest = true
-
 local function getChestsSorted()
-    if FirstRunChest then
-        FirstRunChest = false
+    if State.FirstRunChest then
+        State.FirstRunChest = false
+        State.UncheckedChests = {}
         for _, obj in ipairs(game:GetDescendants()) do
             if obj.Name:find("Chest") and obj.ClassName == "Part" then
-                table.insert(UncheckedChests, obj)
+                table.insert(State.UncheckedChests, obj)
             end
         end
     end
     local chests = {}
-    for _, chest in ipairs(UncheckedChests) do
-        if chest:FindFirstChild("TouchInterest") then
-            table.insert(chests, chest)
-        end
+    for _, chest in ipairs(State.UncheckedChests) do
+        if chest:FindFirstChild("TouchInterest") then table.insert(chests, chest) end
     end
     DistanceFromPlrSort(chests)
     return chests
 end
-
 local function TeleportNoclip(goal, speed)
     speed = speed or MaxSpeed
     toggleNoclip(true)
@@ -242,17 +234,6 @@ local function TeleportNoclip(goal, speed)
 end
 
 --// WEAPON
-local function GetWeaponCategory(name)
-    local n = string.lower(name)
-    local swords = {"katana","cutlass","sword","saber","rapier","blade","trident","pole","reaper","scythe","dagger","hooks","anchor","cursed","hallow","buddy","shark saw","warden","rengoku","tushita","yama"}
-    for _, kw in ipairs(swords) do if string.find(n, kw) then return "Sword" end end
-    local guns = {"gun","pistol","slingshot","rifle","bazooka","cannon","musket","sniper","flintlock"}
-    for _, kw in ipairs(guns) do if string.find(n, kw) then return "Gun" end end
-    local fruits = {"fruit","dough","leopard","kitsune","dragon","venom","shadow","control","spirit","mammoth","trex","rumble","portal","phoenix","sound","spider","buddha","magma","quake","light","dark","ice","sand","flame"}
-    for _, kw in ipairs(fruits) do if string.find(n, kw) then return "Fruit" end end
-    return "Melee"
-end
-
 local function EquipWeapon()
     local char = Player.Character
     if not char then return nil end
@@ -292,55 +273,18 @@ local function TweenToPosition(targetPos, speed)
     task.wait(duration + 0.05)
 end
 
-local function TweenToMob(mob, speed)
-    local trp = mob and mob:FindFirstChild("HumanoidRootPart")
-    if not trp then return end
-    TweenToPosition(trp.Position + Vector3.new(0, 3, 0), speed or CONFIG.TweenMobSpeed)
-end
-
---// MOB LEVEL
-local function GetMobLevel(mob)
-    local lvl = mob:GetAttribute("Level") or mob:GetAttribute("level")
-    if lvl then return lvl end
-    local hum = mob:FindFirstChildOfClass("Humanoid")
-    if hum then
-        local mh = hum.MaxHealth
-        if mh <= 100 then return 10
-        elseif mh <= 500 then return 40
-        elseif mh <= 2000 then return 120
-        elseif mh <= 8000 then return 300
-        elseif mh <= 30000 then return 600
-        elseif mh <= 100000 then return 1000
-        else return math.floor(mh/500) end
-    end
-    return 0
-end
-
-local function FindMobByLevel(playerLevel, tolerance)
-    tolerance = tolerance or CONFIG.LevelTolerance
-    local list = {}
-    for _, mob in ipairs(ScanEnemies()) do
-        local mLvl = GetMobLevel(mob)
-        local diff = math.abs(mLvl - playerLevel)
-        if diff <= tolerance then
-            table.insert(list, {model=mob, level=mLvl, diff=diff})
-        end
-    end
-    table.sort(list, function(a,b) return a.diff < b.diff end)
-    return list
-end
-
 --// ESP
 local function CreateESP(target, text, color)
     if not target or not target:IsA("BasePart") then return end
     if State.ESPObjects[target] then return end
     local bb = Instance.new("BillboardGui")
     bb.Name = "SysxESP"
-    bb.Size = UDim2.new(0, 100, 0, 40)
+    bb.Size = UDim2.new(0, 140, 0, 30)
     bb.StudsOffset = Vector3.new(0, 3, 0)
     bb.AlwaysOnTop = true
     bb.Parent = target
     local label = Instance.new("TextLabel")
+    label.Name = "ESPLabel"
     label.Size = UDim2.new(1, 0, 1, 0)
     label.BackgroundTransparency = 1
     label.Text = text
@@ -352,7 +296,6 @@ local function CreateESP(target, text, color)
     label.Parent = bb
     State.ESPObjects[target] = bb
 end
-
 local function ClearAllESP()
     for target, bb in pairs(State.ESPObjects) do
         pcall(function() bb:Destroy() end)
@@ -362,8 +305,6 @@ end
 
 --// SMOOTH AIMBOT
 local AimbotConnection = nil
-local AimbotTarget = nil
-
 local function GetClosestPlayerHead()
     local closest, dist = nil, math.huge
     local camPos = Camera.CFrame.Position
@@ -372,33 +313,70 @@ local function GetClosestPlayerHead()
             local head = plr.Character:FindFirstChild("Head")
             if head then
                 local d = (head.Position - camPos).Magnitude
-                if d < dist and d < 500 then
-                    closest, dist = head, d
-                end
+                if d < dist and d < 500 then closest, dist = head, d end
             end
         end
     end
     return closest
 end
-
 local function StartAimbot()
     if AimbotConnection then AimbotConnection:Disconnect() end
     AimbotConnection = RunService.RenderStepped:Connect(function(dt)
         if not State.Aimbot then return end
-        AimbotTarget = GetClosestPlayerHead()
-        if not AimbotTarget then return end
-        local currentCF = Camera.CFrame
-        local targetCF = CFrame.new(currentCF.Position, AimbotTarget.Position)
-        Camera.CFrame = currentCF:Lerp(targetCF, math.clamp(dt * 10, 0, 1))
+        local tgt = GetClosestPlayerHead()
+        if not tgt then return end
+        local curCF = Camera.CFrame
+        local tgtCF = CFrame.new(curCF.Position, tgt.Position)
+        Camera.CFrame = curCF:Lerp(tgtCF, math.clamp(dt * 10, 0, 1))
     end)
 end
-
 local function StopAimbot()
-    if AimbotConnection then
-        AimbotConnection:Disconnect()
-        AimbotConnection = nil
+    if AimbotConnection then AimbotConnection:Disconnect() AimbotConnection = nil end
+end
+
+--// LEVEL DATA
+local LEVEL_DATA = {
+    {min=1,   max=10,  quest="BanditQuest1",     questNum=1, mobs={"Bandit","Trainee"}},
+    {min=10,  max=30,  quest="JungleQuest",      questNum=1, mobs={"Monkey","Gorilla"}},
+    {min=30,  max=60,  quest="BuggyQuest1",      questNum=1, mobs={"Pirate","Brute"}},
+    {min=60,  max=90,  quest="DesertQuest",      questNum=1, mobs={"Desert Bandit","Desert Officer"}},
+    {min=90,  max=120, quest="SnowQuest",        questNum=1, mobs={"Snow Bandit","Snowman"}},
+    {min=120, max=150, quest="MarineQuest2",     questNum=1, mobs={"Chief Petty Officer"}},
+    {min=150, max=190, quest="SkyQuest",         questNum=1, mobs={"Sky Bandit","Dark Master"}},
+    {min=190, max=250, quest="PrisonQuest",      questNum=1, mobs={"Prisoner","Dangerous Prisoner"}},
+    {min=250, max=300, quest="ColosseumQuest",   questNum=1, mobs={"Toga Warrior","Gladiator"}},
+    {min=300, max=375, quest="MagmaQuest",       questNum=1, mobs={"Military Soldier","Military Spy"}},
+    {min=375, max=450, quest="FishmanQuest",     questNum=1, mobs={"Fishman Warrior","Fishman Commando"}},
+    {min=450, max=625, quest="SkyExp1Quest",     questNum=1, mobs={"God's Guard","Shandia","Royal Squad","Royal Soldier"}},
+    {min=625, max=700, quest="FountainQuest",    questNum=1, mobs={"Pirate Millionaire","Pistol Billionaire"}},
+    {min=700, max=875, quest="Area1Quest",       questNum=1, mobs={"Raider","Mercenary","Swan Pirate"}},
+    {min=875, max=950, quest="Area2Quest",       questNum=1, mobs={"Marine Soldier","Marine Commando"}},
+    {min=950, max=1000,quest="GraveyardQuest",   questNum=1, mobs={"Zombie","Vampire"}},
+    {min=1000,max=1100,quest="SnowMountainQuest",questNum=1, mobs={"Snow Trooper","Winter Warrior"}},
+    {min=1100,max=1250,quest="PunkHazardQuest",  questNum=1, mobs={"Lab Subordinate","Horned Riot","Magma Ninja","Lava Pirate"}},
+    {min=1250,max=1350,quest="CursedShipQuest",  questNum=1, mobs={"Ship Deckhand","Ship Engineer","Ship Steward","Ship Officer"}},
+    {min=1350,max=1425,quest="IceCastleQuest",   questNum=1, mobs={"Arctic Warrior","Snow Lurker"}},
+    {min=1425,max=1500,quest="ForgottenQuest",   questNum=1, mobs={"Sea Soldier","Water Tiger"}},
+    {min=1500,max=1575,quest="PortQuest",        questNum=1, mobs={"Pirate Millionaire","Pistol Billionaire"}},
+    {min=1575,max=1700,quest="HydraQuest",       questNum=1, mobs={"Dragon Crew Warrior","Dragon Crew Archer"}},
+    {min=1700,max=1775,quest="GreatTreeQuest",   questNum=1, mobs={"Marine Commodore","Marine Rear Admiral"}},
+    {min=1775,max=1975,quest="ForestQuest",      questNum=1, mobs={"Fishman Raider","Fishman Captain","Forest Pirate","Mythological Pirate","Jungle Pirate"}},
+    {min=1975,max=2075,quest="HauntedQuest",     questNum=1, mobs={"Reborn Skeleton","Living Zombie","Demonic Soul","Possessed Mummy"}},
+    {min=2075,max=2450,quest="CakeQuest",        questNum=1, mobs={"Cake Guard","Cake Baking","Cocoa Warrior","Chocolate Bar Battler","Candy Pirate"}},
+    {min=2450,max=2600,quest="TikiQuest",        questNum=1, mobs={"Isle Outlaw","Island Boy","Sun-kissed Warrior","Isle Champion","Serpent Hunter"}},
+    {min=2600,max=2800,quest="SubmergedQuest",   questNum=1, mobs={"Reef Bandit","Coral Pirate","Sea Chanter","Ocean Prophet"}},
+}
+
+local function GetLevel()
+    local ls = Player:FindFirstChild("leaderstats")
+    local lv = ls and ls:FindFirstChild("Level")
+    return lv and lv.Value or 1
+end
+local function GetLevelData(level)
+    for _, data in ipairs(LEVEL_DATA) do
+        if level >= data.min and level < data.max then return data end
     end
-    AimbotTarget = nil
+    return LEVEL_DATA[#LEVEL_DATA]
 end
 
 --// GUI
@@ -487,11 +465,12 @@ Logo.ZIndex = 21
 Create("TextLabel", {Parent=TopBar, BackgroundTransparency=1, Position=UDim2.new(0,66,0,8), Size=UDim2.new(0,300,0,25), Text="SysxHub", TextColor3=CONFIG.White, TextSize=20, Font=Enum.Font.GothamBold, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=21})
 Create("TextLabel", {Parent=TopBar, BackgroundTransparency=1, Position=UDim2.new(0,67,0,33), Size=UDim2.new(0,400,0,18), Text=CONFIG.Build, TextColor3=CONFIG.White, TextSize=11, Font=Enum.Font.Gotham, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=21})
 
-local CloseButton = Create("TextButton", {
+-- Close Button pakai Logo
+local CloseButton = Create("ImageButton", {
     Parent=TopBar, BackgroundColor3=CONFIG.Panel2,
     Size=UDim2.fromOffset(38,38), Position=UDim2.new(1,-50,0.5,-19),
-    Text="X", TextColor3=CONFIG.White, TextSize=20,
-    Font=Enum.Font.GothamBold, AutoButtonColor=false, ZIndex=25,
+    Image=CONFIG.Logo, ImageColor3=CONFIG.White,
+    AutoButtonColor=false, ZIndex=25,
 })
 Corner(CloseButton, 10)
 Stroke(CloseButton, CONFIG.Blue, 1.5, 0.3)
@@ -683,6 +662,22 @@ local function CreateSlider(parent, title, minVal, maxVal, defaultVal, cb)
     return Holder
 end
 
+local function CreateLabel(parent, text, size)
+    local L = Create("TextLabel", {
+        Parent=parent, BackgroundColor3=CONFIG.Panel,
+        Size=UDim2.new(1,0,0,size or 38),
+        Text=text, TextColor3=CONFIG.White, TextSize=12,
+        Font=Enum.Font.GothamMedium, TextXAlignment=Enum.TextXAlignment.Left,
+        BorderSizePixel=0, ZIndex=13,
+    })
+    Corner(L, 8)
+    Stroke(L, CONFIG.Blue, 1.2, 0.4)
+    local pad = Instance.new("UIPadding")
+    pad.PaddingLeft = UDim.new(0, 12)
+    pad.Parent = L
+    return L
+end
+
 local function CreateTab(name, order)
     local B = Create("TextButton", {
         Parent=TabList, BackgroundColor3=CONFIG.Panel,
@@ -699,11 +694,8 @@ end
 local function ShowTab(name)
     for pn, p in pairs(Pages) do p.Visible = (pn == name) end
     for tn, d in pairs(Tabs) do
-        if tn == name then
-            d.Button.BackgroundColor3 = CONFIG.Blue
-        else
-            d.Button.BackgroundColor3 = CONFIG.Panel
-        end
+        if tn == name then d.Button.BackgroundColor3 = CONFIG.Blue
+        else d.Button.BackgroundColor3 = CONFIG.Panel end
         d.Label.TextColor3 = CONFIG.White
     end
 end
@@ -726,32 +718,23 @@ local MiscPage = CreatePage("Misc")
 
 --// DISCORD
 CreateToggle(DiscordPage, "Copy Discord Link", false, function(s)
-    if s then
-        if setclipboard then setclipboard(CONFIG.Discord) Notify("Copied") end
-    end
+    if s then if setclipboard then setclipboard(CONFIG.Discord) Notify("Copied") end end
 end)
 
 --// FARM
-CreateToggle(FarmPage, "Cek Bones", false, function(s)
-    if s then
-        local res = Invoke("Bones", "Check")
-        Notify("Bones: "..tostring(res))
-    end
-end)
-CreateToggle(FarmPage, "Random Bones", false, function(s)
-    if s then Invoke("Bones", "Buy", 1, 1) Notify("Random Bones") end
-end)
+CreateDropdown(FarmPage, "Select Weapon", {"Melee","Sword","Gun","Fruit"}, function(opt) State.SelectedCategory = opt end)
 CreateToggle(FarmPage, "Auto Farm Level", false, function(s)
     State.AutoFarm = s
     Notify("Auto Farm: "..(s and "ON" or "OFF"))
     if s then
+        State.Hitbox = true
         task.spawn(function()
             while State.AutoFarm do
                 pcall(function() Invoke("Buso") end)
                 task.wait(2)
             end
         end)
-    end
+    else State.Hitbox = false end
 end)
 CreateToggle(FarmPage, "Auto Kill Nearest", false, function(s)
     State.AutoKillNearest = s
@@ -765,8 +748,10 @@ CreateToggle(FarmPage, "Auto Kill Nearest", false, function(s)
         end)
     end
 end)
-CreateDropdown(FarmPage, "Select Weapon", {"Melee","Sword","Gun","Fruit"}, function(opt)
-    State.SelectedCategory = opt
+CreateToggle(FarmPage, "Farm Chest", false, function(s)
+    State.AutoChest = s
+    if s then State.FirstRunChest = true State.UncheckedChests = {} end
+    Notify("Farm Chest: "..(s and "ON" or "OFF"))
 end)
 CreateDropdown(FarmPage, "Select Boss", {
     "Gorilla King","Bobby","Yeti","Mob Leader","Vice Admiral","Saber Expert",
@@ -776,38 +761,74 @@ CreateDropdown(FarmPage, "Select Boss", {
     "Stone","Island Empress","Kilo Admiral","Captain Elephant",
     "Beautiful Pirate","Longma","Cake Queen",
 }, function(opt) State.SelectedBoss = opt Notify("Boss: "..opt) end)
-CreateToggle(FarmPage, "Auto Farm Boss", false, function(s)
-    State.AutoBoss = s
-    Notify("Auto Farm Boss: "..(s and "ON" or "OFF"))
+CreateToggle(FarmPage, "Auto Farm Boss", false, function(s) State.AutoBoss = s Notify("Auto Farm Boss: "..(s and "ON" or "OFF")) end)
+local BonesLabel = CreateLabel(FarmPage, "Bones: -", 38)
+task.spawn(function()
+    while task.wait(3) do
+        local res = Invoke("Bones", "Check")
+        if res then BonesLabel.Text = "Bones: "..tostring(res) end
+    end
 end)
-CreateToggle(FarmPage, "Farm Chest", false, function(s)
-    State.AutoChest = s
-    if s then FirstRunChest = true UncheckedChests = {} end
-    Notify("Farm Chest: "..(s and "ON" or "OFF"))
-end)
+CreateToggle(FarmPage, "Random Bone", false, function(s) if s then Invoke("Bones", "Buy", 1, 1) Notify("Random Bone") end end)
 
 --// SEA
+CreateDropdown(SeaPage, "Select Mob", {"Sea Beast","Terrorshark","Shark","Piranha","Fish Crew Member","Fish Crew Warrior"}, function(opt) State.SelectedSeaMob = opt Notify("Sea Mob: "..opt) end)
 CreateToggle(SeaPage, "Auto Farm Sea", false, function(s) State.AutoFarmSea = s Notify("Auto Farm Sea: "..(s and "ON" or "OFF")) end)
-CreateToggle(SeaPage, "Auto Kill Sea Beast", false, function(s) State.AutoKillSeaBeast = s Notify("Auto Kill Sea Beast: "..(s and "ON" or "OFF")) end)
-CreateToggle(SeaPage, "Buy Boat", false, function(s) if s then Invoke("BuyBoat", "Dinghy") Notify("Boat bought") end end)
-CreateToggle(SeaPage, "Travel Main (Sea 1)", false, function(s) if s then Invoke("TravelMain") Notify("Sea 1") end end)
-CreateToggle(SeaPage, "Travel Dressrosa (Sea 2)", false, function(s) if s then Invoke("TravelDressrosa") Notify("Sea 2") end end)
-CreateToggle(SeaPage, "Travel Zou (Sea 3)", false, function(s) if s then Invoke("TravelZou") Notify("Sea 3") end end)
+CreateToggle(SeaPage, "Start Sea Event", false, function(s)
+    if s then
+        pcall(function() Invoke("SeaEvent", "Start") end)
+        Notify("Sea Event started")
+    end
+end)
+CreateToggle(SeaPage, "Auto Buy New Boat", false, function(s) State.AutoBuyBoat = s Notify("Auto Buy Boat: "..(s and "ON" or "OFF")) end)
+CreateToggle(SeaPage, "Auto Remove Rock", false, function(s) State.AutoRemoveRock = s Notify("Auto Remove Rock: "..(s and "ON" or "OFF")) end)
+CreateToggle(SeaPage, "Find Mirage Island", false, function(s) State.FindMirage = s Notify("Find Mirage: "..(s and "ON" or "OFF")) end)
+CreateToggle(SeaPage, "Tween Mirage", false, function(s)
+    if s then
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("BasePart") and string.find(string.lower(obj.Name), "mirage") then
+                TweenToPosition(obj.Position + Vector3.new(0,5,0), 500) Notify("Tween Mirage") break
+            end
+        end
+    end
+end)
+CreateToggle(SeaPage, "Tween Blue Gear", false, function(s)
+    if s then
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("BasePart") and (string.find(string.lower(obj.Name), "bluegear") or string.find(string.lower(obj.Name), "blue_gear")) then
+                TweenToPosition(obj.Position + Vector3.new(0,5,0), 500) Notify("Tween Blue Gear") break
+            end
+        end
+    end
+end)
+CreateToggle(SeaPage, "Tween Fruit Dealer", false, function(s)
+    if s then TweenToPosition(Vector3.new(1138, 22, 1480), 500) Notify("Tween Fruit Dealer") end
+end)
+CreateToggle(SeaPage, "Find Kitsune Island", false, function(s) State.FindKitsune = s Notify("Find Kitsune: "..(s and "ON" or "OFF")) end)
+CreateSlider(SeaPage, "Kitsune Level", 0, 300, 35, function(v) State.KitsuneLevel = v Notify("Kitsune Level: "..v) end)
+CreateToggle(SeaPage, "Auto Trade Aura", false, function(s)
+    if s then pcall(function() Invoke("KitsuneTrade", "Aura") end) Notify("Auto Trade Aura") end
+end)
+CreateToggle(SeaPage, "Find Prehistoric Island", false, function(s) State.FindPrehistoric = s Notify("Find Prehistoric: "..(s and "ON" or "OFF")) end)
+CreateToggle(SeaPage, "Auto Kill Golem", false, function(s) State.AutoKillGolem = s Notify("Auto Kill Golem: "..(s and "ON" or "OFF")) end)
+CreateToggle(SeaPage, "Auto Collect Bone", false, function(s) State.AutoCollectBone = s Notify("Auto Collect Bone: "..(s and "ON" or "OFF")) end)
+CreateToggle(SeaPage, "Auto Collect Dino Egg", false, function(s) State.AutoCollectDinoEgg = s Notify("Auto Collect Dino Egg: "..(s and "ON" or "OFF")) end)
+CreateToggle(SeaPage, "Find Frozen Dimension", false, function(s) State.FindFrozenDim = s Notify("Find Frozen Dim: "..(s and "ON" or "OFF")) end)
+CreateToggle(SeaPage, "Auto Hit Leviathan", false, function(s) State.AutoHitLeviathan = s Notify("Auto Hit Leviathan: "..(s and "ON" or "OFF")) end)
+CreateToggle(SeaPage, "Auto Shoot Heart", false, function(s) State.AutoShootHeart = s Notify("Auto Shoot Heart: "..(s and "ON" or "OFF")) end)
+CreateToggle(SeaPage, "Auto Drive To Tiki", false, function(s) State.AutoDriveTiki = s Notify("Auto Drive Tiki: "..(s and "ON" or "OFF")) end)
+CreateSlider(SeaPage, "Boat Speed", 0, 250, 100, function(v) State.BoatSpeed = v end)
+CreateSlider(SeaPage, "Boat Height", 0, 50, 5, function(v) State.BoatHeight = v end)
 
 --// QUEST / ITEMS
 CreateToggle(QuestItemsPage, "Auto Sea 2", false, function(s) if s then Invoke("TravelDressrosa") Notify("Auto Sea 2") end end)
 CreateToggle(QuestItemsPage, "Auto Sea 3", false, function(s) if s then Invoke("TravelZou") Notify("Auto Sea 3") end end)
-CreateToggle(QuestItemsPage, "Auto Saber", false, function(s)
-    if s then Invoke("BuyItem", "Saber") Notify("Auto Saber") end
-end)
-CreateToggle(QuestItemsPage, "Auto Quest", false, function(s) State.AutoQuest = s Notify("Auto Quest: "..(s and "ON" or "OFF")) end)
+CreateToggle(QuestItemsPage, "Auto Saber", false, function(s) if s then Invoke("BuyItem", "Saber") Notify("Auto Saber") end end)
 CreateToggle(QuestItemsPage, "Auto CDK", false, function(s) if s then Invoke("ProQuestProgress", "CDK") Notify("CDK") end end)
 CreateToggle(QuestItemsPage, "Auto Dark Dagger", false, function(s)
     if s then
-        local hasChalice = Player.Backpack:FindFirstChild("God's Chalice")
-            or (Player.Character and Player.Character:FindFirstChild("God's Chalice"))
-        if hasChalice then Invoke("PlaceChalice") Notify("Summoning Indra")
-        else Notify("Need God's Chalice!") end
+        local hasChalice = Player.Backpack:FindFirstChild("God's Chalice") or (Player.Character and Player.Character:FindFirstChild("God's Chalice"))
+        if hasChalice then Invoke("PlaceChalice") Notify("Summoning Indra") else Notify("Need God's Chalice!") end
     end
 end)
 CreateToggle(QuestItemsPage, "Auto Soul Guitar", false, function(s) if s then Invoke("ProQuestProgress", "SoulGuitar") Notify("Soul Guitar") end end)
@@ -816,13 +837,12 @@ CreateToggle(QuestItemsPage, "Auto Tushita", false, function(s) if s then Invoke
 CreateToggle(QuestItemsPage, "Auto Buddy Sword", false, function(s)
     if s then
         local boss = FindBoss("Cake Queen")
-        if boss then TweenToMob(boss, 300) Notify("Farming Cake Queen") else Notify("Cake Queen not spawned") end
+        if boss then TweenToPosition(boss.HumanoidRootPart.Position + Vector3.new(0,3,0), 300) Notify("Farming Cake Queen") else Notify("Cake Queen not spawned") end
     end
 end)
 CreateToggle(QuestItemsPage, "Auto Spawn Dough King", false, function(s)
     if s then
-        local hasSweet = Player.Backpack:FindFirstChild("Sweet Chalice")
-            or (Player.Character and Player.Character:FindFirstChild("Sweet Chalice"))
+        local hasSweet = Player.Backpack:FindFirstChild("Sweet Chalice") or (Player.Character and Player.Character:FindFirstChild("Sweet Chalice"))
         if hasSweet then Invoke("DoughKing") Notify("Summoning Dough King") else Notify("Need Sweet Chalice!") end
     end
 end)
@@ -853,10 +873,6 @@ CreateToggle(QuestItemsPage, "Auto Talk Trevor", false, function(s) if s then In
 CreateToggle(FruitRaidPage, "Collect Fruit", false, function(s) State.AutoFruit = s Notify("Collect Fruit: "..(s and "ON" or "OFF")) end)
 CreateToggle(FruitRaidPage, "Random Fruit", false, function(s) State.AutoGacha = s Notify("Random Fruit: "..(s and "ON" or "OFF")) end)
 CreateToggle(FruitRaidPage, "Store Fruit", false, function(s) State.StoreFruit = s Notify("Store Fruit: "..(s and "ON" or "OFF")) end)
-CreateToggle(FruitRaidPage, "Bones Check", false, function(s) if s then local res = Invoke("Bones", "Check") Notify("Bones: "..tostring(res)) end end)
-CreateToggle(FruitRaidPage, "Bones Surprise", false, function(s) if s then Invoke("Bones", "Buy", 1, 1) Notify("Surprise") end end)
-CreateToggle(FruitRaidPage, "Bones Stat Refund", false, function(s) if s then Invoke("Bones", "Buy", 1, 2) Notify("Stat Refund") end end)
-CreateToggle(FruitRaidPage, "Bones Race Reroll", false, function(s) if s then Invoke("Bones", "Buy", 1, 3) Notify("Race Reroll") end end)
 CreateDropdown(FruitRaidPage, "Select Raid", {"Flame","Ice","Sand","Dark","Light","Magma","Quake","Buddha","Spider","Phoenix","Dough"}, function(opt) State.SelectedRaid = opt Notify("Raid: "..opt) end)
 CreateToggle(FruitRaidPage, "Auto Raid", false, function(s) State.AutoRaid = s Notify("Auto Raid: "..(s and "ON" or "OFF")) end)
 CreateToggle(FruitRaidPage, "Buy Chip", false, function(s)
@@ -886,7 +902,9 @@ local StatusLabel = Create("TextLabel", {
 })
 Corner(StatusLabel, 8)
 Stroke(StatusLabel, CONFIG.Blue, 1.2, 0.4)
-
+local statusPad = Instance.new("UIPadding")
+statusPad.PaddingLeft = UDim.new(0, 12) statusPad.PaddingTop = UDim.new(0, 10)
+statusPad.Parent = StatusLabel
 task.spawn(function()
     while task.wait(1) do
         local ls = Player:FindFirstChild("leaderstats")
@@ -897,7 +915,6 @@ task.spawn(function()
         end
     end
 end)
-
 CreateToggle(StatusPage, "Get Inventory", false, function(s) if s then Invoke("getInventory") Notify("Inventory") end end)
 CreateToggle(StatusPage, "Get Inventory Weapons", false, function(s) if s then Invoke("getInventoryWeapons") Notify("Weapons") end end)
 CreateToggle(StatusPage, "Get Titles", false, function(s) if s then Invoke("getTitles") Notify("Titles") end end)
@@ -943,17 +960,19 @@ CreateToggle(PvPPage, "Aimbot", false, function(s)
     if s then StartAimbot() else StopAimbot() end
     Notify("Aimbot: "..(s and "ON" or "OFF"))
 end)
-CreateToggle(PvPPage, "Hitbox", false, function(s) State.Hitbox = s Notify("Hitbox: "..(s and "ON" or "OFF")) end)
 
 --// TRIALS
+local TrainProgressLabel = CreateLabel(TrialsPage, "Train Progress: -", 38)
+task.spawn(function()
+    while task.wait(3) do
+        local res = Invoke("RaceV4Progress", "Check")
+        if res then TrainProgressLabel.Text = "Train Progress: "..tostring(res) end
+    end
+end)
 CreateToggle(TrialsPage, "Great Tree Highest", false, function(s) if s then TweenToPosition(Vector3.new(2700,500,3000),500) end end)
 CreateToggle(TrialsPage, "Tween RaceDoor", false, function(s) if s then TweenToPosition(Vector3.new(2830,90,3100),500) end end)
 CreateToggle(TrialsPage, "Tween Ancient Clock", false, function(s) if s then TweenToPosition(Vector3.new(-5020,80,-3020),500) end end)
 CreateDropdown(TrialsPage, "Select Method", {"Bone","Cake"}, function(opt) State.TrialMethod = opt Notify("Method: "..opt) end)
-CreateToggle(TrialsPage, "Race V4 Check", false, function(s) if s then Invoke("RaceV4Progress", "Check") Notify("Race V4 Check") end end)
-CreateToggle(TrialsPage, "Race V4 Begin", false, function(s) if s then Invoke("RaceV4Progress", "Begin") Notify("Race V4 Begin") end end)
-CreateToggle(TrialsPage, "Race V4 Continue", false, function(s) if s then Invoke("RaceV4Progress", "Continue") Notify("Race V4 Continue") end end)
-CreateToggle(TrialsPage, "Train Progress", false, function(s) if s then Invoke("RaceV4Progress", "Continue") Notify("Train Progress") end end)
 CreateToggle(TrialsPage, "Finish Trial", false, function(s) if s then Invoke("RaceV4Progress", "Finish") Notify("Finish Trial") end end)
 CreateToggle(TrialsPage, "Auto Trial", false, function(s) State.AutoTrial = s Notify("Auto Trial: "..(s and "ON" or "OFF")) end)
 CreateToggle(TrialsPage, "Auto Pull Lever", false, function(s) State.AutoPullLever = s Notify("Auto Pull Lever: "..(s and "ON" or "OFF")) end)
@@ -968,6 +987,9 @@ CreateToggle(SetingPage, "ESP Chest", false, function(s) State.ESPChest = s Noti
 CreateToggle(SetingPage, "ESP Flower", false, function(s) State.ESPFlower = s Notify("ESP Flower: "..(s and "ON" or "OFF")) end)
 
 --// TELEPORT
+CreateToggle(TeleportPage, "Check Bones", false, function(s)
+    if s then local res = Invoke("Bones", "Check") Notify("Bones: "..tostring(res)) end
+end)
 local IslandCoords = {
     ["Starter Island"]=Vector3.new(1077,15,1450), ["Jungle"]=Vector3.new(-1620,30,200),
     ["Pirate Village"]=Vector3.new(-1100,15,3800), ["Desert"]=Vector3.new(980,15,4200),
@@ -983,13 +1005,11 @@ local IslandCoords = {
     ["Great Tree"]=Vector3.new(2700,60,3000), ["Floating Turtle"]=Vector3.new(-1600,60,3500),
     ["Castle on the Sea"]=Vector3.new(-5000,60,-3000), ["Haunted Castle"]=Vector3.new(-9500,100,5800),
 }
-
 local SeaIslands = {
     Sea1 = {"Starter Island","Jungle","Pirate Village","Desert","Frozen Village","Marine Fortress","Skylands","Prison","Colosseum","Magma Village","Underwater City","Fountain City"},
     Sea2 = {"Kingdom of Rose","Green Zone","Graveyard","Snow Mountain","Hot and Cold","Cursed Ship","Ice Castle","Forgotten Island"},
     Sea3 = {"Port Town","Hydra Island","Great Tree","Floating Turtle","Castle on the Sea","Haunted Castle"},
 }
-
 CreateDropdown(TeleportPage, "Select Sea", {"Sea1","Sea2","Sea3"}, function(opt) end)
 CreateDropdown(TeleportPage, "Select Island", SeaIslands.Sea1, function(opt) State.SelectedIsland = opt Notify("Island: "..opt) end)
 CreateToggle(TeleportPage, "Tween ke Island", false, function(s)
@@ -998,10 +1018,9 @@ CreateToggle(TeleportPage, "Tween ke Island", false, function(s)
         if pos then TweenToPosition(pos + Vector3.new(0,3,0), 500) Notify("Tween: "..State.SelectedIsland) end
     end
 end)
-CreateToggle(TeleportPage, "Travel Main", false, function(s) if s then Invoke("TravelMain") end end)
-CreateToggle(TeleportPage, "Travel Dressrosa", false, function(s) if s then Invoke("TravelDressrosa") end end)
-CreateToggle(TeleportPage, "Travel Zou", false, function(s) if s then Invoke("TravelZou") end end)
-CreateToggle(TeleportPage, "Set Spawn", false, function(s) if s then Invoke("SetSpawnPoint") end end)
+CreateToggle(TeleportPage, "Sea 1", false, function(s) if s then Invoke("TravelMain") Notify("Sea 1") end end)
+CreateToggle(TeleportPage, "Sea 2", false, function(s) if s then Invoke("TravelDressrosa") Notify("Sea 2") end end)
+CreateToggle(TeleportPage, "Sea 3", false, function(s) if s then Invoke("TravelZou") Notify("Sea 3") end end)
 
 --// STATS
 CreateToggle(StatsPage, "Auto Add Stats", false, function(s) State.AutoAddStats = s Notify("Auto Add Stats: "..(s and "ON" or "OFF")) end)
@@ -1028,12 +1047,7 @@ end)
 CreateDropdown(ShopPage, "Select Melee", {"Black Leg","Electro","Fishman Karate","Sharkman Karate","Dragon Talon","Electric Claw","Death Step","Superhuman","Godhuman"}, function(opt) State.SelectedMelee = opt Notify("Melee: "..opt) end)
 CreateToggle(ShopPage, "Buy Selected Melee", false, function(s)
     if s then
-        local map = {
-            ["Black Leg"]="BuyBlackLeg",["Electro"]="BuyElectro",
-            ["Fishman Karate"]="BuyFishmanKarate",["Sharkman Karate"]="BuySharkmanKarate",
-            ["Dragon Talon"]="BuyDragonTalon",["Electric Claw"]="BuyElectricClaw",
-            ["Death Step"]="BuyDeathStep",["Superhuman"]="BuySuperhuman",["Godhuman"]="BuyGodhuman",
-        }
+        local map = {["Black Leg"]="BuyBlackLeg",["Electro"]="BuyElectro",["Fishman Karate"]="BuyFishmanKarate",["Sharkman Karate"]="BuySharkmanKarate",["Dragon Talon"]="BuyDragonTalon",["Electric Claw"]="BuyElectricClaw",["Death Step"]="BuyDeathStep",["Superhuman"]="BuySuperhuman",["Godhuman"]="BuyGodhuman"}
         local fn = map[State.SelectedMelee]
         if fn then Invoke(fn) Notify("Bought: "..State.SelectedMelee) else Notify("Select melee first") end
     end
@@ -1069,11 +1083,8 @@ CreateToggle(MiscPage, "Boost FPS", false, function(s)
     if s then
         pcall(function()
             State.OriginalLighting = {GlobalShadows=Lighting.GlobalShadows, Brightness=Lighting.Brightness, Ambient=Lighting.Ambient}
-            Lighting.GlobalShadows = false
-            Lighting.Brightness = 0
-            Lighting.Ambient = Color3.fromRGB(0,0,0)
-            Lighting.FogEnd = 100
-            Lighting.Outlines = false
+            Lighting.GlobalShadows = false Lighting.Brightness = 0
+            Lighting.Ambient = Color3.fromRGB(0,0,0) Lighting.FogEnd = 100 Lighting.Outlines = false
         end)
         Notify("Boost FPS: ON")
     else
@@ -1097,29 +1108,104 @@ CreateToggle(MiscPage, "Rejoin Server", false, function(s) if s then TeleportSer
 CreateToggle(MiscPage, "Join Marine", false, function(s) if s then Invoke("SetTeam", "Marines") Notify("Joined Marines") end end)
 CreateToggle(MiscPage, "Join Pirate", false, function(s) if s then Invoke("SetTeam", "Pirates") Notify("Joined Pirates") end end)
 
---// LOOPS
+--// ============== LOOPS ==============
+
+-- AUTO FARM LEVEL
 task.spawn(function()
-    while task.wait(0.1) do
+    while task.wait(0.15) do
         if State.AutoFarm then
             SafeCall(function()
-                local ls = Player:FindFirstChild("leaderstats")
-                local lv = ls and ls:FindFirstChild("Level")
-                local level = lv and lv.Value or 1
-                local mobs = FindMobByLevel(level, CONFIG.LevelTolerance)
-                if #mobs > 0 then
-                    local target = mobs[1].model
+                local level = GetLevel()
+                local data = GetLevelData(level)
+                if not data then return end
+                
+                if CommF then pcall(function() CommF:InvokeServer("StartQuest", data.quest, data.questNum) end) end
+                
+                local target = FindMobByName(data.mobs)
+                if target then
                     local trp = target:FindFirstChild("HumanoidRootPart")
                     local hum = target:FindFirstChildOfClass("Humanoid")
                     if trp and hum and hum.Health > 0 then
-                        TweenToPosition(trp.Position + Vector3.new(0, 3, 0), CONFIG.TweenMobSpeed)
+                        local hrp = GetHRP()
+                        if not hrp then return end
+                        if GetDist(hrp.Position, trp.Position) > 15 then TweenToPosition(trp.Position + Vector3.new(0,3,0), 350) end
+                        
+                        if not State.HitboxPart or not State.HitboxPart.Parent then
+                            local hb = Instance.new("Part")
+                            hb.Name = "SysxHitbox" hb.Size = Vector3.new(30,30,30)
+                            hb.Transparency = 1 hb.CanCollide = false hb.CanTouch = true
+                            hb.Anchored = true hb.Massless = true hb.Parent = workspace
+                            State.HitboxPart = hb
+                        end
+                        State.HitboxPart.CFrame = CFrame.new(trp.Position)
+                        
+                        local tool = EquipWeapon()
+                        if tool then pcall(function() tool:Activate() end) end
+                    end
+                end
+            end)
+        else
+            if State.HitboxPart then State.HitboxPart:Destroy() State.HitboxPart = nil end
+        end
+    end
+end)
+
+-- AUTO KILL NEAREST
+task.spawn(function()
+    while task.wait(0.15) do
+        if State.AutoKillNearest then
+            SafeCall(function()
+                local hrp = GetHRP()
+                if not hrp then return end
+                local closest, dist = nil, math.huge
+                for _, mob in ipairs(ScanEnemies()) do
+                    local trp = mob:FindFirstChild("HumanoidRootPart")
+                    if trp then
+                        local d = GetDist(trp.Position, hrp.Position)
+                        if d < 100 and d < dist then closest, dist = mob, d end
+                    end
+                end
+                if closest then
+                    local trp = closest:FindFirstChild("HumanoidRootPart")
+                    local tool = EquipWeapon()
+                    if tool then
+                        if dist > 15 then TweenToPosition(trp.Position + Vector3.new(0,3,0), 350) end
+                        pcall(function() tool:Activate() end)
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- FARM CHEST
+task.spawn(function()
+    while task.wait(0.3) do
+        if State.AutoChest then
+            SafeCall(function()
+                local chests = getChestsSorted()
+                if #chests > 0 then TeleportNoclip(chests[1].CFrame)
+                else Notify("Chest habis, tunggu respawn") task.wait(5) State.FirstRunChest = true State.UncheckedChests = {} end
+            end)
+        end
+    end
+end)
+
+-- AUTO BOSS
+task.spawn(function()
+    while task.wait(0.5) do
+        if State.AutoBoss and State.SelectedBoss then
+            SafeCall(function()
+                local boss = FindBoss(State.SelectedBoss)
+                if boss then
+                    local trp = boss:FindFirstChild("HumanoidRootPart")
+                    local hum = boss:FindFirstChildOfClass("Humanoid")
+                    if trp and hum and hum.Health > 0 then
+                        TweenToPosition(trp.Position + Vector3.new(0,3,0), 300)
                         local tool = EquipWeapon()
                         if tool then
                             local timeout = 0
-                            while target.Parent and hum.Health > 0 and State.AutoFarm and timeout < 100 do
-                                local hrp = GetHRP()
-                                if hrp and GetDist(hrp.Position, trp.Position) > 30 then
-                                    TweenToPosition(trp.Position + Vector3.new(0, 3, 0), CONFIG.TweenMobSpeed)
-                                end
+                            while boss.Parent and hum.Health > 0 and State.AutoBoss and timeout < 100 do
                                 pcall(function() tool:Activate() end)
                                 task.wait(0.15)
                                 timeout += 1
@@ -1132,37 +1218,141 @@ task.spawn(function()
     end
 end)
 
+-- AUTO FARM SEA / KILL SEA BEAST / EXTRA
 task.spawn(function()
     while task.wait(0.3) do
-        if State.AutoChest then
+        if State.AutoFarmSea and State.SelectedSeaMob then
             SafeCall(function()
-                local chests = getChestsSorted()
-                if #chests > 0 then TeleportNoclip(chests[1].CFrame)
-                else Notify("Chest habis, tunggu respawn") task.wait(5) FirstRunChest = true UncheckedChests = {} end
-            end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(1) do
-        if State.AutoBoss and State.SelectedBoss then
-            SafeCall(function()
-                local boss = FindBoss(State.SelectedBoss)
-                if boss then
-                    TweenToMob(boss, 300)
-                    local tool = EquipWeapon()
-                    if tool then
-                        while boss.Parent and boss:FindFirstChildOfClass("Humanoid") and boss.Humanoid.Health > 0 and State.AutoBoss do
-                            tool:Activate() task.wait(0.1)
+                for _, obj in ipairs(workspace:GetChildren()) do
+                    if obj.Name == State.SelectedSeaMob then
+                        local hum = obj:FindFirstChildOfClass("Humanoid")
+                        local trp = obj:FindFirstChild("HumanoidRootPart")
+                        if hum and trp and hum.Health > 0 then
+                            TweenToPosition(trp.Position + Vector3.new(0,3,0), 400)
+                            local tool = EquipWeapon()
+                            if tool then pcall(function() tool:Activate() end) end
+                            break
                         end
                     end
+                end
+            end)
+        end
+        if State.AutoBuyBoat then
+            SafeCall(function()
+                local hasBoat = false
+                for _, obj in ipairs(workspace:GetDescendants()) do
+                    if obj.Name == "Boat" and obj:FindFirstChildOfClass("VehicleSeat") then hasBoat = true break end
+                end
+                if not hasBoat then Invoke("BuyBoat", "Dinghy") end
+            end)
+        end
+        if State.AutoRemoveRock then
+            SafeCall(function()
+                for _, obj in ipairs(workspace:GetDescendants()) do
+                    if obj:IsA("BasePart") and string.find(string.lower(obj.Name), "rock") then
+                        local hrp = GetHRP()
+                        if hrp and GetDist(obj.Position, hrp.Position) < 50 then pcall(function() obj:Destroy() end) end
+                    end
+                end
+            end)
+        end
+        if State.AutoKillGolem then
+            SafeCall(function()
+                for _, obj in ipairs(workspace:GetChildren()) do
+                    if string.find(string.lower(obj.Name), "golem") then
+                        local hum = obj:FindFirstChildOfClass("Humanoid")
+                        local trp = obj:FindFirstChild("HumanoidRootPart")
+                        if hum and trp and hum.Health > 0 then
+                            TweenToPosition(trp.Position + Vector3.new(0,3,0), 400)
+                            local tool = EquipWeapon()
+                            if tool then pcall(function() tool:Activate() end) end
+                            break
+                        end
+                    end
+                end
+            end)
+        end
+        if State.AutoCollectBone or State.AutoCollectDinoEgg then
+            SafeCall(function()
+                local keywords = {}
+                if State.AutoCollectBone then table.insert(keywords, "bone") end
+                if State.AutoCollectDinoEgg then table.insert(keywords, "dino") table.insert(keywords, "egg") end
+                for _, obj in ipairs(workspace:GetDescendants()) do
+                    if obj:IsA("BasePart") then
+                        local n = string.lower(obj.Name)
+                        for _, kw in ipairs(keywords) do
+                            if string.find(n, kw) and obj:FindFirstChild("TouchInterest") then
+                                local hrp = GetHRP()
+                                if hrp then TweenToPosition(obj.Position + Vector3.new(0,3,0), 400) end
+                                break
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+        if State.AutoHitLeviathan then
+            SafeCall(function()
+                for _, obj in ipairs(workspace:GetChildren()) do
+                    if string.find(string.lower(obj.Name), "leviathan") then
+                        local trp = obj:FindFirstChild("HumanoidRootPart")
+                        if trp then
+                            TweenToPosition(trp.Position + Vector3.new(0,3,0), 400)
+                            local tool = EquipWeapon()
+                            if tool then pcall(function() tool:Activate() end) end
+                            break
+                        end
+                    end
+                end
+            end)
+        end
+        if State.AutoShootHeart then
+            SafeCall(function()
+                for _, obj in ipairs(workspace:GetDescendants()) do
+                    if obj:IsA("BasePart") and string.find(string.lower(obj.Name), "heart") then
+                        if obj:FindFirstChild("TouchInterest") then
+                            local hrp = GetHRP()
+                            if hrp then TweenToPosition(obj.Position + Vector3.new(0,3,0), 400) end
+                        end
+                    end
+                end
+            end)
+        end
+        if State.FindMirage then
+            SafeCall(function()
+                for _, obj in ipairs(workspace:GetChildren()) do
+                    if string.find(string.lower(obj.Name), "mirage") then Notify("Mirage found!") State.FindMirage = false break end
+                end
+            end)
+        end
+        if State.FindKitsune then
+            SafeCall(function()
+                for _, obj in ipairs(workspace:GetChildren()) do
+                    if string.find(string.lower(obj.Name), "kitsune") then
+                        local lvl = obj:GetAttribute("Level") or 0
+                        if lvl >= State.KitsuneLevel then Notify("Kitsune found! Lv "..lvl) State.FindKitsune = false break end
+                    end
+                end
+            end)
+        end
+        if State.FindPrehistoric then
+            SafeCall(function()
+                for _, obj in ipairs(workspace:GetChildren()) do
+                    if string.find(string.lower(obj.Name), "prehistoric") or string.find(string.lower(obj.Name), "dino") then Notify("Prehistoric found!") State.FindPrehistoric = false break end
+                end
+            end)
+        end
+        if State.FindFrozenDim then
+            SafeCall(function()
+                for _, obj in ipairs(workspace:GetChildren()) do
+                    if string.find(string.lower(obj.Name), "frozen") or string.find(string.lower(obj.Name), "dimension") then Notify("Frozen Dim found!") State.FindFrozenDim = false break end
                 end
             end)
         end
     end
 end)
 
+-- AUTO FRUIT
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoFruit then
@@ -1180,14 +1370,14 @@ task.spawn(function()
     end
 end)
 
+-- AUTO GACHA
 task.spawn(function()
     while task.wait(60) do
-        if State.AutoGacha then
-            SafeCall(function() if not GetHeldFruit() then Invoke("BuyFruit", "Random") end end)
-        end
+        if State.AutoGacha then SafeCall(function() if not GetHeldFruit() then Invoke("BuyFruit", "Random") end end) end
     end
 end)
 
+-- AUTO STORE FRUIT
 task.spawn(function()
     while task.wait(1.5) do
         if State.StoreFruit then
@@ -1199,6 +1389,7 @@ task.spawn(function()
     end
 end)
 
+-- AUTO RAID
 task.spawn(function()
     while task.wait(10) do
         if State.AutoRaid and State.SelectedRaid then
@@ -1212,6 +1403,7 @@ task.spawn(function()
     end
 end)
 
+-- AUTO ADD STATS
 task.spawn(function()
     while task.wait(3) do
         if State.AutoAddStats then
@@ -1230,49 +1422,30 @@ task.spawn(function()
     end
 end)
 
+-- COUSIN BUY
 task.spawn(function()
     while task.wait(1) do
         if State.CousinBuy then SafeCall(function() Invoke("Cousin", "Buy") end) end
     end
 end)
 
-task.spawn(function()
-    while task.wait(0.1) do
-        if State.Hitbox then
-            local hrp = GetHRP()
-            if hrp then
-                if not State.HitboxPart or not State.HitboxPart.Parent then
-                    local hb = Instance.new("Part")
-                    hb.Name = "SysxHitbox" hb.Size = Vector3.new(10,10,10)
-                    hb.Transparency = 1 hb.CanCollide = false hb.CanTouch = true
-                    hb.Anchored = true hb.Massless = true hb.Parent = workspace
-                    State.HitboxPart = hb
-                end
-                State.HitboxPart.CFrame = hrp.CFrame
-            end
-        else
-            if State.HitboxPart then State.HitboxPart:Destroy() State.HitboxPart = nil end
-        end
-    end
-end)
-
+-- INFINITE JUMP
 task.spawn(function()
     while task.wait(0.1) do
         if State.InfiniteJump then
             local char = Player.Character
             if char then
                 local hum = char:FindFirstChildOfClass("Humanoid")
-                if hum and hum:GetState() == Enum.HumanoidStateType.Freefall then
-                    hum:ChangeState(Enum.HumanoidStateType.Jumping)
-                end
+                if hum and hum:GetState() == Enum.HumanoidStateType.Freefall then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
             end
         end
     end
 end)
 
+-- BRING MOB
 task.spawn(function()
     while task.wait(0.1) do
-        if State.BringMob then
+        if State.BringMob or State.AutoFarm then
             local now = os.clock()
             if now - State.LastBring >= 0.3 then
                 local hrp = GetHRP()
@@ -1281,7 +1454,7 @@ task.spawn(function()
                     for _, model in ipairs(workspace:GetChildren()) do
                         if IsNPC(model) then
                             local mRoot = model:FindFirstChild("HumanoidRootPart")
-                            if mRoot and GetDist(mRoot.Position, hrp.Position) <= State.BringMobRange then
+                            if mRoot and GetDist(mRoot.Position, hrp.Position) <= (State.BringMobRange or 50) then
                                 pcall(function() mRoot.CFrame = CFrame.new(targetPos) end)
                             end
                         end
@@ -1293,28 +1466,62 @@ task.spawn(function()
     end
 end)
 
+-- ESP LOOP (Distance | Name)
 task.spawn(function()
-    while task.wait(0.5) do
+    while task.wait(0.3) do
+        local hrp = GetHRP()
+        local myPos = hrp and hrp.Position or Vector3.new(0,0,0)
+        
         if State.ESPPlayer then
             for _, plr in ipairs(Players:GetPlayers()) do
                 if plr ~= Player and plr.Character then
-                    local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
-                    if hrp then CreateESP(hrp, plr.Name, Color3.fromRGB(255,80,80)) end
+                    local trp = plr.Character:FindFirstChild("HumanoidRootPart")
+                    if trp then
+                        local dist = math.floor((trp.Position - myPos).Magnitude)
+                        local text = dist.." | "..plr.Name
+                        CreateESP(trp, text, Color3.fromRGB(255,80,80))
+                        if State.ESPObjects[trp] then
+                            local lbl = State.ESPObjects[trp]:FindFirstChild("ESPLabel")
+                            if lbl then lbl.Text = text end
+                        end
+                    end
                 end
             end
         end
         if State.ESPFruit then
-            for _, obj in ipairs(FindFruits()) do CreateESP(obj, obj.Name, Color3.fromRGB(255,200,80)) end
+            for _, obj in ipairs(FindFruits()) do
+                local dist = math.floor((obj.Position - myPos).Magnitude)
+                local text = dist.." | "..obj.Name
+                CreateESP(obj, text, Color3.fromRGB(255,200,80))
+                if State.ESPObjects[obj] then
+                    local lbl = State.ESPObjects[obj]:FindFirstChild("ESPLabel")
+                    if lbl then lbl.Text = text end
+                end
+            end
         end
         if State.ESPChest then
-            for _, obj in ipairs(getChestsSorted()) do CreateESP(obj, "Chest", Color3.fromRGB(255,215,0)) end
+            for _, obj in ipairs(getChestsSorted()) do
+                local dist = math.floor((obj.Position - myPos).Magnitude)
+                local text = dist.." | Chest"
+                CreateESP(obj, text, Color3.fromRGB(255,215,0))
+                if State.ESPObjects[obj] then
+                    local lbl = State.ESPObjects[obj]:FindFirstChild("ESPLabel")
+                    if lbl then lbl.Text = text end
+                end
+            end
         end
         if State.ESPIsland then
             for _, obj in ipairs(workspace:GetDescendants()) do
                 if obj:IsA("BasePart") then
                     local n = string.lower(obj.Name)
                     if string.find(n,"island") or string.find(n,"portal") or string.find(n,"teleport") then
-                        CreateESP(obj, obj.Name, Color3.fromRGB(80,200,255))
+                        local dist = math.floor((obj.Position - myPos).Magnitude)
+                        local text = dist.." | "..obj.Name
+                        CreateESP(obj, text, Color3.fromRGB(80,200,255))
+                        if State.ESPObjects[obj] then
+                            local lbl = State.ESPObjects[obj]:FindFirstChild("ESPLabel")
+                            if lbl then lbl.Text = text end
+                        end
                     end
                 end
             end
@@ -1324,7 +1531,13 @@ task.spawn(function()
                 if obj:IsA("BasePart") then
                     local n = string.lower(obj.Name)
                     if string.find(n,"bluegear") or string.find(n,"blue_gear") or string.find(n,"gear") then
-                        CreateESP(obj, "Blue Gear", Color3.fromRGB(0,150,255))
+                        local dist = math.floor((obj.Position - myPos).Magnitude)
+                        local text = dist.." | Blue Gear"
+                        CreateESP(obj, text, Color3.fromRGB(0,150,255))
+                        if State.ESPObjects[obj] then
+                            local lbl = State.ESPObjects[obj]:FindFirstChild("ESPLabel")
+                            if lbl then lbl.Text = text end
+                        end
                     end
                 end
             end
@@ -1334,7 +1547,13 @@ task.spawn(function()
                 if obj:IsA("BasePart") then
                     local n = string.lower(obj.Name)
                     if string.find(n,"flower") or string.find(n,"blossom") or string.find(n,"petal") then
-                        CreateESP(obj, obj.Name, Color3.fromRGB(255,100,200))
+                        local dist = math.floor((obj.Position - myPos).Magnitude)
+                        local text = dist.." | "..obj.Name
+                        CreateESP(obj, text, Color3.fromRGB(255,100,200))
+                        if State.ESPObjects[obj] then
+                            local lbl = State.ESPObjects[obj]:FindFirstChild("ESPLabel")
+                            if lbl then lbl.Text = text end
+                        end
                     end
                 end
             end
@@ -1352,7 +1571,6 @@ local TabDefs = {
     {"Fishing"}, {"Status"}, {"PvP"}, {"Trials"}, {"Seting"},
     {"Teleport"}, {"Stats"}, {"Shop"}, {"Misc"},
 }
-
 for i, d in ipairs(TabDefs) do
     local btn = CreateTab(d[1], i)
     btn.Activated:Connect(function() ShowTab(d[1]) end)
