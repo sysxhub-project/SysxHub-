@@ -1,7 +1,7 @@
 --[[
 ================================================================
  SYSX HUB | Freemium v1.0 | Created by Ramanotsugarr
- Logo + Banner + 14 Tabs + Full Feature + Fixed Dropdown
+ Logo + Banner + 14 Tabs + Farm Config Max 2800 + Farm Nearest
 ================================================================
 ]]
 
@@ -14,18 +14,14 @@ local Workspace = game:GetService("Workspace")
 local VirtualUser = game:GetService("VirtualUser")
 local TeleportService = game:GetService("TeleportService")
 local Lighting = game:GetService("Lighting")
-local StarterGui = game:GetService("StarterGui")
 
 local Player = Players.LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")
 local Camera = Workspace.CurrentCamera
 
---==================================================
--- CONFIG (DEKLARASI DULU DI ATAS)
---==================================================
-
 local LOGO_ID = "rbxassetid://136425814447688"
 local BANNER_ID = "rbxassetid://78771184763605"
+local MAX_LEVEL = 2800
 
 local CONFIG = {
     Name = "SysxHub",
@@ -36,12 +32,8 @@ local CONFIG = {
     FruitTweenSpeed = 180,
 }
 
---==================================================
--- STATE
---==================================================
-
 local State = {
-    AutoFarm=false, AutoChest=false, AutoBoss=false,
+    AutoFarm=false, AutoFarmNearest=false, AutoChest=false, AutoBoss=false,
     AutoFruit=false, AutoKillNearest=false, AutoRaid=false,
     AutoGacha=false, StoreFruit=false, AutoFish=false, AutoAddStats=false,
     AutoRaceV2=false, AutoRaceV3=false,
@@ -75,10 +67,7 @@ local State = {
 local old = PlayerGui:FindFirstChild("SysxHub")
 if old then old:Destroy() end
 
---==================================================
--- HELPERS
---==================================================
-
+--// HELPERS
 local function Create(cls, props)
     local o = Instance.new(cls)
     for k,v in pairs(props or {}) do pcall(function() o[k]=v end) end
@@ -97,10 +86,7 @@ local function Tween(o, props, time)
     TweenService:Create(o, TweenInfo.new(time or 0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), props):Play()
 end
 
---==================================================
--- REMOTE
---==================================================
-
+--// REMOTE
 local CommF = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
 local function Invoke(...)
     if not CommF then return nil end
@@ -109,10 +95,7 @@ local function Invoke(...)
     return res
 end
 
---==================================================
--- NPC FILTER
---==================================================
-
+--// NPC FILTER
 local PASSIVE = {"dealer","shop","vendor","merchant","quest","giver","bartender","chef","captain","scientist","teacher","guide","trainer","banker","blacksmith","smith","farmer","villager","elder"}
 
 local function IsNPC(m)
@@ -168,10 +151,7 @@ local function GetHeldFruit()
     return nil
 end
 
---==================================================
--- FARM CHEST
---==================================================
-
+--// FARM CHEST
 local MaxSpeed = 300
 local function getCharacter()
     if not Player.Character then Player.CharacterAdded:Wait() end
@@ -220,10 +200,7 @@ local function TeleportNoclip(goal, speed)
     toggleNoclip(false)
 end
 
---==================================================
--- WEAPON
---==================================================
-
+--// WEAPON
 local function EquipWeapon()
     local char = Player.Character
     if not char then return nil end
@@ -242,10 +219,7 @@ local function EquipWeapon()
     return nil
 end
 
---==================================================
--- TWEEN
---==================================================
-
+--// TWEEN
 local function TweenToPosition(targetPos, speed)
     local hrp = GetHRP()
     if not hrp then return end
@@ -296,10 +270,7 @@ local function TweenToIslandSmooth(targetPos)
     return true
 end
 
---==================================================
--- ESP
---==================================================
-
+--// ESP
 local function CreateESP(target, text, color)
     if not target or not target:IsA("BasePart") then return end
     if State.ESPObjects[target] then return end
@@ -319,10 +290,7 @@ local function ClearAllESP()
     State.ESPObjects = {}
 end
 
---==================================================
--- SMOOTH AIMBOT
---==================================================
-
+--// SMOOTH AIMBOT
 local AimbotConnection = nil
 local function GetClosestPlayerHead()
     local closest, dist = nil, math.huge
@@ -353,10 +321,7 @@ local function StopAimbot()
     if AimbotConnection then AimbotConnection:Disconnect() AimbotConnection = nil end
 end
 
---==================================================
--- WALK ON WATER
---==================================================
-
+--// WALK ON WATER
 local WalkWaterConnection = nil
 local function getWaterHeight(root)
     local params = RaycastParams.new()
@@ -383,91 +348,92 @@ local function DisableWalkWater()
     if WalkWaterConnection then WalkWaterConnection:Disconnect() WalkWaterConnection = nil end
 end
 
---==================================================
--- FARM LEVEL CONFIG
---==================================================
-
-local FarmLevelConfig = {
-    {Min=1, Max=9, Island="Starter Island", Quest="Bandit Quest", NPC="Bandit"},
-    {Min=10, Max=14, Island="Jungle", Quest="Monkey Quest", NPC="Monkey"},
-    {Min=15, Max=29, Island="Jungle", Quest="Gorilla Quest", NPC="Gorilla"},
-    {Min=30, Max=59, Island="Pirate Village", Quest="Pirate Quest", NPC="Pirate"},
-    {Min=60, Max=74, Island="Pirate Village", Quest="Brute Quest", NPC="Brute"},
-    {Min=75, Max=89, Island="Desert", Quest="Desert Bandit Quest", NPC="Desert Bandit"},
-    {Min=90, Max=99, Island="Desert", Quest="Desert Officer Quest", NPC="Desert Officer"},
-    {Min=100, Max=119, Island="Frozen Village", Quest="Snow Bandit Quest", NPC="Snow Bandit"},
-    {Min=120, Max=149, Island="Frozen Village", Quest="Snowman Quest", NPC="Snowman"},
-    {Min=150, Max=174, Island="Marine Fortress", Quest="Chief Petty Officer Quest", NPC="Chief Petty Officer"},
-    {Min=175, Max=199, Island="Skylands", Quest="Sky Bandit Quest", NPC="Sky Bandit"},
-    {Min=200, Max=224, Island="Skylands", Quest="Dark Master Quest", NPC="Dark Master"},
-    {Min=225, Max=274, Island="Prison", Quest="Prisoner Quest", NPC="Prisoner"},
-    {Min=275, Max=299, Island="Colosseum", Quest="Toga Warrior Quest", NPC="Toga Warrior"},
-    {Min=300, Max=374, Island="Magma Village", Quest="Military Soldier Quest", NPC="Military Soldier"},
-    {Min=375, Max=399, Island="Magma Village", Quest="Military Spy Quest", NPC="Military Spy"},
-    {Min=400, Max=449, Island="Underwater City", Quest="Fishman Warrior Quest", NPC="Fishman Warrior"},
-    {Min=450, Max=474, Island="Underwater City", Quest="Fishman Commando Quest", NPC="Fishman Commando"},
-    {Min=475, Max=524, Island="Fountain City", Quest="Galley Pirate Quest", NPC="Galley Pirate"},
-    {Min=525, Max=599, Island="Fountain City", Quest="Galley Captain Quest", NPC="Galley Captain"},
-    {Min=600, Max=699, Island="Upper Skylands", Quest="God's Guard Quest", NPC="God's Guard"},
-    {Min=700, Max=724, Island="Kingdom of Rose", Quest="Raider Quest", NPC="Raider"},
-    {Min=725, Max=774, Island="Kingdom of Rose", Quest="Mercenary Quest", NPC="Mercenary"},
-    {Min=775, Max=874, Island="Kingdom of Rose", Quest="Swan Pirate Quest", NPC="Swan Pirate"},
-    {Min=875, Max=899, Island="Green Zone", Quest="Factory Staff Quest", NPC="Factory Staff"},
-    {Min=900, Max=949, Island="Graveyard", Quest="Graveyard Warrior Quest", NPC="Graveyard Warrior"},
-    {Min=950, Max=974, Island="Graveyard", Quest="Graveyard Assassin Quest", NPC="Graveyard Assassin"},
-    {Min=975, Max=999, Island="Snow Mountain", Quest="Snow Trooper Quest", NPC="Snow Trooper"},
-    {Min=1000, Max=1049, Island="Snow Mountain", Quest="Winter Warrior Quest", NPC="Winter Warrior"},
-    {Min=1050, Max=1099, Island="Hot and Cold", Quest="Lab Subordinate Quest", NPC="Lab Subordinate"},
-    {Min=1100, Max=1124, Island="Hot and Cold", Quest="Horned Warrior Quest", NPC="Horned Warrior"},
-    {Min=1125, Max=1174, Island="Cursed Ship", Quest="Ship Deckhand Quest", NPC="Ship Deckhand"},
-    {Min=1175, Max=1199, Island="Cursed Ship", Quest="Ship Engineer Quest", NPC="Ship Engineer"},
-    {Min=1200, Max=1249, Island="Ice Castle", Quest="Arctic Warrior Quest", NPC="Arctic Warrior"},
-    {Min=1250, Max=1274, Island="Ice Castle", Quest="Snow Lurker Quest", NPC="Snow Lurker"},
-    {Min=1275, Max=1299, Island="Forgotten Island", Quest="Sea Soldier Quest", NPC="Sea Soldier"},
-    {Min=1300, Max=1349, Island="Forgotten Island", Quest="Water Fighter Quest", NPC="Water Fighter"},
-    {Min=1350, Max=1424, Island="Forgotten Island", Quest="Toga Warrior Quest", NPC="Toga Warrior"},
-    {Min=1425, Max=1449, Island="Forgotten Island", Quest="Fishman Raider Quest", NPC="Fishman Raider"},
-    {Min=1450, Max=1499, Island="Forgotten Island", Quest="Fishman Captain Quest", NPC="Fishman Captain"},
-    {Min=1500, Max=1524, Island="Port Town", Quest="Pirate Millionaire Quest", NPC="Pirate Millionaire"},
-    {Min=1525, Max=1574, Island="Port Town", Quest="Pistol Billionaire Quest", NPC="Pistol Billionaire"},
-    {Min=1575, Max=1599, Island="Hydra Island", Quest="Dragon Crew Warrior Quest", NPC="Dragon Crew Warrior"},
-    {Min=1600, Max=1624, Island="Hydra Island", Quest="Dragon Crew Archer Quest", NPC="Dragon Crew Archer"},
-    {Min=1625, Max=1649, Island="Great Tree", Quest="Marine Commodore Quest", NPC="Marine Commodore"},
-    {Min=1650, Max=1699, Island="Great Tree", Quest="Marine Rear Admiral Quest", NPC="Marine Rear Admiral"},
-    {Min=1700, Max=1724, Island="Floating Turtle", Quest="Fishman Raider Quest", NPC="Fishman Raider"},
-    {Min=1725, Max=1774, Island="Floating Turtle", Quest="Fishman Captain Quest", NPC="Fishman Captain"},
-    {Min=1775, Max=1799, Island="Floating Turtle", Quest="Forest Pirate Quest", NPC="Forest Pirate"},
-    {Min=1800, Max=1824, Island="Floating Turtle", Quest="Mythological Pirate Quest", NPC="Mythological Pirate"},
-    {Min=1825, Max=1874, Island="Floating Turtle", Quest="Jungle Pirate Quest", NPC="Jungle Pirate"},
-    {Min=1875, Max=1899, Island="Floating Turtle", Quest="Musketeer Pirate Quest", NPC="Musketeer Pirate"},
-    {Min=1900, Max=1924, Island="Haunted Castle", Quest="Reborn Skeleton Quest", NPC="Reborn Skeleton"},
-    {Min=1925, Max=1974, Island="Haunted Castle", Quest="Living Zombie Quest", NPC="Living Zombie"},
-    {Min=1975, Max=1999, Island="Haunted Castle", Quest="Demonic Soul Quest", NPC="Demonic Soul"},
-    {Min=2000, Max=2024, Island="Haunted Castle", Quest="Posessed Mummy Quest", NPC="Posessed Mummy"},
-    {Min=2025, Max=2049, Island="Sea of Treats", Quest="Peanut Scout Quest", NPC="Peanut Scout"},
-    {Min=2050, Max=2074, Island="Sea of Treats", Quest="Peanut President Quest", NPC="Peanut President"},
-    {Min=2075, Max=2099, Island="Sea of Treats", Quest="Ice Cream Chef Quest", NPC="Ice Cream Chef"},
-    {Min=2100, Max=2124, Island="Sea of Treats", Quest="Ice Cream Commander Quest", NPC="Ice Cream Commander"},
-    {Min=2125, Max=2149, Island="Sea of Treats", Quest="Cookie Crafter Quest", NPC="Cookie Crafter"},
-    {Min=2150, Max=2199, Island="Sea of Treats", Quest="Cake Guard Quest", NPC="Cake Guard"},
-    {Min=2200, Max=2224, Island="Chocolate Land", Quest="Chocolate Bar Battler Quest", NPC="Chocolate Bar Battler"},
-    {Min=2225, Max=2274, Island="Chocolate Land", Quest="Cocoa Warrior Quest", NPC="Cocoa Warrior"},
-    {Min=2275, Max=2299, Island="Cake Land", Quest="Sweet Thief Quest", NPC="Sweet Thief"},
-    {Min=2300, Max=2324, Island="Cake Land", Quest="Candy Rebel Quest", NPC="Candy Rebel"},
-    {Min=2325, Max=2349, Island="Cake Land", Quest="Candy Pirate Quest", NPC="Candy Pirate"},
-    {Min=2350, Max=2374, Island="Cake Land", Quest="Snow Demon Quest", NPC="Snow Demon"},
-    {Min=2375, Max=2399, Island="Cake Land", Quest="Isle Champion Quest", NPC="Isle Champion"},
-    {Min=2400, Max=2424, Island="Tiki Outpost", Quest="Isle Outlaw Quest", NPC="Isle Outlaw"},
-    {Min=2425, Max=2449, Island="Tiki Outpost", Quest="Island Boy Quest", NPC="Island Boy"},
-    {Min=2450, Max=2474, Island="Tiki Outpost", Quest="Isle Champion Quest", NPC="Isle Champion"},
-    {Min=2475, Max=2499, Island="Tiki Outpost", Quest="Forest Pirate Quest", NPC="Forest Pirate"},
-    {Min=2500, Max=2549, Island="Tiki Outpost", Quest="Tiki Warrior Quest", NPC="Tiki Warrior"},
-    {Min=2550, Max=2599, Island="Tiki Outpost", Quest="Tiki Chief Quest", NPC="Tiki Chief"},
-    {Min=2600, Max=2649, Island="Tiki Outpost", Quest="Tiki Warrior Quest", NPC="Tiki Warrior"},
-    {Min=2650, Max=2699, Island="Tiki Outpost", Quest="Tiki Chief Quest", NPC="Tiki Chief"},
-    {Min=2700, Max=2749, Island="Final Island", Quest="Final Warrior Quest", NPC="Final Warrior"},
-    {Min=2750, Max=2799, Island="Final Island", Quest="Final Champion Quest", NPC="Final Champion"},
-    {Min=2800, Max=2800, Island="Final Island", Quest="Max Level Quest", NPC="Final Boss"},
+--// ============== FARM CONFIG (MAX 2800) ==============
+local FarmConfig = {
+    {Min=1,    Max=9,    Island="Starter Island",  Quest="BanditQuest1",    QuestNum=1, NPC="Bandit"},
+    {Min=10,   Max=14,   Island="Jungle",          Quest="JungleQuest",     QuestNum=1, NPC="Monkey"},
+    {Min=15,   Max=29,   Island="Jungle",          Quest="JungleQuest",     QuestNum=2, NPC="Gorilla"},
+    {Min=30,   Max=59,   Island="Pirate Village",  Quest="BuggyQuest1",     QuestNum=1, NPC="Pirate"},
+    {Min=60,   Max=74,   Island="Pirate Village",  Quest="BuggyQuest1",     QuestNum=2, NPC="Brute"},
+    {Min=75,   Max=89,   Island="Desert",          Quest="DesertQuest",     QuestNum=1, NPC="Desert Bandit"},
+    {Min=90,   Max=99,   Island="Frozen Village",  Quest="SnowQuest",       QuestNum=1, NPC="Snow Bandit"},
+    {Min=100,  Max=104,  Island="Frozen Village",  Quest="SnowQuest",       QuestNum=2, NPC="Snowman"},
+    {Min=105,  Max=119,  Island="Frozen Village",  Quest="SnowQuest",       QuestNum=3, NPC="Yeti"},
+    {Min=120,  Max=129,  Island="Marine Fortress", Quest="MarineQuest2",    QuestNum=1, NPC="Chief Petty Officer"},
+    {Min=130,  Max=149,  Island="Marine Fortress", Quest="MarineQuest2",    QuestNum=2, NPC="Vice Admiral"},
+    {Min=150,  Max=174,  Island="Skylands",        Quest="SkyQuest",        QuestNum=1, NPC="Sky Bandit"},
+    {Min=175,  Max=189,  Island="Skylands",        Quest="SkyQuest",        QuestNum=2, NPC="Dark Master"},
+    {Min=190,  Max=209,  Island="Prison",          Quest="PrisonQuest",     QuestNum=1, NPC="Prisoner"},
+    {Min=210,  Max=224,  Island="Prison",          Quest="PrisonQuest",     QuestNum=2, NPC="Dangerous Prisoner"},
+    {Min=225,  Max=249,  Island="Prison",          Quest="PrisonQuest",     QuestNum=3, NPC="Head Jailer"},
+    {Min=250,  Max=274,  Island="Colosseum",       Quest="ColosseumQuest",  QuestNum=1, NPC="Gladiator"},
+    {Min=275,  Max=299,  Island="Magma Village",   Quest="MagmaQuest",      QuestNum=1, NPC="Military Soldier"},
+    {Min=300,  Max=324,  Island="Magma Village",   Quest="MagmaQuest",      QuestNum=2, NPC="Military Spy"},
+    {Min=325,  Max=374,  Island="Magma Village",   Quest="MagmaQuest",      QuestNum=3, NPC="Magma Admiral"},
+    {Min=375,  Max=399,  Island="Underwater City", Quest="FishmanQuest",    QuestNum=1, NPC="Fishman Warrior"},
+    {Min=400,  Max=449,  Island="Underwater City", Quest="FishmanQuest",    QuestNum=2, NPC="Fishman Commando"},
+    {Min=450,  Max=474,  Island="Fountain City",   Quest="FountainQuest",   QuestNum=1, NPC="Galley Pirate"},
+    {Min=475,  Max=499,  Island="Fountain City",   Quest="FountainQuest",   QuestNum=2, NPC="Galley Captain"},
+    {Min=500,  Max=524,  Island="Kingdom of Rose", Quest="Area1Quest",      QuestNum=1, NPC="Raider"},
+    {Min=525,  Max=549,  Island="Kingdom of Rose", Quest="Area1Quest",      QuestNum=2, NPC="Mercenary"},
+    {Min=550,  Max=624,  Island="Kingdom of Rose", Quest="Area1Quest",      QuestNum=3, NPC="Swan Pirate"},
+    {Min=625,  Max=649,  Island="Green Zone",       Quest="Area2Quest",      QuestNum=1, NPC="Marine Lieutenant"},
+    {Min=650,  Max=699,  Island="Green Zone",       Quest="Area2Quest",      QuestNum=2, NPC="Marine Rear Admiral"},
+    {Min=700,  Max=724,  Island="Graveyard",        Quest="GraveyardQuest",  QuestNum=1, NPC="Zombie"},
+    {Min=725,  Max=774,  Island="Graveyard",        Quest="GraveyardQuest",  QuestNum=2, NPC="Vampire"},
+    {Min=775,  Max=799,  Island="Snow Mountain",    Quest="SnowMountainQuest",QuestNum=1, NPC="Snow Trooper"},
+    {Min=800,  Max=874,  Island="Snow Mountain",    Quest="SnowMountainQuest",QuestNum=2, NPC="Winter Warrior"},
+    {Min=875,  Max=899,  Island="Hot and Cold",     Quest="PunkHazardQuest", QuestNum=1, NPC="Lab Subordinate"},
+    {Min=900,  Max=949,  Island="Hot and Cold",     Quest="PunkHazardQuest", QuestNum=2, NPC="Horned Warrior"},
+    {Min=950,  Max=974,  Island="Hot and Cold",     Quest="PunkHazardQuest", QuestNum=3, NPC="Magma Ninja"},
+    {Min=975,  Max=999,  Island="Hot and Cold",     Quest="PunkHazardQuest", QuestNum=4, NPC="Lava Pirate"},
+    {Min=1000, Max=1049, Island="Cursed Ship",      Quest="CursedShipQuest", QuestNum=1, NPC="Ship Deckhand"},
+    {Min=1050, Max=1099, Island="Cursed Ship",      Quest="CursedShipQuest", QuestNum=2, NPC="Ship Engineer"},
+    {Min=1100, Max=1124, Island="Cursed Ship",      Quest="CursedShipQuest", QuestNum=3, NPC="Ship Steward"},
+    {Min=1125, Max=1174, Island="Cursed Ship",      Quest="CursedShipQuest", QuestNum=4, NPC="Ship Officer"},
+    {Min=1175, Max=1199, Island="Ice Castle",       Quest="IceCastleQuest",  QuestNum=1, NPC="Arctic Warrior"},
+    {Min=1200, Max=1249, Island="Ice Castle",       Quest="IceCastleQuest",  QuestNum=2, NPC="Snow Lurker"},
+    {Min=1250, Max=1274, Island="Ice Castle",       Quest="IceCastleQuest",  QuestNum=3, NPC="Awakened Ice Admiral"},
+    {Min=1275, Max=1299, Island="Forgotten Island", Quest="ForgottenQuest",  QuestNum=1, NPC="Sea Soldier"},
+    {Min=1300, Max=1349, Island="Forgotten Island", Quest="ForgottenQuest",  QuestNum=2, NPC="Water Fighter"},
+    {Min=1350, Max=1374, Island="Forgotten Island", Quest="ForgottenQuest",  QuestNum=3, NPC="Tide Keeper"},
+    {Min=1500, Max=1524, Island="Port Town",        Quest="PortQuest",       QuestNum=1, NPC="Pirate Millionaire"},
+    {Min=1525, Max=1574, Island="Port Town",        Quest="PortQuest",       QuestNum=2, NPC="Pistol Billionaire"},
+    {Min=1575, Max=1599, Island="Hydra Island",     Quest="HydraQuest",      QuestNum=1, NPC="Dragon Crew Warrior"},
+    {Min=1600, Max=1624, Island="Hydra Island",     Quest="HydraQuest",      QuestNum=2, NPC="Dragon Crew Archer"},
+    {Min=1625, Max=1649, Island="Great Tree",       Quest="GreatTreeQuest",  QuestNum=1, NPC="Marine Commodore"},
+    {Min=1650, Max=1699, Island="Great Tree",       Quest="GreatTreeQuest",  QuestNum=2, NPC="Marine Rear Admiral"},
+    {Min=1700, Max=1724, Island="Floating Turtle",  Quest="ForestQuest",     QuestNum=1, NPC="Forest Pirate"},
+    {Min=1725, Max=1774, Island="Floating Turtle",  Quest="ForestQuest",     QuestNum=2, NPC="Mythological Pirate"},
+    {Min=1775, Max=1799, Island="Floating Turtle",  Quest="ForestQuest",     QuestNum=3, NPC="Jungle Pirate"},
+    {Min=1800, Max=1824, Island="Floating Turtle",  Quest="ForestQuest",     QuestNum=4, NPC="Musketeer Pirate"},
+    {Min=1825, Max=1849, Island="Floating Turtle",  Quest="ForestQuest",     QuestNum=5, NPC="Fishman Raider"},
+    {Min=1850, Max=1874, Island="Floating Turtle",  Quest="ForestQuest",     QuestNum=6, NPC="Fishman Captain"},
+    {Min=1875, Max=1899, Island="Floating Turtle",  Quest="ForestQuest",     QuestNum=7, NPC="Forest Pirate"},
+    {Min=1900, Max=1924, Island="Haunted Castle",   Quest="HauntedQuest",    QuestNum=1, NPC="Reborn Skeleton"},
+    {Min=1925, Max=1949, Island="Haunted Castle",   Quest="HauntedQuest",    QuestNum=2, NPC="Living Zombie"},
+    {Min=1950, Max=1974, Island="Haunted Castle",   Quest="HauntedQuest",    QuestNum=3, NPC="Demonic Soul"},
+    {Min=1975, Max=1999, Island="Haunted Castle",   Quest="HauntedQuest",    QuestNum=4, NPC="Soul Reaper"},
+    {Min=2000, Max=2024, Island="Sea of Treats",    Quest="CakeQuest",       QuestNum=1, NPC="Candy Rebel"},
+    {Min=2025, Max=2049, Island="Sea of Treats",    Quest="CakeQuest",       QuestNum=2, NPC="Sweet Thief"},
+    {Min=2050, Max=2074, Island="Sea of Treats",    Quest="CakeQuest",       QuestNum=3, NPC="Cookie Crafter"},
+    {Min=2075, Max=2099, Island="Sea of Treats",    Quest="CakeQuest",       QuestNum=4, NPC="Cake Guard"},
+    {Min=2100, Max=2124, Island="Chocolate Land",   Quest="CakeQuest",       QuestNum=5, NPC="Chocolate Bar Battler"},
+    {Min=2125, Max=2149, Island="Chocolate Land",   Quest="CakeQuest",       QuestNum=6, NPC="Cocoa Warrior"},
+    {Min=2150, Max=2174, Island="Cake Land",        Quest="CakeQuest",       QuestNum=7, NPC="Sweet Thief"},
+    {Min=2175, Max=2199, Island="Cake Land",        Quest="CakeQuest",       QuestNum=8, NPC="Candy Rebel"},
+    {Min=2200, Max=2249, Island="Cake Land",        Quest="CakeQuest",       QuestNum=9, NPC="Candy Pirate"},
+    {Min=2250, Max=2299, Island="Cake Land",        Quest="CakeQuest",       QuestNum=10, NPC="Snow Demon"},
+    {Min=2300, Max=2349, Island="Tiki Outpost",     Quest="TikiQuest",       QuestNum=1, NPC="Isle Champion"},
+    {Min=2350, Max=2399, Island="Tiki Outpost",     Quest="TikiQuest",       QuestNum=2, NPC="Isle Outlaw"},
+    {Min=2400, Max=2449, Island="Tiki Outpost",     Quest="TikiQuest",       QuestNum=3, NPC="Island Boy"},
+    {Min=2450, Max=2499, Island="Tiki Outpost",     Quest="TikiQuest",       QuestNum=4, NPC="Tiki Warrior"},
+    {Min=2500, Max=2549, Island="Tiki Outpost",     Quest="TikiQuest",       QuestNum=5, NPC="Tiki Chief"},
+    {Min=2550, Max=2599, Island="Tiki Outpost",     Quest="TikiQuest",       QuestNum=6, NPC="Tiki Warrior"},
+    {Min=2600, Max=2649, Island="Tiki Outpost",     Quest="TikiQuest",       QuestNum=7, NPC="Tiki Chief"},
+    {Min=2650, Max=2699, Island="Final Island",     Quest="SubmergedQuest",  QuestNum=1, NPC="Final Warrior"},
+    {Min=2700, Max=2749, Island="Final Island",     Quest="SubmergedQuest",  QuestNum=2, NPC="Final Champion"},
+    {Min=2750, Max=2800, Island="Final Island",     Quest="SubmergedQuest",  QuestNum=3, NPC="Final Boss"},
 }
 
 local IslandCoords = {
@@ -489,57 +455,33 @@ local IslandCoords = {
     ["Final Island"]=Vector3.new(0,100,0),
 }
 
-local QuestMap = {
-    ["Bandit Quest"]={"BanditQuest1",1},["Monkey Quest"]={"JungleQuest",1},
-    ["Gorilla Quest"]={"JungleQuest",2},["Pirate Quest"]={"BuggyQuest1",1},
-    ["Brute Quest"]={"BuggyQuest1",2},["Desert Bandit Quest"]={"DesertQuest",1},
-    ["Desert Officer Quest"]={"DesertQuest",2},["Snow Bandit Quest"]={"SnowQuest",1},
-    ["Snowman Quest"]={"SnowQuest",2},["Chief Petty Officer Quest"]={"MarineQuest2",1},
-    ["Sky Bandit Quest"]={"SkyQuest",1},["Dark Master Quest"]={"SkyQuest",2},
-    ["Prisoner Quest"]={"PrisonQuest",1},["Toga Warrior Quest"]={"ColosseumQuest",1},
-    ["Military Soldier Quest"]={"MagmaQuest",1},["Military Spy Quest"]={"MagmaQuest",2},
-    ["Fishman Warrior Quest"]={"FishmanQuest",1},["Fishman Commando Quest"]={"FishmanQuest",2},
-    ["Galley Pirate Quest"]={"FountainQuest",1},["Galley Captain Quest"]={"FountainQuest",2},
-    ["God's Guard Quest"]={"SkyExp1Quest",1},["Raider Quest"]={"Area1Quest",1},
-    ["Mercenary Quest"]={"Area1Quest",2},["Swan Pirate Quest"]={"Area1Quest",3},
-    ["Factory Staff Quest"]={"Area2Quest",1},["Graveyard Warrior Quest"]={"GraveyardQuest",1},
-    ["Graveyard Assassin Quest"]={"GraveyardQuest",2},["Snow Trooper Quest"]={"SnowMountainQuest",1},
-    ["Winter Warrior Quest"]={"SnowMountainQuest",2},["Lab Subordinate Quest"]={"PunkHazardQuest",1},
-    ["Horned Warrior Quest"]={"PunkHazardQuest",2},["Ship Deckhand Quest"]={"CursedShipQuest",1},
-    ["Ship Engineer Quest"]={"CursedShipQuest",2},["Arctic Warrior Quest"]={"IceCastleQuest",1},
-    ["Snow Lurker Quest"]={"IceCastleQuest",2},["Sea Soldier Quest"]={"ForgottenQuest",1},
-    ["Water Fighter Quest"]={"ForgottenQuest",2},["Pirate Millionaire Quest"]={"PortQuest",1},
-    ["Pistol Billionaire Quest"]={"PortQuest",2},["Dragon Crew Warrior Quest"]={"HydraQuest",1},
-    ["Dragon Crew Archer Quest"]={"HydraQuest",2},["Marine Commodore Quest"]={"GreatTreeQuest",1},
-    ["Marine Rear Admiral Quest"]={"GreatTreeQuest",2},["Fishman Raider Quest"]={"ForestQuest",1},
-    ["Fishman Captain Quest"]={"ForestQuest",2},["Forest Pirate Quest"]={"ForestQuest",3},
-    ["Mythological Pirate Quest"]={"ForestQuest",4},["Jungle Pirate Quest"]={"ForestQuest",5},
-    ["Musketeer Pirate Quest"]={"ForestQuest",6},["Reborn Skeleton Quest"]={"HauntedQuest",1},
-    ["Living Zombie Quest"]={"HauntedQuest",2},["Demonic Soul Quest"]={"HauntedQuest",3},
-    ["Posessed Mummy Quest"]={"HauntedQuest",4},["Peanut Scout Quest"]={"CakeQuest",1},
-    ["Peanut President Quest"]={"CakeQuest",2},["Ice Cream Chef Quest"]={"CakeQuest",3},
-    ["Ice Cream Commander Quest"]={"CakeQuest",4},["Cookie Crafter Quest"]={"CakeQuest",5},
-    ["Cake Guard Quest"]={"CakeQuest",6},["Chocolate Bar Battler Quest"]={"CakeQuest",7},
-    ["Cocoa Warrior Quest"]={"CakeQuest",8},["Sweet Thief Quest"]={"CakeQuest",9},
-    ["Candy Rebel Quest"]={"CakeQuest",10},["Candy Pirate Quest"]={"CakeQuest",11},
-    ["Snow Demon Quest"]={"CakeQuest",12},["Isle Champion Quest"]={"TikiQuest",1},
-    ["Isle Outlaw Quest"]={"TikiQuest",2},["Island Boy Quest"]={"TikiQuest",3},
-    ["Tiki Warrior Quest"]={"TikiQuest",4},["Tiki Chief Quest"]={"TikiQuest",5},
-    ["Final Warrior Quest"]={"SubmergedQuest",1},["Final Champion Quest"]={"SubmergedQuest",2},
-    ["Max Level Quest"]={"SubmergedQuest",3},
-}
-
 local function GetFarmData(level)
-    for _, data in ipairs(FarmLevelConfig) do
+    for _, data in ipairs(FarmConfig) do
         if level >= data.Min and level <= data.Max then return data end
     end
     return nil
 end
 
---==================================================
--- GUI
---==================================================
+--// FARM NEAREST LOGIC
+local function GetNearestEnemy(maxRadius)
+    local hrp = GetHRP()
+    if not hrp then return nil end
+    maxRadius = maxRadius or 500
+    local nearest, nearestDist = nil, maxRadius
+    for _, obj in ipairs(workspace:GetChildren()) do
+        if IsNPC(obj) then
+            local trp = obj:FindFirstChild("HumanoidRootPart")
+            local hum = obj:FindFirstChildOfClass("Humanoid")
+            if trp and hum and hum.Health > 0 then
+                local d = GetDist(trp.Position, hrp.Position)
+                if d < nearestDist then nearest = obj nearestDist = d end
+            end
+        end
+    end
+    return nearest
+end
 
+--// ============== GUI ==============
 local Gui = Create("ScreenGui", {
     Name="SysxHub", Parent=PlayerGui, ResetOnSpawn=false,
     IgnoreGuiInset=true, DisplayOrder=999999,
@@ -586,10 +528,7 @@ end
 UpdateScale()
 if Camera then Camera:GetPropertyChangedSignal("ViewportSize"):Connect(UpdateScale) end
 
---==================================================
--- OPEN BUTTON
---==================================================
-
+--// OPEN BUTTON
 local OpenButton = Create("ImageButton", {
     Name="SysxLogo", Parent=Gui,
     Size=UDim2.fromOffset(62,62), Position=UDim2.new(0,18,0.5,-31),
@@ -601,10 +540,7 @@ Corner(OpenButton, 18)
 local OS = Instance.new("UIStroke")
 OS.Color = Color3.fromRGB(35,125,255) OS.Thickness = 1.5 OS.Transparency = 0.1 OS.Parent = OpenButton
 
---==================================================
--- MAIN
---==================================================
-
+--// MAIN
 local Main = Create("Frame", {
     Name="Main", Parent=Gui,
     Size=UDim2.fromOffset(780,600), Position=UDim2.new(0.5,-390,0.5,-300),
@@ -615,38 +551,11 @@ Corner(Main, 18)
 local MS = Instance.new("UIStroke")
 MS.Color = Color3.fromRGB(38,100,190) MS.Thickness = 1.2 MS.Transparency = 0.25 MS.Parent = Main
 
---==================================================
--- HEADER
---==================================================
-
-local Header = Create("Frame", {
-    Name="Header", Parent=Main,
-    Size=UDim2.new(1,0,0,82),
-    BackgroundTransparency=1, ZIndex=20,
-})
-
-local Logo = Create("ImageLabel", {
-    Name="Logo", Parent=Header,
-    Size=UDim2.fromOffset(55,55), Position=UDim2.fromOffset(14,8),
-    BackgroundTransparency=1, Image=LOGO_ID,
-    ScaleType=Enum.ScaleType.Fit, ZIndex=22,
-})
-
-Create("TextLabel", {
-    Parent=Header, BackgroundTransparency=1,
-    Position=UDim2.fromOffset(78,12), Size=UDim2.fromOffset(320,30),
-    Text="SysxHub", TextColor3=Color3.fromRGB(235,242,255),
-    TextSize=23, Font=Enum.Font.GothamBold,
-    TextXAlignment=Enum.TextXAlignment.Left, ZIndex=22,
-})
-
-Create("TextLabel", {
-    Parent=Header, BackgroundTransparency=1,
-    Position=UDim2.fromOffset(79,39), Size=UDim2.fromOffset(320,20),
-    Text="Play Smarter, Not Harder", TextColor3=Color3.fromRGB(120,150,195),
-    TextSize=12, Font=Enum.Font.Gotham,
-    TextXAlignment=Enum.TextXAlignment.Left, ZIndex=22,
-})
+--// HEADER
+local Header = Create("Frame", {Name="Header", Parent=Main, Size=UDim2.new(1,0,0,82), BackgroundTransparency=1, ZIndex=20})
+Create("ImageLabel", {Name="Logo", Parent=Header, Size=UDim2.fromOffset(55,55), Position=UDim2.fromOffset(14,8), BackgroundTransparency=1, Image=LOGO_ID, ScaleType=Enum.ScaleType.Fit, ZIndex=22})
+Create("TextLabel", {Parent=Header, BackgroundTransparency=1, Position=UDim2.fromOffset(78,12), Size=UDim2.fromOffset(320,30), Text="SysxHub", TextColor3=Color3.fromRGB(235,242,255), TextSize=23, Font=Enum.Font.GothamBold, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=22})
+Create("TextLabel", {Parent=Header, BackgroundTransparency=1, Position=UDim2.fromOffset(79,39), Size=UDim2.fromOffset(320,20), Text="Play Smarter, Not Harder", TextColor3=Color3.fromRGB(120,150,195), TextSize=12, Font=Enum.Font.Gotham, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=22})
 
 local StatusDot = Create("Frame", {Parent=Header, Size=UDim2.fromOffset(10,10), Position=UDim2.new(1,-280,0,26), BackgroundColor3=Color3.fromRGB(0,220,150), BorderSizePixel=0, ZIndex=22})
 Corner(StatusDot, 10)
@@ -654,47 +563,27 @@ Create("TextLabel", {Parent=Header, BackgroundTransparency=1, Position=UDim2.new
 Create("TextLabel", {Parent=Header, BackgroundTransparency=1, Position=UDim2.new(1,-165,0,19), Size=UDim2.fromOffset(60,25), Text="v1.0.0", TextColor3=Color3.fromRGB(130,145,175), TextSize=11, Font=Enum.Font.Gotham, TextXAlignment=Enum.TextXAlignment.Center, ZIndex=22})
 
 local CloseButton = Create("ImageButton", {
-    Name="CloseButton", Parent=Header,
-    Size=UDim2.fromOffset(42,42), Position=UDim2.new(1,-58,0,14),
+    Parent=Header, Size=UDim2.fromOffset(42,42), Position=UDim2.new(1,-58,0,14),
     BackgroundColor3=Color3.fromRGB(23,18,38), BackgroundTransparency=0.05,
     Image=LOGO_ID, ImageColor3=Color3.fromRGB(255,255,255),
     ScaleType=Enum.ScaleType.Fit, AutoButtonColor=false, ZIndex=25,
 })
 Corner(CloseButton, 10)
 Stroke(CloseButton, Color3.fromRGB(0,150,255), 1.5, 0.25)
-
 Create("Frame", {Parent=Header, Size=UDim2.new(1,0,0,1), Position=UDim2.new(0,0,1,-1), BackgroundColor3=Color3.fromRGB(35,55,85), BackgroundTransparency=0.35, BorderSizePixel=0, ZIndex=22})
 
---==================================================
--- BANNER
---==================================================
-
+--// BANNER
 local BannerHolder = Create("Frame", {
     Name="BannerHolder", Parent=Main,
     Size=UDim2.new(1,-32,0,150), Position=UDim2.fromOffset(16,98),
-    BackgroundColor3=Color3.fromRGB(10,18,34),
-    BorderSizePixel=0, ClipsDescendants=true, ZIndex=12,
+    BackgroundColor3=Color3.fromRGB(10,18,34), BorderSizePixel=0, ClipsDescendants=true, ZIndex=12,
 })
 Corner(BannerHolder, 14)
 Stroke(BannerHolder, Color3.fromRGB(35,95,175), 1, 0.25)
+Create("ImageLabel", {Name="Banner", Parent=BannerHolder, Size=UDim2.fromScale(1,1), Position=UDim2.fromScale(0,0), BackgroundTransparency=1, Image=BANNER_ID, ScaleType=Enum.ScaleType.Crop, ZIndex=12})
+Create("Frame", {Name="BannerOverlay", Parent=BannerHolder, Size=UDim2.fromScale(1,1), BackgroundColor3=Color3.fromRGB(0,10,25), BackgroundTransparency=0.72, BorderSizePixel=0, ZIndex=13})
 
-local Banner = Create("ImageLabel", {
-    Name="Banner", Parent=BannerHolder,
-    Size=UDim2.fromScale(1,1), Position=UDim2.fromScale(0,0),
-    BackgroundTransparency=1, Image=BANNER_ID,
-    ScaleType=Enum.ScaleType.Crop, ZIndex=12,
-})
-
-Create("Frame", {
-    Name="BannerOverlay", Parent=BannerHolder,
-    Size=UDim2.fromScale(1,1), BackgroundColor3=Color3.fromRGB(0,10,25),
-    BackgroundTransparency=0.72, BorderSizePixel=0, ZIndex=13,
-})
-
---==================================================
--- CONTENT
---==================================================
-
+--// CONTENT
 local Content = Create("Frame", {
     Name="Content", Parent=Main,
     Size=UDim2.new(1,-32,1,-264), Position=UDim2.fromOffset(16,256),
@@ -809,20 +698,8 @@ local function CreateDropdown(parent, title, options, cb)
         Corner(popup, 12)
         local pStroke = Instance.new("UIStroke")
         pStroke.Color = Color3.fromRGB(0,150,255) pStroke.Thickness = 2 pStroke.Parent = popup
-        Create("TextLabel", {
-            Parent=popup, BackgroundTransparency=1,
-            Position=UDim2.fromOffset(15,10), Size=UDim2.new(1,-60,0,25),
-            Text=title, TextColor3=Color3.fromRGB(235,242,255),
-            TextSize=15, Font=Enum.Font.GothamBold,
-            TextXAlignment=Enum.TextXAlignment.Left, ZIndex=999991,
-        })
-        local closeBtn = Create("TextButton", {
-            Parent=popup, Position=UDim2.new(1,-40,0,10),
-            Size=UDim2.fromOffset(30,25), Text="×",
-            TextColor3=Color3.fromRGB(255,255,255), TextSize=22,
-            BackgroundTransparency=1, Font=Enum.Font.GothamBold,
-            AutoButtonColor=false, ZIndex=999992,
-        })
+        Create("TextLabel", {Parent=popup, BackgroundTransparency=1, Position=UDim2.fromOffset(15,10), Size=UDim2.new(1,-60,0,25), Text=title, TextColor3=Color3.fromRGB(235,242,255), TextSize=15, Font=Enum.Font.GothamBold, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=999991})
+        local closeBtn = Create("TextButton", {Parent=popup, Position=UDim2.new(1,-40,0,10), Size=UDim2.fromOffset(30,25), Text="×", TextColor3=Color3.fromRGB(255,255,255), TextSize=22, BackgroundTransparency=1, Font=Enum.Font.GothamBold, AutoButtonColor=false, ZIndex=999992})
         closeBtn.Activated:Connect(function() popup:Destroy() end)
         local listScroll = Create("ScrollingFrame", {
             Parent=popup, BackgroundTransparency=1,
@@ -846,12 +723,8 @@ local function CreateDropdown(parent, title, options, cb)
             Corner(OB, 6)
             local pad = Instance.new("UIPadding")
             pad.PaddingLeft = UDim.new(0, 10) pad.Parent = OB
-            OB.MouseEnter:Connect(function()
-                TweenService:Create(OB, TweenInfo.new(0.1), {BackgroundColor3=Color3.fromRGB(0,150,255)}):Play()
-            end)
-            OB.MouseLeave:Connect(function()
-                TweenService:Create(OB, TweenInfo.new(0.1), {BackgroundColor3=Color3.fromRGB(17,13,29)}):Play()
-            end)
+            OB.MouseEnter:Connect(function() TweenService:Create(OB, TweenInfo.new(0.1), {BackgroundColor3=Color3.fromRGB(0,150,255)}):Play() end)
+            OB.MouseLeave:Connect(function() TweenService:Create(OB, TweenInfo.new(0.1), {BackgroundColor3=Color3.fromRGB(17,13,29)}):Play() end)
             OB.Activated:Connect(function()
                 Selected = opt
                 TitleLbl.Text = title..": "..opt
@@ -865,10 +738,7 @@ end
 
 local function CreateSlider(parent, title, minVal, maxVal, defaultVal, cb)
     local val = defaultVal or minVal
-    local Holder = Create("Frame", {
-        Parent=parent, BackgroundColor3=Color3.fromRGB(17,13,29),
-        Size=UDim2.new(1,0,0,46), BorderSizePixel=0, ZIndex=100,
-    })
+    local Holder = Create("Frame", {Parent=parent, BackgroundColor3=Color3.fromRGB(17,13,29), Size=UDim2.new(1,0,0,46), BorderSizePixel=0, ZIndex=100})
     Corner(Holder, 8)
     Stroke(Holder, Color3.fromRGB(0,150,255), 1.2, 0.4)
     Create("TextLabel", {Parent=Holder, BackgroundTransparency=1, Position=UDim2.new(0,10,0,5), Size=UDim2.new(1,-70,0,14), Text=title, TextColor3=Color3.fromRGB(255,255,255), TextSize=11, Font=Enum.Font.GothamMedium, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=101})
@@ -930,10 +800,7 @@ local function ShowTab(name)
     end
 end
 
---==================================================
--- PAGES
---==================================================
-
+--// PAGES
 local DiscordPage = CreatePage("Discord")
 local FarmPage = CreatePage("Farm")
 local SeaPage = CreatePage("Sea")
@@ -969,10 +836,20 @@ CreateToggle(FarmPage, "Auto Farm Level", false, function(s)
         end)
     end
 end)
-CreateToggle(FarmPage, "Auto Kill Nearest", false, function(s)
-    State.AutoKillNearest = s
-    Notify("Auto Kill Nearest: "..(s and "ON" or "OFF"))
+CreateToggle(FarmPage, "Auto Farm Nearest", false, function(s)
+    State.AutoFarmNearest = s
+    if s then State.Hitbox = true else State.Hitbox = false end
+    Notify("Farm Nearest: "..(s and "ON" or "OFF"))
+    if s then
+        task.spawn(function()
+            while State.AutoFarmNearest do
+                pcall(function() Invoke("Buso") end)
+                task.wait(2)
+            end
+        end)
+    end
 end)
+CreateToggle(FarmPage, "Auto Kill Nearest", false, function(s) State.AutoKillNearest = s Notify("Auto Kill Nearest: "..(s and "ON" or "OFF")) end)
 CreateToggle(FarmPage, "Farm Chest", false, function(s)
     State.AutoChest = s
     if s then State.FirstRunChest = true State.UncheckedChests = {} end
@@ -995,10 +872,7 @@ CreateToggle(FarmPage, "Random Bone", false, function(s) if s then Invoke("Bones
 CreateDropdown(SeaPage, "Select Mob", {"Sea Beast","Terrorshark","Shark","Piranha","Fish Crew Member","Fish Crew Warrior"}, function(opt) State.SelectedSeaMob = opt State.SeaEventMob = opt Notify("Sea Mob: "..opt) end)
 CreateDropdown(SeaPage, "Select Boat", {"Dinghy","Bizarre Boat","Speed Boat","Miracle","Sentinel","Guardian","Beast Hunter","Shark Boat"}, function(opt) State.SelectedBoat = opt Notify("Boat: "..opt) end)
 CreateToggle(SeaPage, "Auto Farm Sea", false, function(s) State.AutoFarmSea = s Notify("Auto Farm Sea: "..(s and "ON" or "OFF")) end)
-CreateToggle(SeaPage, "Start Sea Event", false, function(s)
-    State.SeaEventActive = s
-    if s then Notify("Sea Event: "..State.SeaEventMob) else Notify("Sea Event stopped") end
-end)
+CreateToggle(SeaPage, "Start Sea Event", false, function(s) State.SeaEventActive = s if s then Notify("Sea Event: "..State.SeaEventMob) else Notify("Sea Event stopped") end end)
 CreateToggle(SeaPage, "Auto Buy New Boat", false, function(s) State.AutoBuyBoat = s Notify("Auto Buy Boat: "..(s and "ON" or "OFF")) end)
 CreateToggle(SeaPage, "Auto Remove Rock", false, function(s) State.AutoRemoveRock = s Notify("Auto Remove Rock: "..(s and "ON" or "OFF")) end)
 CreateToggle(SeaPage, "Find Mirage Island", false, function(s) State.FindMirage = s Notify("Find Mirage: "..(s and "ON" or "OFF")) end)
@@ -1280,7 +1154,7 @@ CreateToggle(MiscPage, "Join Pirate", false, function(s) if s then Invoke("SetTe
 -- LOOPS
 --==================================================
 
--- AUTO FARM LEVEL (Config-based)
+-- AUTO FARM LEVEL (Config-based, Max 2800)
 task.spawn(function()
     while task.wait(0.3) do
         if State.AutoFarm then
@@ -1288,6 +1162,8 @@ task.spawn(function()
                 local ls = Player:FindFirstChild("leaderstats")
                 local lv = ls and ls:FindFirstChild("Level")
                 local level = lv and lv.Value or 1
+                if level >= MAX_LEVEL then Notify("Max Level Reached!") State.AutoFarm = false return end
+                
                 local data = GetFarmData(level)
                 if not data then return end
 
@@ -1300,9 +1176,8 @@ task.spawn(function()
                     end
                 end
 
-                local questMap = QuestMap[data.Quest]
-                if questMap and CommF then
-                    pcall(function() CommF:InvokeServer("StartQuest", questMap[1], questMap[2]) end)
+                if CommF then
+                    pcall(function() CommF:InvokeServer("StartQuest", data.Quest, data.QuestNum) end)
                 end
 
                 local hrp = GetHRP()
@@ -1326,21 +1201,14 @@ task.spawn(function()
                         if GetDist(hrp.Position, trp.Position) > 15 then
                             TweenToPosition(trp.Position + Vector3.new(0,3,0), CONFIG.TweenMobSpeed)
                         end
-                        
                         if not State.HitboxPart or not State.HitboxPart.Parent then
                             local hb = Instance.new("Part")
-                            hb.Name = "SysxHitbox"
-                            hb.Size = Vector3.new(30,30,30)
-                            hb.Transparency = 1
-                            hb.CanCollide = false
-                            hb.CanTouch = true
-                            hb.Anchored = true
-                            hb.Massless = true
-                            hb.Parent = workspace
+                            hb.Name = "SysxHitbox" hb.Size = Vector3.new(30,30,30)
+                            hb.Transparency = 1 hb.CanCollide = false hb.CanTouch = true
+                            hb.Anchored = true hb.Massless = true hb.Parent = workspace
                             State.HitboxPart = hb
                         end
                         State.HitboxPart.CFrame = CFrame.new(trp.Position)
-                        
                         local tool = EquipWeapon()
                         if tool then pcall(function() tool:Activate() end) end
                     end
@@ -1352,6 +1220,47 @@ task.spawn(function()
     end
 end)
 
+-- AUTO FARM NEAREST (Nearest NPC)
+task.spawn(function()
+    while task.wait(0.15) do
+        if State.AutoFarmNearest then
+            pcall(function()
+                local hrp = GetHRP()
+                if not hrp then return end
+                
+                local ls = Player:FindFirstChild("leaderstats")
+                local lv = ls and ls:FindFirstChild("Level")
+                local level = lv and lv.Value or 1
+                if level >= MAX_LEVEL then Notify("Max Level Reached!") State.AutoFarmNearest = false return end
+                
+                -- Cari NPC terdekat
+                local target = GetNearestEnemy(500)
+                if target then
+                    local trp = target:FindFirstChild("HumanoidRootPart")
+                    local hum = target:FindFirstChildOfClass("Humanoid")
+                    if trp and hum and hum.Health > 0 then
+                        local dist = GetDist(hrp.Position, trp.Position)
+                        if dist > 15 then
+                            TweenToPosition(trp.Position + Vector3.new(0,3,0), CONFIG.TweenMobSpeed)
+                        end
+                        if not State.HitboxPart or not State.HitboxPart.Parent then
+                            local hb = Instance.new("Part")
+                            hb.Name = "SysxHitbox" hb.Size = Vector3.new(30,30,30)
+                            hb.Transparency = 1 hb.CanCollide = false hb.CanTouch = true
+                            hb.Anchored = true hb.Massless = true hb.Parent = workspace
+                            State.HitboxPart = hb
+                        end
+                        State.HitboxPart.CFrame = CFrame.new(trp.Position)
+                        local tool = EquipWeapon()
+                        if tool then pcall(function() tool:Activate() end) end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- AUTO KILL NEAREST
 task.spawn(function()
     while task.wait(0.15) do
         if State.AutoKillNearest then
@@ -1379,6 +1288,7 @@ task.spawn(function()
     end
 end)
 
+-- FARM CHEST
 task.spawn(function()
     while task.wait(0.3) do
         if State.AutoChest then
@@ -1391,6 +1301,7 @@ task.spawn(function()
     end
 end)
 
+-- AUTO BOSS
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoBoss and State.SelectedBoss then
@@ -1417,6 +1328,7 @@ task.spawn(function()
     end
 end)
 
+-- CASTLE RAID
 task.spawn(function()
     while task.wait(0.3) do
         if State.AutoCastleRaid then
@@ -1457,6 +1369,7 @@ task.spawn(function()
     end
 end)
 
+-- FACTORY RAID
 task.spawn(function()
     while task.wait(0.3) do
         if State.AutoFactoryRaid then
@@ -1497,6 +1410,7 @@ task.spawn(function()
     end
 end)
 
+-- AUTO ELITE HUNTER
 task.spawn(function()
     while task.wait(0.3) do
         if State.AutoEliteHunter then
@@ -1547,6 +1461,7 @@ task.spawn(function()
     end
 end)
 
+-- SEA / FRUIT / STATS / ETC LOOPS
 task.spawn(function()
     while task.wait(0.3) do
         if State.AutoFarmSea and State.SelectedSeaMob then
@@ -1775,7 +1690,7 @@ end)
 
 task.spawn(function()
     while task.wait(0.1) do
-        if State.BringMob or State.AutoFarm then
+        if State.BringMob or State.AutoFarm or State.AutoFarmNearest then
             local now = os.clock()
             if now - State.LastBring >= 0.3 then
                 local hrp = GetHRP()
@@ -1807,7 +1722,6 @@ task.spawn(function()
     while task.wait(0.3) do
         local hrp = GetHRP()
         local myPos = hrp and hrp.Position or Vector3.new(0,0,0)
-        
         if State.ESPPlayer then
             for _, plr in ipairs(Players:GetPlayers()) do
                 if plr ~= Player and plr.Character then
@@ -1901,10 +1815,7 @@ task.spawn(function()
     end
 end)
 
---==================================================
--- TABS
---==================================================
-
+--// TABS
 local TabDefs = {
     {"Discord"}, {"Farm"}, {"Sea"}, {"Quest / Items"}, {"Fruit / Raid"},
     {"Fishing"}, {"Status"}, {"PvP"}, {"Trials"}, {"Seting"},
@@ -1915,10 +1826,7 @@ for i, d in ipairs(TabDefs) do
     btn.Activated:Connect(function() ShowTab(d[1]) end)
 end
 
---==================================================
--- OPEN/CLOSE
---==================================================
-
+--// OPEN/CLOSE
 local function OpenGUI()
     Main.Visible = true
     Main.Size = UDim2.fromOffset(750, 570)
@@ -1937,7 +1845,6 @@ local function CloseGUI()
     tw.Completed:Once(function() Main.Visible = false end)
 end
 
--- DRAG LOGO
 local IsDragging, DragStart, StartPosition, HasMoved = false, nil, nil, false
 OpenButton.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -1966,7 +1873,7 @@ OpenButton.Activated:Connect(function()
 end)
 CloseButton.Activated:Connect(function() CloseGUI() end)
 
--- DRAG MAIN via Header
+-- DRAG MAIN
 local MDragging, MDragStart, MStartPos = false, nil, nil
 Header.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -1994,11 +1901,6 @@ Player.Idled:Connect(function()
         VirtualUser:ClickButton2(Vector2.new())
     end
 end)
-
-_G.SysxHubVisual = {
-    Open = OpenGUI, Close = CloseGUI,
-    Toggle = function() if Main.Visible then CloseGUI() else OpenGUI() end end,
-}
 
 ShowTab("Farm")
 print("================================")
