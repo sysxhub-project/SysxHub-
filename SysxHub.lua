@@ -1,7 +1,7 @@
 --[[
 ================================================================
- SYSX HUB - v1.0 | Created by Ramanotsugarr
- Blue Outline + Logo Asset + White Text + CommF_ Chain
+ SYSX HUB | Freemium Version | v0.2 | Created by Ramanotsugarr
+ Blue Outline + Logo + White Text + Full CommF_ Chain
 ================================================================
 ]]
 
@@ -21,14 +21,13 @@ local Camera = Workspace.CurrentCamera
 
 local CONFIG = {
     Name = "SysxHub",
-    Build = "SysxHub v1.0 | Created by Ramanotsugarr",
+    Build = "SysxHub v0.2 | Freemium | Created by Ramanotsugarr",
     Logo = "rbxassetid://78595907369123",
     OpenClose = "rbxassetid://70792832229220",
     Discord = "https://discord.gg/E5kQJW3hn",
     Background = Color3.fromRGB(10,8,18),
     Panel = Color3.fromRGB(17,13,29),
     Panel2 = Color3.fromRGB(23,18,38),
-    Panel3 = Color3.fromRGB(30,24,48),
     Blue = Color3.fromRGB(0,150,255),
     Blue2 = Color3.fromRGB(80,180,255),
     White = Color3.fromRGB(255,255,255),
@@ -45,18 +44,22 @@ local CONFIG = {
 }
 
 local State = {
-    AutoFarm=false, AutoChest=false, AutoBoss=false, AutoQuest=false,
+    AutoFarm=false, AutoChest=false, AutoBoss=false,
     AutoFruit=false, AutoKillNearest=false, AutoRaid=false, AutoBuyChip=false,
     AutoGacha=false, StoreFruit=false, AutoFish=false, AutoAddStats=false,
-    AutoRaceV2=false, AutoRaceV3=false,
+    AutoRaceV2=false, AutoRaceV3=false, CousinBuy=false,
+    AutoFarmSea=false, AutoKillSeaBeast=false, AutoQuest=false,
+    AutoTrial=false, AutoPullLever=false, KillPlayerTrial=false,
+    TrialMethod="Bone",
     SelectedWeapon=nil, SelectedCategory=nil,
-    SelectedBoss=nil, SelectedBossSea=nil, SelectedRaid=nil,
-    SelectedPlayer=nil,
+    SelectedBoss=nil, SelectedBossSea=nil, SelectedRaid=nil, SelectedPlayer=nil,
+    SelectedIsland="Starter Island", SelectedMelee=nil, SelectedSword=nil,
+    SelectedGun=nil, SelectedAbility=nil, SelectedFruitLoad=nil,
     BringMob=false, BringMobRange=50, InfiniteJump=false, BoostFPS=false,
     Hitbox=false, HitboxPart=nil, Aimbot=false,
     KillAura=false, LastKillAura=0, LastBring=0, LastFruitTP=0,
     AntiAFK=true, Notifications=true,
-    StatsMelee=0, StatsDefense=0, StatsSword=0, StatsGun=0, StatsBloxFruit=0,
+    StatsMelee=0, StatsSword=0, StatsGun=0, StatsBloxFruit=0,
     OriginalLighting=nil, OpenedChests={},
     ESPPlayer=false, ESPIsland=false, ESPFruit=false, ESPBlueGear=false,
     ESPChest=false, ESPFlower=false, ESPObjects={},
@@ -157,20 +160,12 @@ end
 --// REMOTE
 local CommF = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
 
-local function FindRemote(...)
-    local kws = {...}
-    for _, obj in ipairs(game:GetDescendants()) do
-        if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
-            local ln = string.lower(obj.Name)
-            for _, kw in ipairs(kws) do
-                if string.find(ln, string.lower(kw)) then return obj end
-            end
-        end
-    end
-    return nil
+local function Invoke(...)
+    if not CommF then return nil end
+    local ok, res = pcall(function(...) return CommF:InvokeServer(...) end, ...)
+    if not ok then return nil end
+    return res
 end
-
-local REMOTE_StoreFruit = FindRemote("storefruit", "fruitstore", "savefruit")
 
 --// SCAN
 local function ScanEnemies()
@@ -218,16 +213,6 @@ local function FindFruits()
     return list
 end
 
-local function FindObjectByKeyword(kw)
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if string.find(string.lower(obj.Name), string.lower(kw)) then
-            if obj:IsA("BasePart") then return obj end
-            if obj:IsA("Model") and obj.PrimaryPart then return obj.PrimaryPart end
-        end
-    end
-    return nil
-end
-
 local function GetHeldFruit()
     local char = Player.Character
     if not char then return nil end
@@ -261,26 +246,6 @@ local function GetWeaponsByCategory(cat)
     for _, t in ipairs(char:GetChildren()) do check(t) end
     for _, t in ipairs(Player.Backpack:GetChildren()) do check(t) end
     return list
-end
-
-local function SelectWeapon(name)
-    local char = Player.Character
-    if not char then return false end
-    local found = nil
-    for _, c in ipairs(char:GetChildren()) do
-        if c:IsA("Tool") and c.Name == name then found = c break end
-    end
-    if not found then
-        for _, c in ipairs(Player.Backpack:GetChildren()) do
-            if c:IsA("Tool") and c.Name == name then found = c break end
-        end
-    end
-    if not found then Notify("Weapon not found: "..name) return false end
-    State.SelectedWeapon = found.Name
-    State.SelectedCategory = GetWeaponCategory(found.Name)
-    pcall(function() found.Parent = char end)
-    Notify("Equipped: "..found.Name)
-    return true
 end
 
 local function EquipWeapon()
@@ -328,12 +293,6 @@ local function TweenToMob(mob, speed)
     TweenToPosition(trp.Position + Vector3.new(0, 3, 0), speed or CONFIG.TweenMobSpeed)
 end
 
-local function TeleportTo(pos)
-    local hrp = GetHRP()
-    if not hrp then return end
-    hrp.CFrame = CFrame.new(pos)
-end
-
 --// MOB LEVEL
 local function GetMobLevel(mob)
     local lvl = mob:GetAttribute("Level") or mob:GetAttribute("level")
@@ -347,7 +306,6 @@ local function GetMobLevel(mob)
         elseif mh <= 8000 then return 300
         elseif mh <= 30000 then return 600
         elseif mh <= 100000 then return 1000
-        elseif mh <= 200000 then return 1300
         else return math.floor(mh/500) end
     end
     return 0
@@ -387,14 +345,6 @@ end
 
 --// RAID
 local function GetRaidIsland()
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if obj:IsA("BasePart") or obj:IsA("Model") or obj:IsA("Folder") then
-            local n = string.lower(obj.Name)
-            if string.find(n,"island3") or string.find(n,"island_3") then return 3 end
-            if string.find(n,"island4") or string.find(n,"island_4") then return 4 end
-            if string.find(n,"island5") or string.find(n,"island_5") then return 5 end
-        end
-    end
     local hrp = GetHRP()
     if not hrp then return 0 end
     local c = 0
@@ -410,106 +360,62 @@ local function GetRaidIsland()
     return 0
 end
 
-local function IsInRaidIsland3()
-    local ls = Player:FindFirstChild("leaderstats")
-    local lv = ls and ls:FindFirstChild("Level")
-    if not lv or lv.Value < 1500 then return false end
-    return GetRaidIsland() >= 3
-end
-
 --// COMMF_ ACTIONS
 local function AutoAddStats()
-    if not CommF then return false end
     local stats = {
         {Name="Melee", Value=State.StatsMelee},
-        {Name="Defense", Value=State.StatsDefense},
         {Name="Sword", Value=State.StatsSword},
         {Name="Gun", Value=State.StatsGun},
         {Name="Blox Fruit", Value=State.StatsBloxFruit},
     }
     for _, stat in ipairs(stats) do
         if stat.Value > 0 then
-            pcall(function() CommF:InvokeServer("AddPoint", stat.Name, stat.Value) end)
+            Invoke("AddPoint", stat.Name, stat.Value)
             Notify("Added "..stat.Name..": "..stat.Value)
             task.wait(0.3)
         end
     end
-    return true
-end
-
-local function DoGacha()
-    if not CommF then return end
-    pcall(function() CommF:InvokeServer("BuyFruit", "Random") end)
 end
 
 local function DoStoreFruit()
     local held = GetHeldFruit()
     if not held then return end
-    if CommF then
-        pcall(function() CommF:InvokeServer("StoreFruit", held.Name) end)
-    elseif REMOTE_StoreFruit then
-        pcall(function()
-            if REMOTE_StoreFruit:IsA("RemoteEvent") then REMOTE_StoreFruit:FireServer(held)
-            else REMOTE_StoreFruit:InvokeServer(held) end
-        end)
-    else
-        pcall(function() held.Parent = Player.Backpack end)
-    end
+    Invoke("StoreFruit", held.Name, held)
     Notify("Stored: "..held.Name)
 end
 
 local function DoAutoRaid()
-    if not CommF or not State.SelectedRaid then return end
-    pcall(function() CommF:InvokeServer("RaidsNpc", "Select", State.SelectedRaid) end)
+    if not State.SelectedRaid then return end
+    Invoke("RaidsNpc", "Select", State.SelectedRaid)
     task.wait(0.5)
     pcall(function()
-        fireclickdetector(workspace.Map["Boat Castle"].RaidSummon2.Button.Main.ClickDetector)
+        fireclickdetector(workspace.Map.CircleIsland.RaidSummon.Button.Main.ClickDetector)
     end)
     Notify("Raid: "..State.SelectedRaid)
 end
 
-local function DoBuyChip()
-    if not CommF or not State.SelectedRaid then return end
-    pcall(function() CommF:InvokeServer("RaidsNpc", "Select", State.SelectedRaid) end)
-    Notify("BuyChip: "..State.SelectedRaid)
-end
-
---// COMMF_ CHAIN
-local function GetQuestChain(questName)
-    if not CommF then Notify("CommF_ not found") return false end
-    if questName == "CDK" then
-        pcall(function() CommF:InvokeServer("ProQuestProgress", "CDK") end)
-        Notify("Starting CDK Puzzle (Lv 2200+)")
-    elseif questName == "DarkDagger" or questName == "Indra" then
+local function GetQuestChain(q)
+    if q == "CDK" then Invoke("ProQuestProgress", "CDK") Notify("CDK Started")
+    elseif q == "DarkDagger" or q == "Indra" then
         local hasChalice = Player.Backpack:FindFirstChild("God's Chalice")
             or (Player.Character and Player.Character:FindFirstChild("God's Chalice"))
-        if not hasChalice then Notify("Need God's Chalice!") return false end
-        pcall(function() CommF:InvokeServer("PlaceChalice") end)
-        Notify("rip_indra summoning")
-    elseif questName == "SoulGuitar" then
-        pcall(function() CommF:InvokeServer("ProQuestProgress", "SoulGuitar") end)
-        Notify("Soul Guitar puzzle (Lv 2300+)")
-    elseif questName == "Yama" then
-        pcall(function() CommF:InvokeServer("StartQuest", "EliteHunter", 1) end)
-        Notify("Elite Hunter quest started")
-    elseif questName == "Tushita" then
-        pcall(function() CommF:InvokeServer("ProQuestProgress", "Tushita") end)
-        Notify("Tushita torch puzzle (Lv 2000+)")
-    elseif questName == "BuddySword" then
+        if not hasChalice then Notify("Need God's Chalice!") return end
+        Invoke("PlaceChalice") Notify("Summoning Indra")
+    elseif q == "SoulGuitar" then Invoke("ProQuestProgress", "SoulGuitar") Notify("Soul Guitar Started")
+    elseif q == "Yama" then Invoke("StartQuest", "EliteHunter", 1) Notify("Elite Hunter Started")
+    elseif q == "Tushita" then Invoke("ProQuestProgress", "Tushita") Notify("Tushita Started")
+    elseif q == "BuddySword" then
         local boss = FindBoss("Cake Queen")
         if boss then TweenToMob(boss, 300) Notify("Farming Cake Queen")
-        else Notify("Cake Queen not spawned (wait 30 min)") end
-    elseif questName == "DoughKing" then
+        else Notify("Cake Queen not spawned") end
+    elseif q == "DoughKing" then
         local hasSweet = Player.Backpack:FindFirstChild("Sweet Chalice")
             or (Player.Character and Player.Character:FindFirstChild("Sweet Chalice"))
-        if not hasSweet then Notify("Need Sweet Chalice!") return false end
-        pcall(function() CommF:InvokeServer("DoughKing") end)
-        Notify("Summoning Dough King")
+        if not hasSweet then Notify("Need Sweet Chalice!") return end
+        Invoke("DoughKing") Notify("Summoning Dough King")
     end
-    return true
 end
 
---// REDEEM
 local RedeemCodes = {
     "KITT_RESET","SUB2GAMERROBOT_RESET1","SUB2GAMERROBOT_EXP1",
     "SUB2OFFICIALNOOBIE","AXIORE","BLUXXY","JCWK","KITTGAMING",
@@ -518,53 +424,12 @@ local RedeemCodes = {
 }
 
 local function RedeemAllCodes()
-    if not CommF then Notify("CommF_ not found") return end
     for _, code in ipairs(RedeemCodes) do
-        pcall(function() CommF:InvokeServer("Redeem", code) end)
+        Invoke("Redeem", code)
         Notify("Redeeming: "..code)
         task.wait(1)
     end
 end
-
---// BOSS DATA
-local BossData = {
-    Sea1 = {
-        {Name="Gorilla King", Level=25, Location="Jungle"},
-        {Name="Bobby", Level=55, Location="Pirate Village"},
-        {Name="Yeti", Level=110, Location="Frozen Village"},
-        {Name="Mob Leader", Level=120, Location="Pirate Village"},
-        {Name="Vice Admiral", Level=130, Location="Marine Fortress"},
-        {Name="Saber Expert", Level=200, Location="Jungle"},
-        {Name="Warden", Level=220, Location="Prison"},
-        {Name="Chief Warden", Level=230, Location="Prison"},
-        {Name="Swan", Level=240, Location="Prison"},
-        {Name="Magma Admiral", Level=350, Location="Magma Village"},
-        {Name="Fishman Lord", Level=425, Location="Underwater City"},
-        {Name="Wysper", Level=500, Location="Upper Skylands"},
-        {Name="Thunder God", Level=575, Location="Upper Skylands"},
-        {Name="Cyborg", Level=675, Location="Fountain City"},
-    },
-    Sea2 = {
-        {Name="Diamond", Level=750, Location="Kingdom of Rose"},
-        {Name="Jeremy", Level=850, Location="Kingdom of Rose"},
-        {Name="Fajita", Level=925, Location="Green Zone"},
-        {Name="Don Swan", Level=1000, Location="Kingdom of Rose"},
-        {Name="Darkbeard", Level=1000, Location="Dark Arena", Raid=true},
-        {Name="Smoke Admiral", Level=1150, Location="Hot and Cold"},
-        {Name="Cursed Captain", Level=1325, Location="Cursed Ship"},
-        {Name="Awakened Ice Admiral", Level=1400, Location="Ice Castle"},
-        {Name="Tide Keeper", Level=1475, Location="Forgotten Island"},
-    },
-    Sea3 = {
-        {Name="Stone", Level=1550, Location="Port Town"},
-        {Name="Island Empress", Level=1675, Location="Hydra Island"},
-        {Name="Kilo Admiral", Level=1750, Location="Great Tree"},
-        {Name="Captain Elephant", Level=1875, Location="Floating Turtle"},
-        {Name="Beautiful Pirate", Level=1950, Location="Floating Turtle"},
-        {Name="Longma", Level=2000, Location="Floating Turtle"},
-        {Name="Cake Queen", Level=2175, Location="Ice Cream Land"},
-    },
-}
 
 --// ESP
 local function CreateESP(target, text, color)
@@ -669,7 +534,6 @@ local TopBar = Create("Frame", {
 Corner(TopBar, 14)
 Gradient(TopBar, CONFIG.Panel, CONFIG.Panel2, 0)
 
---// LOGO (Asset ID)
 local Logo = Instance.new("ImageLabel")
 Logo.Name = "Logo"
 Logo.Size = UDim2.new(0, 48, 0, 48)
@@ -955,62 +819,12 @@ local FruitRaidPage = CreatePage("Fruit / Raid")
 local FishingPage = CreatePage("Fishing")
 local StatusPage = CreatePage("Status")
 local PvPPage = CreatePage("PvP")
-local StatsPage = CreatePage("Stats")
+local TrialsPage = CreatePage("Trials")
 local SetingPage = CreatePage("Seting")
+local TeleportPage = CreatePage("Teleport")
+local StatsPage = CreatePage("Stats")
+local ShopPage = CreatePage("Shop")
 local MiscPage = CreatePage("Misc")
-
---// WEAPON LIST
-local WeaponListHolder = Create("Frame", {Parent=FarmPage, BackgroundColor3=CONFIG.Panel, Size=UDim2.new(1,0,0,180), BorderSizePixel=0, ZIndex=13})
-Corner(WeaponListHolder, 10)
-Stroke(WeaponListHolder, CONFIG.Blue, 1.5, 0.3)
-local WeaponListScroll = Create("ScrollingFrame", {Parent=WeaponListHolder, BackgroundTransparency=1, Position=UDim2.new(0,8,0,8), Size=UDim2.new(1,-16,1,-16), CanvasSize=UDim2.new(0,0,0,0), AutomaticCanvasSize=Enum.AutomaticSize.Y, ScrollBarThickness=3, ScrollBarImageColor3=CONFIG.Blue, BorderSizePixel=0, ZIndex=14})
-local WL = Instance.new("UIListLayout")
-WL.Padding = UDim.new(0,6)
-WL.SortOrder = Enum.SortOrder.LayoutOrder
-WL.Parent = WeaponListScroll
-
-local function ShowWeaponsInCategory(cat)
-    for _, c in ipairs(WeaponListScroll:GetChildren()) do
-        if c:IsA("TextButton") then c:Destroy() end
-    end
-    local weapons = GetWeaponsByCategory(cat)
-    if #weapons == 0 then
-        Create("TextLabel", {Parent=WeaponListScroll, BackgroundTransparency=1, Size=UDim2.new(1,0,0,36), Text="No weapon in "..cat, TextColor3=CONFIG.White, TextSize=12, ZIndex=15})
-        return
-    end
-    for i, w in ipairs(weapons) do
-        local Btn = Create("TextButton", {Parent=WeaponListScroll, BackgroundColor3=CONFIG.Panel2, Size=UDim2.new(1,0,0,36), Text="- "..w.Name, TextColor3=CONFIG.White, TextSize=12, Font=Enum.Font.GothamMedium, AutoButtonColor=false, BorderSizePixel=0, LayoutOrder=i, ZIndex=15, TextXAlignment=Enum.TextXAlignment.Left})
-        Corner(Btn, 8)
-        Padding(Btn, 12,12,0,0)
-        Btn.Activated:Connect(function() SelectWeapon(w.Name) end)
-    end
-end
-
---// BOSS LIST
-local BossListHolder = Create("Frame", {Parent=FarmPage, BackgroundColor3=CONFIG.Panel, Size=UDim2.new(1,0,0,200), BorderSizePixel=0, ZIndex=13})
-Corner(BossListHolder, 10)
-Stroke(BossListHolder, CONFIG.Blue, 1.5, 0.3)
-local BossListScroll = Create("ScrollingFrame", {Parent=BossListHolder, BackgroundTransparency=1, Position=UDim2.new(0,8,0,8), Size=UDim2.new(1,-16,1,-16), CanvasSize=UDim2.new(0,0,0,0), AutomaticCanvasSize=Enum.AutomaticSize.Y, ScrollBarThickness=3, ScrollBarImageColor3=CONFIG.Blue, BorderSizePixel=0, ZIndex=14})
-local BL = Instance.new("UIListLayout")
-BL.Padding = UDim.new(0,6)
-BL.SortOrder = Enum.SortOrder.LayoutOrder
-BL.Parent = BossListScroll
-
-local function ShowBossBySea(sea)
-    for _, c in ipairs(BossListScroll:GetChildren()) do
-        if c:IsA("TextButton") then c:Destroy() end
-    end
-    for i, b in ipairs(BossData[sea] or {}) do
-        local Btn = Create("TextButton", {Parent=BossListScroll, BackgroundColor3=CONFIG.Panel2, Size=UDim2.new(1,0,0,46), Text="- "..b.Name.." (Lv "..b.Level..")\n  "..b.Location..(b.Raid and " [Raid]" or ""), TextColor3=CONFIG.White, TextSize=11, Font=Enum.Font.GothamMedium, AutoButtonColor=false, BorderSizePixel=0, LayoutOrder=i, ZIndex=15, TextXAlignment=Enum.TextXAlignment.Left, TextYAlignment=Enum.TextYAlignment.Top})
-        Corner(Btn, 8)
-        Padding(Btn, 12,12,6,6)
-        Btn.Activated:Connect(function()
-            State.SelectedBoss = b.Name
-            State.SelectedBossSea = sea
-            Notify("Boss: "..b.Name)
-        end)
-    end
-end
 
 --// DISCORD
 CreateSection(DiscordPage, "DISCORD INFO", "Join community")
@@ -1020,39 +834,73 @@ CreateButton(DiscordPage, "Copy Discord Link", function()
 end)
 
 --// FARM
-CreateSection(FarmPage, "FARM", "Auto farm level + level match")
-CreateToggle(FarmPage, "Auto Farm Level", false, function(s) State.AutoFarm=s Notify("Auto Farm: "..(s and "ON" or "OFF")) end)
-CreateToggle(FarmPage, "Auto Kill Nearest", false, function(s) State.AutoKillNearest=s Notify("Auto Kill Nearest: "..(s and "ON" or "OFF")) end)
+CreateSection(FarmPage, "FARM", "Auto farm + auto Haki")
+CreateToggle(FarmPage, "Auto Farm Level", false, function(s)
+    State.AutoFarm = s
+    Notify("Auto Farm: "..(s and "ON" or "OFF"))
+    if s then
+        task.spawn(function()
+            while State.AutoFarm do
+                pcall(function() Invoke("Buso") end)
+                task.wait(2)
+            end
+        end)
+    end
+end)
+CreateToggle(FarmPage, "Auto Kill Nearest", false, function(s)
+    State.AutoKillNearest = s
+    Notify("Auto Kill Nearest: "..(s and "ON" or "OFF"))
+    if s then
+        task.spawn(function()
+            while State.AutoKillNearest do
+                pcall(function() Invoke("Buso") end)
+                task.wait(2)
+            end
+        end)
+    end
+end)
 
 CreateSection(FarmPage, "WEAPON", "Select weapon")
 CreateDropdown(FarmPage, "Select Tool", {"Melee","Sword","Gun","Fruit"}, function(opt)
     State.SelectedCategory = opt
-    ShowWeaponsInCategory(opt)
 end)
 
 CreateSection(FarmPage, "BOSS", "Select boss")
-CreateDropdown(FarmPage, "Select Sea", {"Sea1","Sea2","Sea3"}, function(opt) ShowBossBySea(opt) end)
-CreateToggle(FarmPage, "Auto Farm Boss", false, function(s)
-    State.AutoBoss = s
-    if s and not State.SelectedBoss then Notify("Select boss first") State.AutoBoss = false
-    else Notify("Auto Farm Boss: "..(s and "ON" or "OFF")) end
-end)
+CreateDropdown(FarmPage, "Select Sea", {"Sea1","Sea2","Sea3"}, function(opt) end)
+CreateToggle(FarmPage, "Auto Farm Boss", false, function(s) State.AutoBoss = s Notify("Auto Farm Boss: "..(s and "ON" or "OFF")) end)
 
-CreateSection(FarmPage, "CHEST", "Auto farm chest")
+CreateSection(FarmPage, "CHEST", "Auto chest")
 CreateToggle(FarmPage, "Farm Chest", false, function(s)
     State.AutoChest = s
     if s then State.OpenedChests = {} end
     Notify("Farm Chest: "..(s and "ON" or "OFF"))
 end)
 
+CreateSection(FarmPage, "BONE", "Random Bone")
+CreateButton(FarmPage, "Random Bone", function()
+    Invoke("Bones", "Buy", 1, 1)
+    Notify("Random Bone bought")
+end)
+
+CreateSection(FarmPage, "BUSO STAGE", "Change Buso")
+CreateButton(FarmPage, "Change Buso Stage", function()
+    Invoke("ChangeBusoStage", 0)
+    Notify("Buso Stage changed")
+end)
+
 --// SEA
-CreateSection(SeaPage, "SEA", "Sea mobs")
-CreateToggle(SeaPage, "Auto Farm Sea", false, function(s) Notify("Auto Farm Sea: "..(s and "ON" or "OFF")) end)
-CreateToggle(SeaPage, "Auto Kill Sea Beast", false, function(s) Notify("Auto Kill Sea Beast: "..(s and "ON" or "OFF")) end)
+CreateSection(SeaPage, "SEA TRAVEL", "Pindah sea")
+CreateButton(SeaPage, "Travel Main (Sea 1)", function() Invoke("TravelMain") Notify("Travel Main") end)
+CreateButton(SeaPage, "Travel Dressrosa (Sea 2)", function() Invoke("TravelDressrosa") Notify("Travel Dressrosa") end)
+CreateButton(SeaPage, "Travel Zou (Sea 3)", function() Invoke("TravelZou") Notify("Travel Zou") end)
+
+CreateSection(SeaPage, "SEA FARM", "Auto sea")
+CreateToggle(SeaPage, "Auto Farm Sea", false, function(s) State.AutoFarmSea = s Notify("Auto Farm Sea: "..(s and "ON" or "OFF")) end)
+CreateToggle(SeaPage, "Auto Kill Sea Beast", false, function(s) State.AutoKillSeaBeast = s Notify("Auto Kill Sea Beast: "..(s and "ON" or "OFF")) end)
 
 --// QUEST / ITEMS
 CreateSection(QuestItemsPage, "AUTO QUEST", "Basic auto quest")
-CreateToggle(QuestItemsPage, "Auto Quest", false, function(s) State.AutoQuest=s Notify("Auto Quest: "..(s and "ON" or "OFF")) end)
+CreateToggle(QuestItemsPage, "Auto Quest", false, function(s) State.AutoQuest = s Notify("Auto Quest: "..(s and "ON" or "OFF")) end)
 
 CreateSection(QuestItemsPage, "COMMF_ CHAIN", "Auto quest items")
 CreateButton(QuestItemsPage, "Auto CDK (Lv 2200+)", function() GetQuestChain("CDK") end)
@@ -1064,65 +912,106 @@ CreateButton(QuestItemsPage, "Auto Buddy Sword (Kill Cake Queen)", function() Ge
 CreateButton(QuestItemsPage, "Auto Kill Indra (God's Chalice)", function() GetQuestChain("Indra") end)
 CreateButton(QuestItemsPage, "Auto Spawn Dough King (Sweet Chalice)", function() GetQuestChain("DoughKing") end)
 
+CreateSection(QuestItemsPage, "COMMF_ EXTRA", "Quest tambahan")
+CreateButton(QuestItemsPage, "Abandon Quest", function() Invoke("AbandonQuest") Notify("Quest abandoned") end)
+CreateButton(QuestItemsPage, "Torch Puzzle (Get)", function() Invoke("ProQuestProgress", "GetTorch") Notify("Torch Get") end)
+CreateButton(QuestItemsPage, "Torch Puzzle (Destroy)", function() Invoke("ProQuestProgress", "DestroyTorch") Notify("Torch Destroy") end)
+CreateButton(QuestItemsPage, "Cup Puzzle (Get)", function() Invoke("ProQuestProgress", "GetCup") Notify("Cup Get") end)
+CreateButton(QuestItemsPage, "Cup Puzzle (Fill)", function() Invoke("ProQuestProgress", "FillCup") Notify("Cup Fill") end)
+CreateButton(QuestItemsPage, "SickMan Quest", function() Invoke("ProQuestProgress", "SickMan") Notify("SickMan") end)
+CreateButton(QuestItemsPage, "RichSon Quest", function() Invoke("ProQuestProgress", "RichSon") Notify("RichSon") end)
+CreateButton(QuestItemsPage, "CDK Open Door", function() Invoke("CDKQuest", "OpenDoor") Notify("CDK OpenDoor") end)
+CreateButton(QuestItemsPage, "CDK Progress", function() Invoke("CDKQuest", "Progress") Notify("CDK Progress") end)
+CreateButton(QuestItemsPage, "CDK Boat Quest", function() Invoke("CDKQuest", "BoatQuest") Notify("CDK BoatQuest") end)
+CreateButton(QuestItemsPage, "Wenlocktoad Step 1", function() Invoke("Wenlocktoad", "1") Notify("Wenlocktoad 1") end)
+CreateButton(QuestItemsPage, "Wenlocktoad Step 2", function() Invoke("Wenlocktoad", "2") Notify("Wenlocktoad 2") end)
+CreateButton(QuestItemsPage, "Alchemist Step 1", function() Invoke("Alchemist", "1") Notify("Alchemist 1") end)
+CreateButton(QuestItemsPage, "Alchemist Step 2", function() Invoke("Alchemist", "2") Notify("Alchemist 2") end)
+
+CreateSection(QuestItemsPage, "SECRET QUEST", "Object interaction")
+CreateButton(QuestItemsPage, "Auto Temple Door", function() Invoke("CheckTempleDoor") Notify("Temple Door checked") end)
+CreateButton(QuestItemsPage, "Auto Bartilo Quest", function() Invoke("BartiloQuestProgress") Notify("Bartilo checked") end)
+CreateButton(QuestItemsPage, "Auto Guitar Puzzle", function() Invoke("GuitarPuzzleProgress", "Check") Notify("Guitar checked") end)
+
 CreateSection(QuestItemsPage, "RACE", "Auto Race V2 & V3")
-CreateToggle(QuestItemsPage, "Auto Race V2", false, function(s) State.AutoRaceV2=s Notify("Auto Race V2: "..(s and "ON" or "OFF")) end)
-CreateToggle(QuestItemsPage, "Auto Race V3", false, function(s) State.AutoRaceV3=s Notify("Auto Race V3: "..(s and "ON" or "OFF")) end)
+CreateToggle(QuestItemsPage, "Auto Race V2", false, function(s) State.AutoRaceV2 = s Notify("Auto Race V2: "..(s and "ON" or "OFF")) end)
+CreateToggle(QuestItemsPage, "Auto Race V3", false, function(s) State.AutoRaceV3 = s Notify("Auto Race V3: "..(s and "ON" or "OFF")) end)
+
+CreateSection(QuestItemsPage, "EVENT", "Event NPC")
+CreateButton(QuestItemsPage, "Auto Blackbeard Reward", function() Invoke("BlackbeardReward", "DragonClaw", "1") Notify("Blackbeard") end)
+CreateButton(QuestItemsPage, "Auto Horned Man Bet", function() Invoke("HornedMan", "Bet") Notify("Horned Man") end)
+CreateButton(QuestItemsPage, "Auto Talk Trevor", function() Invoke("TalkTrevor", "1") Notify("Trevor") end)
 
 --// FRUIT / RAID
-CreateSection(FruitRaidPage, "FRUIT", "Auto collect fruit")
-CreateToggle(FruitRaidPage, "Auto Collect Fruit", false, function(s) State.AutoFruit=s Notify("Auto Collect Fruit: "..(s and "ON" or "OFF")) end)
+CreateSection(FruitRaidPage, "FRUIT", "Auto fruit")
+CreateToggle(FruitRaidPage, "Collect Fruit", false, function(s) State.AutoFruit = s Notify("Collect Fruit: "..(s and "ON" or "OFF")) end)
+CreateToggle(FruitRaidPage, "Random Fruit", false, function(s) State.AutoGacha = s Notify("Random Fruit: "..(s and "ON" or "OFF")) end)
+CreateToggle(FruitRaidPage, "Store Fruit", false, function(s) State.StoreFruit = s Notify("Store Fruit: "..(s and "ON" or "OFF")) end)
 
-CreateSection(FruitRaidPage, "GACHA ZIOLES", "Auto Gacha Box")
-CreateToggle(FruitRaidPage, "Auto Gacha", false, function(s) State.AutoGacha=s Notify("Auto Gacha: "..(s and "ON" or "OFF")) end)
-CreateToggle(FruitRaidPage, "Store Fruit", false, function(s) State.StoreFruit=s Notify("Store Fruit: "..(s and "ON" or "OFF")) end)
+CreateSection(FruitRaidPage, "BONES", "Bones exchange")
+CreateButton(FruitRaidPage, "Bones Check", function()
+    local res = Invoke("Bones", "Check")
+    Notify("Bones: "..tostring(res))
+end)
+CreateButton(FruitRaidPage, "Bones Surprise", function() Invoke("Bones", "Buy", 1, 1) Notify("Surprise bought") end)
+CreateButton(FruitRaidPage, "Bones Stat Refund", function() Invoke("Bones", "Buy", 1, 2) Notify("Stat Refund") end)
+CreateButton(FruitRaidPage, "Bones Race Reroll", function() Invoke("Bones", "Buy", 1, 3) Notify("Race Reroll") end)
+
+CreateSection(FruitRaidPage, "LOAD FRUIT", "Load fruit from inventory")
+CreateDropdown(FruitRaidPage, "Select Fruit to Load", {
+    "Rocket","Spin","Chop","Spring","Bomb","Smoke","Spike","Flame","Falcon",
+    "Ice","Sand","Dark","Diamond","Light","Rubber","Barrier","Magma","Door",
+    "Quake","Human","Buddha","Love","Spider","Sound","Phoenix","Portal",
+    "Rumble","Pain","Blizzard","Gravity","Mammoth","T-Rex","Dough","Shadow",
+    "Venom","Control","Spirit","Dragon","Leopard","Kitsune",
+}, function(opt) State.SelectedFruitLoad = opt Notify("Fruit: "..opt) end)
+CreateButton(FruitRaidPage, "Load Fruit", function()
+    if State.SelectedFruitLoad then
+        Invoke("LoadFruit", State.SelectedFruitLoad)
+        Notify("Loaded: "..State.SelectedFruitLoad)
+    else
+        Notify("Select fruit first")
+    end
+end)
 
 CreateSection(FruitRaidPage, "RAID", "Auto raid")
-CreateDropdown(FruitRaidPage, "Select Raid", {"Flame","Ice","Sand","Dark","Light","Magma","Quake","Buddha","Spider","Phoenix","Dough"}, function(opt)
-    State.SelectedRaid = opt
-    Notify("Raid: "..opt)
-end)
-CreateToggle(FruitRaidPage, "Auto Raid", false, function(s) State.AutoRaid=s Notify("Auto Raid: "..(s and "ON" or "OFF")) end)
-CreateToggle(FruitRaidPage, "Auto Buy Chip", false, function(s) State.AutoBuyChip=s Notify("Auto Buy Chip: "..(s and "ON" or "OFF")) end)
+CreateDropdown(FruitRaidPage, "Select Raid", {"Flame","Ice","Sand","Dark","Light","Magma","Quake","Buddha","Spider","Phoenix","Dough"}, function(opt) State.SelectedRaid = opt Notify("Raid: "..opt) end)
+CreateToggle(FruitRaidPage, "Auto Raid", false, function(s) State.AutoRaid = s Notify("Auto Raid: "..(s and "ON" or "OFF")) end)
+CreateToggle(FruitRaidPage, "Npc Select", false, function(s) State.AutoBuyChip = s Notify("Npc Select: "..(s and "ON" or "OFF")) end)
+
+CreateSection(FruitRaidPage, "COUSIN", "Random fruit buy")
+CreateToggle(FruitRaidPage, "Cousin Buy", false, function(s) State.CousinBuy = s Notify("Cousin Buy: "..(s and "ON" or "OFF")) end)
 
 --// FISHING
 CreateSection(FishingPage, "FISHING", "Auto fishing")
-CreateToggle(FishingPage, "Auto Fishing", false, function(s) State.AutoFish=s Notify("Auto Fishing: "..(s and "ON" or "OFF")) end)
+CreateToggle(FishingPage, "Auto Fishing", false, function(s) State.AutoFish = s Notify("Auto Fishing: "..(s and "ON" or "OFF")) end)
 
 --// STATUS
-CreateSection(StatusPage, "STATUS", "Player info + boss per sea")
+CreateSection(StatusPage, "STATUS", "Player info")
 local StatusLabel = Create("TextLabel", {
     Parent=StatusPage, BackgroundColor3=CONFIG.Panel,
-    Size=UDim2.new(1,0,0,300),
-    Text="Loading...",
-    TextColor3=CONFIG.White, TextSize=12,
-    Font=Enum.Font.GothamMedium,
-    TextXAlignment=Enum.TextXAlignment.Left,
-    TextYAlignment=Enum.TextYAlignment.Top,
+    Size=UDim2.new(1,0,0,200), Text="Loading...",
+    TextColor3=CONFIG.White, TextSize=12, Font=Enum.Font.GothamMedium,
+    TextXAlignment=Enum.TextXAlignment.Left, TextYAlignment=Enum.TextYAlignment.Top,
     BorderSizePixel=0, ZIndex=13,
 })
 Corner(StatusLabel, 9)
 Padding(StatusLabel, 14,14,7,7)
 
-local leaderstats = Player:FindFirstChild("leaderstats")
-local LevelValue = leaderstats and leaderstats:FindFirstChild("Level")
-
 task.spawn(function()
     while task.wait(1) do
-        if LevelValue then
-            local lv = LevelValue.Value
-            local sea = "Sea1"
-            if lv >= 1500 then sea = "Sea3"
-            elseif lv >= 700 then sea = "Sea2"
-            end
-            local bossList = BossData[sea] or {}
-            local bossText = ""
-            for _, b in ipairs(bossList) do
-                bossText = bossText .. string.format("\n%s (Lv %d) - %s", b.Name, b.Level, b.Location)
-            end
-            StatusLabel.Text = string.format("Level: %d\nSea: %s\nRaid Island: %d\n\nBosses %s:%s", lv, sea, GetRaidIsland(), sea, bossText)
+        local ls = Player:FindFirstChild("leaderstats")
+        local lv = ls and ls:FindFirstChild("Level")
+        if lv then
+            StatusLabel.Text = string.format("Level: %d\nSea: %s\nRaid Island: %d", lv.Value, lv.Value >= 1500 and "Sea3" or (lv.Value >= 700 and "Sea2" or "Sea1"), GetRaidIsland())
         end
     end
 end)
+
+CreateButton(StatusPage, "Get Inventory", function() Invoke("getInventory") Notify("Inventory fetched") end)
+CreateButton(StatusPage, "Get Inventory Weapons", function() Invoke("getInventoryWeapons") Notify("Weapons fetched") end)
+CreateButton(StatusPage, "Get Titles", function() Invoke("getTitles") Notify("Titles fetched") end)
+CreateButton(StatusPage, "Get Unlockables", function() Invoke("GetUnlockables") Notify("Unlockables fetched") end)
 
 --// PVP
 CreateSection(PvPPage, "PLAYER CONTROL", "Teleport + spectate")
@@ -1135,87 +1024,174 @@ CreateDropdown(PvPPage, "Select Player", (function()
     return list
 end)(), function(opt) State.SelectedPlayer = opt Notify("Player: "..opt) end)
 
-CreateButton(PvPPage, "Teleport Player (Tween)", function()
+CreateButton(PvPPage, "Teleport Player", function()
     if not State.SelectedPlayer then Notify("Select player first") return end
-    local target = nil
     for _, plr in ipairs(Players:GetPlayers()) do
-        if plr.Name == State.SelectedPlayer then target = plr break end
+        if plr.Name == State.SelectedPlayer and plr.Character then
+            local trp = plr.Character:FindFirstChild("HumanoidRootPart")
+            if trp then TweenToPosition(trp.Position + Vector3.new(0, 3, 5), CONFIG.TweenPlayerSpeed) end
+        end
     end
-    if not target or not target.Character then Notify("Player not found") return end
-    local trp = target.Character:FindFirstChild("HumanoidRootPart")
-    if not trp then Notify("No HRP") return end
-    TweenToPosition(trp.Position + Vector3.new(0, 3, 5), CONFIG.TweenPlayerSpeed)
-    Notify("Tweening to: "..State.SelectedPlayer)
 end)
 
 CreateButton(PvPPage, "Spectate Player", function()
-    if not State.SelectedPlayer then Notify("Select player first") return end
-    local target = nil
     for _, plr in ipairs(Players:GetPlayers()) do
-        if plr.Name == State.SelectedPlayer then target = plr break end
+        if plr.Name == State.SelectedPlayer and plr.Character then
+            local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+            if hum then Camera.CameraSubject = hum Camera.CameraType = Enum.CameraType.Custom end
+        end
     end
-    if not target or not target.Character then Notify("Player not found") return end
-    local hum = target.Character:FindFirstChildOfClass("Humanoid")
-    if not hum then return end
-    Camera.CameraSubject = hum
-    Camera.CameraType = Enum.CameraType.Custom
-    Notify("Spectating: "..State.SelectedPlayer)
 end)
 
 CreateButton(PvPPage, "Stop Spectate", function()
     local char = Player.Character
-    if char then
-        local hum = char:FindFirstChildOfClass("Humanoid")
-        if hum then Camera.CameraSubject = hum end
-    end
-    Notify("Spectate stopped")
+    if char then local hum = char:FindFirstChildOfClass("Humanoid") if hum then Camera.CameraSubject = hum end end
 end)
 
 CreateSection(PvPPage, "COMBAT", "PvP features")
-CreateToggle(PvPPage, "Aimbot", false, function(s) State.Aimbot=s Notify("Aimbot: "..(s and "ON" or "OFF")) end)
-CreateToggle(PvPPage, "Hitbox", false, function(s) State.Hitbox=s Notify("Hitbox: "..(s and "ON" or "OFF")) end)
+CreateToggle(PvPPage, "Aimbot", false, function(s) State.Aimbot = s Notify("Aimbot: "..(s and "ON" or "OFF")) end)
+CreateToggle(PvPPage, "Hitbox", false, function(s) State.Hitbox = s Notify("Hitbox: "..(s and "ON" or "OFF")) end)
 
 local KillAuraLabel = Create("TextLabel", {Parent=PvPPage, BackgroundColor3=CONFIG.Panel, Size=UDim2.new(1,0,0,40), Text="Kill Aura: Standby", TextColor3=CONFIG.White, TextSize=13, Font=Enum.Font.GothamMedium, TextXAlignment=Enum.TextXAlignment.Left, BorderSizePixel=0, ZIndex=13})
 Corner(KillAuraLabel, 9)
 Padding(KillAuraLabel, 14,14,7,7)
 
-task.spawn(function()
-    while task.wait(1) do
-        if IsInRaidIsland3() then
-            KillAuraLabel.Text = "Kill Aura: ACTIVE (Raid Island "..GetRaidIsland()..")"
-        else
-            KillAuraLabel.Text = "Kill Aura: Standby (need Island 3+)"
-        end
-    end
-end)
+--// TRIALS
+CreateSection(TrialsPage, "TELEPORT TRIAL", "Tween ke trial")
+CreateButton(TrialsPage, "Great Tree Highest", function() TweenToPosition(Vector3.new(2700, 500, 3000), 500) Notify("Great Tree Highest") end)
+CreateButton(TrialsPage, "Tween RaceDoor", function() TweenToPosition(Vector3.new(2830, 90, 3100), 500) Notify("RaceDoor") end)
+CreateButton(TrialsPage, "Tween Ancient Clock", function() TweenToPosition(Vector3.new(-5020, 80, -3020), 500) Notify("Ancient Clock") end)
 
---// STATS
-CreateSection(StatsPage, "AUTO ADD STATS", "Distribute stat points")
-CreateToggle(StatsPage, "Auto Add Stats", false, function(s) State.AutoAddStats=s Notify("Auto Add Stats: "..(s and "ON" or "OFF")) end)
-CreateSlider(StatsPage, "Melee", 0, 100, 0, function(v) State.StatsMelee=v end)
-CreateSlider(StatsPage, "Defense", 0, 100, 0, function(v) State.StatsDefense=v end)
-CreateSlider(StatsPage, "Sword", 0, 100, 0, function(v) State.StatsSword=v end)
-CreateSlider(StatsPage, "Gun", 0, 100, 0, function(v) State.StatsGun=v end)
-CreateSlider(StatsPage, "BloxFruit", 0, 100, 0, function(v) State.StatsBloxFruit=v end)
-CreateButton(StatsPage, "Apply Stats Now", function() AutoAddStats() end)
+CreateSection(TrialsPage, "TRIAL SETUP", "Method trial")
+CreateDropdown(TrialsPage, "Select Method", {"Bone","Cake"}, function(opt) State.TrialMethod = opt Notify("Method: "..opt) end)
+
+CreateSection(TrialsPage, "RACE V4", "Race V4 Progress")
+CreateButton(TrialsPage, "Race V4 Check", function() Invoke("RaceV4Progress", "Check") Notify("Race V4 Check") end)
+CreateButton(TrialsPage, "Race V4 Begin", function() Invoke("RaceV4Progress", "Begin") Notify("Race V4 Begin") end)
+CreateButton(TrialsPage, "Race V4 Continue", function() Invoke("RaceV4Progress", "Continue") Notify("Race V4 Continue") end)
+CreateButton(TrialsPage, "Finish Trial", function() Invoke("RaceV4Progress", "Finish") Notify("Finish Trial") end)
+
+CreateSection(TrialsPage, "AUTO TRIAL", "Auto trial")
+CreateToggle(TrialsPage, "Auto Trial", false, function(s) State.AutoTrial = s Notify("Auto Trial: "..(s and "ON" or "OFF")) end)
+CreateToggle(TrialsPage, "Auto Pull Lever", false, function(s) State.AutoPullLever = s Notify("Auto Pull Lever: "..(s and "ON" or "OFF")) end)
+CreateToggle(TrialsPage, "Kill Player Trial", false, function(s) State.KillPlayerTrial = s Notify("Kill Player: "..(s and "ON" or "OFF")) end)
 
 --// SETING (ESP)
 CreateSection(SetingPage, "ESP / WALLHACK", "Highlight objects")
-CreateToggle(SetingPage, "ESP Player", false, function(s) State.ESPPlayer=s Notify("ESP Player: "..(s and "ON" or "OFF")) end)
-CreateToggle(SetingPage, "ESP Island", false, function(s) State.ESPIsland=s Notify("ESP Island: "..(s and "ON" or "OFF")) end)
-CreateToggle(SetingPage, "ESP Fruit", false, function(s) State.ESPFruit=s Notify("ESP Fruit: "..(s and "ON" or "OFF")) end)
-CreateToggle(SetingPage, "ESP Blue Gear", false, function(s) State.ESPBlueGear=s Notify("ESP Blue Gear: "..(s and "ON" or "OFF")) end)
-CreateToggle(SetingPage, "ESP Chest", false, function(s) State.ESPChest=s Notify("ESP Chest: "..(s and "ON" or "OFF")) end)
-CreateToggle(SetingPage, "ESP Flower", false, function(s) State.ESPFlower=s Notify("ESP Flower: "..(s and "ON" or "OFF")) end)
+CreateToggle(SetingPage, "ESP Player", false, function(s) State.ESPPlayer = s Notify("ESP Player: "..(s and "ON" or "OFF")) end)
+CreateToggle(SetingPage, "ESP Island", false, function(s) State.ESPIsland = s Notify("ESP Island: "..(s and "ON" or "OFF")) end)
+CreateToggle(SetingPage, "ESP Fruit", false, function(s) State.ESPFruit = s Notify("ESP Fruit: "..(s and "ON" or "OFF")) end)
+CreateToggle(SetingPage, "ESP Blue Gear", false, function(s) State.ESPBlueGear = s Notify("ESP Blue Gear: "..(s and "ON" or "OFF")) end)
+CreateToggle(SetingPage, "ESP Chest", false, function(s) State.ESPChest = s Notify("ESP Chest: "..(s and "ON" or "OFF")) end)
+CreateToggle(SetingPage, "ESP Flower", false, function(s) State.ESPFlower = s Notify("ESP Flower: "..(s and "ON" or "OFF")) end)
+
+--// TELEPORT
+CreateSection(TeleportPage, "TELEPORT", "Tween ke island")
+local IslandCoords = {
+    ["Starter Island"]=Vector3.new(1077,15,1450), ["Jungle"]=Vector3.new(-1620,30,200),
+    ["Pirate Village"]=Vector3.new(-1100,15,3800), ["Desert"]=Vector3.new(980,15,4200),
+    ["Frozen Village"]=Vector3.new(-70,20,-2500), ["Marine Fortress"]=Vector3.new(-5100,20,4050),
+    ["Skylands"]=Vector3.new(-4650,850,-3220), ["Prison"]=Vector3.new(4850,15,650),
+    ["Colosseum"]=Vector3.new(-1800,50,-3000), ["Magma Village"]=Vector3.new(-5200,20,-300),
+    ["Underwater City"]=Vector3.new(6000,-150,3000), ["Fountain City"]=Vector3.new(5600,60,-5000),
+    ["Kingdom of Rose"]=Vector3.new(-800,20,1800), ["Green Zone"]=Vector3.new(-2500,30,100),
+    ["Graveyard"]=Vector3.new(6500,60,4500), ["Snow Mountain"]=Vector3.new(400,30,-5300),
+    ["Hot and Cold"]=Vector3.new(-5500,30,-4000), ["Cursed Ship"]=Vector3.new(923,100,32000),
+    ["Ice Castle"]=Vector3.new(5000,60,-6500), ["Forgotten Island"]=Vector3.new(-3050,100,-7500),
+    ["Port Town"]=Vector3.new(-290,20,6000), ["Hydra Island"]=Vector3.new(5800,30,-2000),
+    ["Great Tree"]=Vector3.new(2700,60,3000), ["Floating Turtle"]=Vector3.new(-1600,60,3500),
+    ["Castle on the Sea"]=Vector3.new(-5000,60,-3000), ["Haunted Castle"]=Vector3.new(-9500,100,5800),
+}
+
+local SeaIslands = {
+    Sea1 = {"Starter Island","Jungle","Pirate Village","Desert","Frozen Village","Marine Fortress","Skylands","Prison","Colosseum","Magma Village","Underwater City","Fountain City"},
+    Sea2 = {"Kingdom of Rose","Green Zone","Graveyard","Snow Mountain","Hot and Cold","Cursed Ship","Ice Castle","Forgotten Island"},
+    Sea3 = {"Port Town","Hydra Island","Great Tree","Floating Turtle","Castle on the Sea","Haunted Castle"},
+}
+
+CreateDropdown(TeleportPage, "Select Sea", {"Sea1","Sea2","Sea3"}, function(opt) end)
+CreateDropdown(TeleportPage, "Select Island", SeaIslands.Sea1, function(opt) State.SelectedIsland = opt Notify("Island: "..opt) end)
+
+CreateButton(TeleportPage, "Tween ke Island", function()
+    local pos = IslandCoords[State.SelectedIsland]
+    if pos then TweenToPosition(pos + Vector3.new(0,3,0), 500) Notify("Tween: "..State.SelectedIsland) end
+end)
+
+CreateSection(TeleportPage, "TRAVEL", "Pindah sea")
+CreateButton(TeleportPage, "Travel Main (Sea 1)", function() Invoke("TravelMain") Notify("Travel Main") end)
+CreateButton(TeleportPage, "Travel Dressrosa (Sea 2)", function() Invoke("TravelDressrosa") Notify("Travel Dressrosa") end)
+CreateButton(TeleportPage, "Travel Zou (Sea 3)", function() Invoke("TravelZou") Notify("Travel Zou") end)
+
+CreateSection(TeleportPage, "TEAM / BOAT", "Team and boat")
+CreateButton(TeleportPage, "Set Team Pirates", function() Invoke("SetTeam", "Pirates") Notify("Pirates") end)
+CreateButton(TeleportPage, "Set Team Marines", function() Invoke("SetTeam", "Marines") Notify("Marines") end)
+CreateButton(TeleportPage, "Buy Boat", function() Invoke("BuyBoat", "Dinghy") Notify("Boat bought") end)
+CreateButton(TeleportPage, "Set Spawn", function() Invoke("SetSpawnPoint") Notify("Spawn set") end)
+
+--// STATS
+CreateSection(StatsPage, "AUTO ADD STATS", "Distribute stats")
+CreateToggle(StatsPage, "Auto Add Stats", false, function(s) State.AutoAddStats = s Notify("Auto Add Stats: "..(s and "ON" or "OFF")) end)
+CreateSlider(StatsPage, "Melee", 0, 100, 0, function(v) State.StatsMelee = v end)
+CreateSlider(StatsPage, "Sword", 0, 100, 0, function(v) State.StatsSword = v end)
+CreateSlider(StatsPage, "Gun", 0, 100, 0, function(v) State.StatsGun = v end)
+CreateSlider(StatsPage, "Fruit", 0, 100, 0, function(v) State.StatsBloxFruit = v end)
+CreateButton(StatsPage, "Apply Stats Now", function() AutoAddStats() Notify("Stats applied") end)
+
+--// SHOP
+CreateSection(ShopPage, "SHOP MELEE", "Buy Fighting Style")
+CreateDropdown(ShopPage, "Select Melee", {
+    "Black Leg","Electro","Fishman Karate","Sharkman Karate",
+    "Dragon Talon","Electric Claw","Death Step","Superhuman","Godhuman",
+}, function(opt) State.SelectedMelee = opt Notify("Melee: "..opt) end)
+
+CreateButton(ShopPage, "Buy Selected Melee", function()
+    local map = {
+        ["Black Leg"]="BuyBlackLeg",["Electro"]="BuyElectro",
+        ["Fishman Karate"]="BuyFishmanKarate",["Sharkman Karate"]="BuySharkmanKarate",
+        ["Dragon Talon"]="BuyDragonTalon",["Electric Claw"]="BuyElectricClaw",
+        ["Death Step"]="BuyDeathStep",["Superhuman"]="BuySuperhuman",["Godhuman"]="BuyGodhuman",
+    }
+    local fn = map[State.SelectedMelee]
+    if fn then Invoke(fn) Notify("Bought: "..State.SelectedMelee) else Notify("Select melee first") end
+end)
+
+CreateSection(ShopPage, "SHOP SWORD", "Buy Sword")
+CreateDropdown(ShopPage, "Select Sword", {
+    "Katana","Cutlass","Iron Mace","Dual Katana","Triple Katana","Pipe","Small Sword",
+    "Dual-Headed Blade","Soul Cane","Saber","Rengoku","Shisui","Yama","Tushita",
+    "Cursed Dual Katana","Dark Dagger","Buddy Sword","Hallow Scythe","Spikey Trident","Trident",
+}, function(opt) State.SelectedSword = opt Notify("Sword: "..opt) end)
+CreateButton(ShopPage, "Buy Selected Sword", function()
+    if State.SelectedSword then Invoke("BuyItem", State.SelectedSword) Notify("Bought: "..State.SelectedSword) else Notify("Select sword first") end
+end)
+
+CreateSection(ShopPage, "SHOP GUN", "Buy Gun")
+CreateDropdown(ShopPage, "Select Gun", {
+    "Slingshot","Flintlock","Refined Flintlock","Musket","Refined Musket",
+    "Cannon","Bazooka","Sniper","Kabucha","Acidum Rifle","Bizarre Rifle","Serpent Bow",
+}, function(opt) State.SelectedGun = opt Notify("Gun: "..opt) end)
+CreateButton(ShopPage, "Buy Selected Gun", function()
+    if State.SelectedGun then Invoke("BuyItem", State.SelectedGun) Notify("Bought: "..State.SelectedGun) else Notify("Select gun first") end
+end)
+
+CreateSection(ShopPage, "SHOP ABILITIES", "Buy Haki")
+CreateDropdown(ShopPage, "Select Abilities", {"Ken","Buso","Geppo"}, function(opt) State.SelectedAbility = opt Notify("Ability: "..opt) end)
+CreateButton(ShopPage, "Buy Selected Ability", function()
+    if State.SelectedAbility == "Ken" then Invoke("KenTalk", "Buy") Notify("Ken bought")
+    elseif State.SelectedAbility == "Buso" then Invoke("BuyHaki", "Buso") Notify("Buso bought")
+    elseif State.SelectedAbility == "Geppo" then Invoke("BuyHaki", "Geppo") Notify("Geppo bought")
+    else Notify("Select ability first") end
+end)
+CreateButton(ShopPage, "Buy Soru", function() Invoke("BuyHaki", "Soru") Notify("Soru bought") end)
 
 --// MISC
 CreateSection(MiscPage, "ANTI AFK", "Prevent kick")
-CreateToggle(MiscPage, "Anti AFK", true, function(s) State.AntiAFK=s Notify("Anti AFK: "..(s and "ON" or "OFF")) end)
+CreateToggle(MiscPage, "Anti AFK", true, function(s) State.AntiAFK = s Notify("Anti AFK: "..(s and "ON" or "OFF")) end)
 
-CreateSection(MiscPage, "MOVEMENT", "Movement control")
-CreateToggle(MiscPage, "Bring Mob", false, function(s) State.BringMob=s Notify("Bring Mob: "..(s and "ON" or "OFF")) end)
-CreateSlider(MiscPage, "Bring Mob Range", 0, 100, 50, function(v) State.BringMobRange=v end)
-CreateToggle(MiscPage, "Infinite Jump", false, function(s) State.InfiniteJump=s Notify("Infinite Jump: "..(s and "ON" or "OFF")) end)
+CreateSection(MiscPage, "MOVEMENT", "Movement")
+CreateToggle(MiscPage, "Bring Mob", false, function(s) State.BringMob = s Notify("Bring Mob: "..(s and "ON" or "OFF")) end)
+CreateSlider(MiscPage, "Bring Mob Range", 0, 100, 50, function(v) State.BringMobRange = v end)
+CreateToggle(MiscPage, "Infinite Jump", false, function(s) State.InfiniteJump = s Notify("Infinite Jump: "..(s and "ON" or "OFF")) end)
 
 CreateSection(MiscPage, "PERFORMANCE", "Boost FPS")
 CreateToggle(MiscPage, "Boost FPS", false, function(s)
@@ -1242,7 +1218,7 @@ CreateToggle(MiscPage, "Boost FPS", false, function(s)
     end
 end)
 
-CreateSection(MiscPage, "REDEEM CODE", "Redeem all codes")
+CreateSection(MiscPage, "REDEEM CODE", "Redeem codes")
 CreateButton(MiscPage, "Redeem All Codes", function() RedeemAllCodes() end)
 
 CreateSection(MiscPage, "SERVER", "Server options")
@@ -1253,8 +1229,10 @@ task.spawn(function()
     while task.wait(CONFIG.FarmDelay) do
         if State.AutoFarm then
             SafeCall(function()
-                local lv = LevelValue and LevelValue.Value or 1
-                local mobs = FindMobByLevel(lv, CONFIG.LevelTolerance)
+                local ls = Player:FindFirstChild("leaderstats")
+                local lv = ls and ls:FindFirstChild("Level")
+                local level = lv and lv.Value or 1
+                local mobs = FindMobByLevel(level, CONFIG.LevelTolerance)
                 if #mobs > 0 then
                     local target = mobs[1].model
                     TweenToMob(target, CONFIG.TweenMobSpeed)
@@ -1290,12 +1268,8 @@ task.spawn(function()
                         if d < nd then nearest, nd = c, d end
                     end
                 end
-                if not nearest then
-                    State.OpenedChests = {}
-                    task.wait(5)
-                    return
-                end
-                TeleportTo(nearest.Position + Vector3.new(0, 3, 0))
+                if not nearest then State.OpenedChests = {} task.wait(5) return end
+                TweenToPosition(nearest.Position + Vector3.new(0, 3, 0), 400)
                 State.OpenedChests[GetChestKey(nearest)] = true
                 task.wait(0.6)
             end)
@@ -1328,8 +1302,6 @@ task.spawn(function()
     while task.wait(0.5) do
         if State.AutoFruit then
             SafeCall(function()
-                local now = os.clock()
-                if now - State.LastFruitTP < 1 then return end
                 local hrp = GetHRP()
                 if not hrp then return end
                 local nearest, nd = nil, math.huge
@@ -1337,23 +1309,7 @@ task.spawn(function()
                     local d = GetDist(f.Position, hrp.Position)
                     if d < 500 and d < nd then nearest, nd = f, d end
                 end
-                if nearest then
-                    State.LastFruitTP = now
-                    TweenToPosition(nearest.Position + Vector3.new(0, 3, 0), CONFIG.TweenFruitSpeed)
-                end
-            end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(2) do
-        if State.AutoFish then
-            SafeCall(function()
-                local char = Player.Character
-                if not char then return end
-                local tool = char:FindFirstChildOfClass("Tool")
-                if tool and string.find(string.lower(tool.Name), "rod") then tool:Activate() end
+                if nearest then TweenToPosition(nearest.Position + Vector3.new(0, 3, 0), 400) end
             end)
         end
     end
@@ -1362,7 +1318,7 @@ end)
 task.spawn(function()
     while task.wait(60) do
         if State.AutoGacha then
-            SafeCall(function() if not GetHeldFruit() then DoGacha() end end)
+            SafeCall(function() if not GetHeldFruit() then Invoke("BuyFruit", "Random") end end)
         end
     end
 end)
@@ -1382,49 +1338,21 @@ task.spawn(function()
 end)
 
 task.spawn(function()
-    while task.wait(15) do
-        if State.AutoBuyChip then SafeCall(DoBuyChip) end
-    end
-end)
-
-task.spawn(function()
     while task.wait(3) do
         if State.AutoAddStats then SafeCall(AutoAddStats) end
     end
 end)
 
 task.spawn(function()
-    while task.wait(0.1) do
-        State.KillAura = IsInRaidIsland3()
-        if State.KillAura then
-            local now = os.clock()
-            if now - State.LastKillAura >= CONFIG.KillAuraCooldown then
-                local hrp = GetHRP()
-                if hrp then
-                    local found = false
-                    for _, obj in ipairs(workspace:GetChildren()) do
-                        if IsNPC(obj) or IsEnemyPlayer(obj) then
-                            local trp = obj:FindFirstChild("HumanoidRootPart")
-                            if trp and GetDist(trp.Position, hrp.Position) <= CONFIG.KillAuraRange then
-                                found = true break
-                            end
-                        end
-                    end
-                    if found then
-                        local tool = EquipWeapon()
-                        if tool then
-                            pcall(function() tool:Activate() end)
-                            State.LastKillAura = now
-                        end
-                    end
-                end
-            end
+    while task.wait(1) do
+        if State.CousinBuy then
+            SafeCall(function() Invoke("Cousin", "Buy") end)
         end
     end
 end)
 
 task.spawn(function()
-    while task.wait(0.05) do
+    while task.wait(0.1) do
         if State.Hitbox then
             local hrp = GetHRP()
             if hrp then
@@ -1444,29 +1372,6 @@ task.spawn(function()
             end
         else
             if State.HitboxPart then State.HitboxPart:Destroy() State.HitboxPart = nil end
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(0.1) do
-        if State.BringMob then
-            local now = os.clock()
-            if now - State.LastBring >= 0.3 then
-                local hrp = GetHRP()
-                if hrp then
-                    local targetPos = hrp.Position + hrp.CFrame.LookVector * 6
-                    for _, model in ipairs(workspace:GetChildren()) do
-                        if IsNPC(model) or IsEnemyPlayer(model) then
-                            local mRoot = model:FindFirstChild("HumanoidRootPart")
-                            if mRoot and GetDist(mRoot.Position, hrp.Position) <= State.BringMobRange then
-                                pcall(function() mRoot.CFrame = CFrame.new(targetPos) end)
-                            end
-                        end
-                    end
-                end
-                State.LastBring = now
-            end
         end
     end
 end)
@@ -1513,57 +1418,17 @@ task.spawn(function()
                 end
             end
         end
-        if State.ESPIsland then
-            for _, obj in ipairs(workspace:GetDescendants()) do
-                if obj:IsA("BasePart") then
-                    local n = string.lower(obj.Name)
-                    if string.find(n,"island") or string.find(n,"portal") or string.find(n,"teleport") then
-                        CreateESP(obj, obj.Name, Color3.fromRGB(80,200,255))
-                    end
-                end
-            end
-        end
         if State.ESPFruit then
-            for _, obj in ipairs(workspace:GetDescendants()) do
-                if obj:IsA("BasePart") and string.find(string.lower(obj.Name), "fruit") then
-                    if obj.Parent == workspace or (obj.Parent and obj.Parent.Name == "Map") then
-                        CreateESP(obj, obj.Name, Color3.fromRGB(255,200,80))
-                    end
-                end
-            end
-        end
-        if State.ESPBlueGear then
-            for _, obj in ipairs(workspace:GetDescendants()) do
-                if obj:IsA("BasePart") then
-                    local n = string.lower(obj.Name)
-                    if string.find(n,"bluegear") or string.find(n,"blue_gear") or string.find(n,"gear") then
-                        CreateESP(obj, "Blue Gear", Color3.fromRGB(0,150,255))
-                    end
-                end
+            for _, obj in ipairs(FindFruits()) do
+                CreateESP(obj, obj.Name, Color3.fromRGB(255,200,80))
             end
         end
         if State.ESPChest then
-            for _, obj in ipairs(workspace:GetDescendants()) do
-                if obj:IsA("BasePart") then
-                    local n = string.lower(obj.Name)
-                    if string.find(n,"chest") or string.find(n,"treasure") or string.find(n,"reward") then
-                        CreateESP(obj, "Chest", Color3.fromRGB(255,215,0))
-                    end
-                end
+            for _, obj in ipairs(FindChests()) do
+                CreateESP(obj, "Chest", Color3.fromRGB(255,215,0))
             end
         end
-        if State.ESPFlower then
-            for _, obj in ipairs(workspace:GetDescendants()) do
-                if obj:IsA("BasePart") then
-                    local n = string.lower(obj.Name)
-                    if string.find(n,"flower") or string.find(n,"blossom") or string.find(n,"petal") then
-                        CreateESP(obj, obj.Name, Color3.fromRGB(255,100,200))
-                    end
-                end
-            end
-        end
-        if not State.ESPPlayer and not State.ESPIsland and not State.ESPFruit
-        and not State.ESPBlueGear and not State.ESPChest and not State.ESPFlower then
+        if not State.ESPPlayer and not State.ESPFruit and not State.ESPChest then
             ClearAllESP()
         end
     end
@@ -1572,7 +1437,8 @@ end)
 --// TABS
 local TabDefs = {
     {"Discord"}, {"Farm"}, {"Sea"}, {"Quest / Items"}, {"Fruit / Raid"},
-    {"Fishing"}, {"Status"}, {"PvP"}, {"Stats"}, {"Seting"}, {"Misc"},
+    {"Fishing"}, {"Status"}, {"PvP"}, {"Trials"}, {"Seting"},
+    {"Teleport"}, {"Stats"}, {"Shop"}, {"Misc"},
 }
 
 for i, d in ipairs(TabDefs) do
@@ -1611,9 +1477,9 @@ end)
 ShowTab("Farm")
 
 print("================================")
-print("        SYSX HUB LOADED v1.0")
+print("        SYSX HUB v0.2 FREEMIUM")
 print("        "..CONFIG.Build)
 print("================================")
 
-Notify("SysxHub v1.0 loaded")
+Notify("SysxHub v0.2 loaded")
 return true
