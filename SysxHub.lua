@@ -2,8 +2,7 @@
 ================================================================
  SYSX HUB | Freemium Version | v0.1
  Created by Ramanotsugarr
- Logo + Banner + 14 Tabs
- Auto-Detect Sea for Boss/Island + Fixed Attack + Fixed Water/Mob
+ Logo + Banner + 14 Tabs + Race V4 Trial Complete Chain
 ================================================================
 ]]
 
@@ -29,8 +28,8 @@ local CONFIG = {
     Build = "SysxHub | Freemium Version | v0.1",
     Discord = "https://discord.gg/E5kQJW3hn",
     TweenMobSpeed = 400,
-    IslandTweenSpeed = 200,
-    FruitTweenSpeed = 180,
+    IslandTweenSpeed = 300,
+    FruitTweenSpeed = 200,
 }
 
 local State = {
@@ -39,16 +38,20 @@ local State = {
     HakiActivated=false, Hitbox=false, HitboxPart=nil,
     SelectedWeapon=nil, SelectedCategory=nil,
     SelectedBoss=nil, FirstRunChest=true, UncheckedChests={},
-    SeaEventEnabled=false, MirageTweenEnabled=false,
+    MirageTweenEnabled=false,
     FindKitsune=false, FindPrehistoric=false, FindFrozenDim=false,
     FindMirage=false, AutoDriveTiki=false,
-    KitsuneLevel=35, BoatSpeed=100, BoatHeight=5,
+    KitsuneLevel=0, BoatSpeed=500, BoatHeight=5,
     AutoFarmSea=false, AutoBuyBoat=false,
     AutoKillGolem=false, AutoCollectBone=false, AutoCollectDinoEgg=false,
     SelectedSeaMob="Sea Beast", SelectedBoat="Dinghy",
     AutoRaceV2=false, AutoRaceV3=false,
     Aimbot=false, SelectedPlayer=nil,
-    AutoTrial=false, AutoPullLever=false,
+    -- TRIAL V4
+    AutoTrialV4=false, AutoTrialOnly=false, AutoTrainV4=false,
+    AutoPullLever=false, AutoFragment=false,
+    TrainCount=0, TrainTarget=0, TrainStage=1,
+    -- 
     BringMob=false, BringMobRange=50,
     InfiniteJump=false, BoostFPS=false,
     WalkWater=false, AntiAFK=true, Notifications=true,
@@ -62,7 +65,6 @@ local State = {
     LastBring=0,
 }
 
---// REMOTE
 local CommF = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
 local function Invoke(...)
     if not CommF then return nil end
@@ -71,7 +73,6 @@ local function Invoke(...)
     return res
 end
 
---// HELPERS
 local function Create(cls, props)
     local o = Instance.new(cls)
     for k,v in pairs(props or {}) do pcall(function() o[k]=v end) end
@@ -93,7 +94,6 @@ end
 local old = PlayerGui:FindFirstChild("SysxHub")
 if old then old:Destroy() end
 
---// NPC FILTER
 local PASSIVE = {"dealer","shop","vendor","merchant","quest","giver","bartender","chef","captain","scientist","teacher","guide","trainer","banker","blacksmith","smith","farmer","villager","elder"}
 local function IsNPC(m)
     if not m or m == Player.Character then return false end
@@ -120,10 +120,12 @@ local function FindBoss(name)
 end
 local function FindFruits()
     local list = {}
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if obj:IsA("BasePart") and string.find(string.lower(obj.Name), "fruit") then
-            if obj.Parent == workspace or (obj.Parent and obj.Parent.Name == "Map") then
-                table.insert(list, obj)
+    for _, obj in ipairs(workspace:GetChildren()) do
+        if obj:IsA("Tool") or obj:IsA("Model") then
+            if string.find(obj.Name, "Fruit") then
+                local part = obj:IsA("Tool") and obj:FindFirstChildWhichIsA("BasePart") 
+                    or (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true))
+                if part then table.insert(list, {model=obj, part=part}) end
             end
         end
     end
@@ -131,14 +133,14 @@ local function FindFruits()
 end
 local function GetHeldFruit()
     local char = Player.Character
-    if not char then return nil end
-    for _, tool in ipairs(char:GetChildren()) do
-        if tool:IsA("Tool") and string.find(string.lower(tool.Name), "fruit") then return tool end
+    if char then
+        for _, tool in ipairs(char:GetChildren()) do
+            if tool:IsA("Tool") and tool.Name:find("Fruit") then return tool end
+        end
     end
     return nil
 end
 
---// FARM CHEST
 local MaxSpeed = 300
 local function getCharacter()
     if not Player.Character then Player.CharacterAdded:Wait() end
@@ -146,7 +148,8 @@ local function getCharacter()
     return Player.Character
 end
 local function toggleNoclip(toggle)
-    for _, v in pairs(getCharacter():GetChildren()) do
+    local char = getCharacter()
+    for _, v in pairs(char:GetChildren()) do
         if v:IsA("BasePart") then v.CanCollide = not toggle end
     end
 end
@@ -159,7 +162,9 @@ local function getChestsSorted()
         State.FirstRunChest = false
         State.UncheckedChests = {}
         for _, obj in ipairs(game:GetDescendants()) do
-            if obj.Name:find("Chest") and obj.ClassName == "Part" then table.insert(State.UncheckedChests, obj) end
+            if obj.Name:find("Chest") and obj.ClassName == "Part" then 
+                table.insert(State.UncheckedChests, obj) 
+            end
         end
     end
     local chests = {}
@@ -183,11 +188,9 @@ local function TeleportNoclip(goal, speed)
     toggleNoclip(false)
 end
 
---// WEAPON
 local function EquipWeapon()
     local char = Player.Character
     if not char then return nil end
-    local tool = char:FindFirstChildOfClass("Tool")
     if State.SelectedWeapon then
         local held = char:FindFirstChild(State.SelectedWeapon)
         if held and held:IsA("Tool") then return held end
@@ -197,6 +200,7 @@ local function EquipWeapon()
             end
         end
     end
+    local tool = char:FindFirstChildOfClass("Tool")
     if tool then return tool end
     for _, c in ipairs(Player.Backpack:GetChildren()) do
         if c:IsA("Tool") then c.Parent = char task.wait(0.05) return c end
@@ -204,7 +208,6 @@ local function EquipWeapon()
     return nil
 end
 
---// AUTO ATTACK FIX
 local function AutoAttackNPC(target, duration)
     if not target or not target.Parent then return false end
     local hum = target:FindFirstChildOfClass("Humanoid")
@@ -231,7 +234,6 @@ local function AutoAttackNPC(target, duration)
     return true
 end
 
---// TWEEN
 local function TweenToPosition(targetPos, speed)
     local hrp = GetHRP()
     if not hrp then return end
@@ -246,7 +248,9 @@ local function TweenToPosition(targetPos, speed)
     conn = RunService.Heartbeat:Connect(function(dt)
         elapsed += dt
         local alpha = math.clamp(elapsed / duration, 0, 1)
-        hrp.CFrame = startCF:Lerp(targetCF, alpha)
+        if hrp and hrp.Parent then
+            hrp.CFrame = startCF:Lerp(targetCF, alpha)
+        end
         if alpha >= 1 then conn:Disconnect() end
     end)
     task.wait(duration + 0.05)
@@ -259,7 +263,7 @@ local function TweenToIslandSmooth(targetPos)
     if dist < 5 then return true end
     local lookVec = hrp.CFrame.LookVector
     local targetCF = CFrame.lookAt(targetPos + Vector3.new(0,8,0), targetPos + Vector3.new(0,8,0) + Vector3.new(lookVec.X, 0, lookVec.Z))
-    local duration = math.max(dist / CONFIG.IslandTweenSpeed, 0.15)
+    local duration = math.max(dist / CONFIG.IslandTweenSpeed, 0.2)
     local hum = Player.Character and Player.Character:FindFirstChildOfClass("Humanoid")
     local oldAuto = hum and hum.AutoRotate
     if hum then hum.AutoRotate = false end
@@ -273,7 +277,7 @@ local function TweenToIslandSmooth(targetPos)
     end)
     tween.Completed:Wait()
     if conn then conn:Disconnect() end
-    if hrp then
+    if hrp and hrp.Parent then
         hrp.CFrame = targetCF
         hrp.AssemblyLinearVelocity = Vector3.zero
         hrp.AssemblyAngularVelocity = Vector3.zero
@@ -282,7 +286,6 @@ local function TweenToIslandSmooth(targetPos)
     return true
 end
 
---// ESP
 local function CreateESP(target, text, color)
     if not target or not target:IsA("BasePart") then return end
     if State.ESPObjects[target] then return end
@@ -302,7 +305,6 @@ local function ClearAllESP()
     State.ESPObjects = {}
 end
 
---// AIMBOT
 local AimbotConnection = nil
 local function GetClosestPlayerHead()
     local closest, dist = nil, math.huge
@@ -333,7 +335,6 @@ local function StopAimbot()
     if AimbotConnection then AimbotConnection:Disconnect() AimbotConnection = nil end
 end
 
---// WALK WATER FIX
 local WalkWaterConnection = nil
 local function getWaterHeight(root)
     local params = RaycastParams.new()
@@ -377,9 +378,13 @@ local function DisableWalkWater()
     if WalkWaterConnection then WalkWaterConnection:Disconnect() WalkWaterConnection = nil end
 end
 
---// AUTO HAKI ONCE
 local function ActivateHakiOnce()
     if State.HakiActivated then return end
+    local char = Player.Character
+    if char and char:FindFirstChild("HasBuso") then
+        State.HakiActivated = true
+        return
+    end
     if CommF then
         pcall(function() CommF:InvokeServer("Buso") end)
         task.wait(0.3)
@@ -387,7 +392,54 @@ local function ActivateHakiOnce()
     State.HakiActivated = true
 end
 
---// FARM CONFIG (MAX 2800)
+-- FASTATTACK + CLICKATTACK
+task.spawn(function()
+    for _, v in pairs(getreg()) do
+        if typeof(v) == "function" then
+            local ok, env = pcall(function() return getfenv(v).script end)
+            if ok and env == Player.PlayerScripts:FindFirstChild("CombatFramework") then
+                local ok2, upvals = pcall(function() return debug.getupvalues(v) end)
+                if ok2 then
+                    for _, upval in pairs(upvals) do
+                        if typeof(upval) == "table" then
+                            task.spawn(function()
+                                RunService.RenderStepped:Connect(function()
+                                    if State.AutoFarm or State.AutoFarmNearest or State.AutoKillNearest 
+                                    or State.AutoTrialV4 or State.AutoTrainV4 then
+                                        pcall(function()
+                                            upval.activeController.timeToNextAttack = -(math.huge^math.huge^math.huge)
+                                            upval.activeController.attacking = false
+                                            upval.activeController.increment = 4
+                                            upval.activeController.blocking = false
+                                            upval.activeController.hitboxMagnitude = 150
+                                            upval.activeController.humanoid.AutoRotate = true
+                                            upval.activeController.focusStart = 0
+                                            upval.activeController.currentAttackTrack = 0
+                                        end)
+                                    end
+                                end)
+                            end)
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
+task.spawn(function()
+    RunService.RenderStepped:Connect(function()
+        if State.AutoFarm or State.AutoFarmNearest or State.AutoKillNearest
+        or State.AutoTrialV4 or State.AutoTrainV4 then
+            pcall(function()
+                VirtualUser:CaptureController()
+                VirtualUser:Button1Down(Vector2.new(0,1,0,1))
+            end)
+        end
+    end)
+end)
+
+-- FARM CONFIG
 local FarmConfig = {
     {1,9,"Starter Island","BanditQuest1",1,"Bandit"},
     {10,14,"Jungle","JungleQuest",1,"Monkey"},
@@ -464,6 +516,18 @@ local SeaIslands = {
     Sea3={"Port Town","Hydra Island","Great Tree","Floating Turtle","Castle on the Sea","Haunted Castle"},
 }
 
+local BoatDataBySea = {
+    Sea1 = {"Dinghy","Sloop","Boat","Fishing Boat"},
+    Sea2 = {"Guardian","Speed Boat","Miracle"},
+    Sea3 = {"Sentinel","Beast Hunter","Shark Boat","Bizarre Boat"},
+}
+
+local RaidDataBySea = {
+    Sea1 = {"Flame","Ice","Sand","Dark","Light"},
+    Sea2 = {"Magma","Quake","Buddha","Love","Spider","Sound","Phoenix","Portal","Rumble","Pain","Blizzard","Gravity"},
+    Sea3 = {"Venom","Control","Spirit","Dragon","Leopard","Kitsune","Dough","Mammoth","T-Rex"},
+}
+
 local function GetLevel()
     local ls = Player:FindFirstChild("leaderstats")
     local lv = ls and ls:FindFirstChild("Level")
@@ -499,6 +563,36 @@ local function GetNearestEnemy(radius)
         end
     end
     return nearest
+end
+local function GetBoat()
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("Model") and obj:FindFirstChildWhichIsA("VehicleSeat", true) then
+            local owner = obj:FindFirstChild("Owner") or obj:GetAttribute("Owner")
+            if owner then
+                if (owner.Value == Player) or (owner == Player.UserId) or (owner == Player.Name) then
+                    return obj
+                end
+            end
+        end
+    end
+    return nil
+end
+
+-- FRAGMENTS GETTER
+local function GetFragments()
+    local ls = Player:FindFirstChild("leaderstats")
+    if ls then
+        local f = ls:FindFirstChild("Fragments") or ls:FindFirstChild("Fragment")
+        if f then return f.Value or 0 end
+    end
+    local data = Player:FindFirstChild("Data")
+    if data then
+        local f = data:FindFirstChild("Fragments") or data:FindFirstChild("Fragment")
+        if f then return f.Value or 0 end
+    end
+    local attr = Player:GetAttribute("Fragments")
+    if attr then return attr end
+    return 0
 end
 
 --// GUI
@@ -558,9 +652,10 @@ local function RunAutoSaber()
                 Invoke("ProQuestProgress", "DestroyTorch") task.wait(1)
             elseif not prog.UsedCup then
                 Invoke("ProQuestProgress", "GetCup") task.wait(1)
-                local cup = Player.Character and (Player.Character:FindFirstChild("Cup") or Player.Backpack:FindFirstChild("Cup"))
+                local char = Player.Character
+                local cup = char and (char:FindFirstChild("Cup") or Player.Backpack:FindFirstChild("Cup"))
                 if cup then
-                    if cup.Parent ~= Player.Character then cup.Parent = Player.Character end
+                    if cup.Parent ~= char then cup.Parent = char end
                     task.wait(0.5)
                     Invoke("ProQuestProgress", "FillCup", cup)
                 end
@@ -629,6 +724,7 @@ local function RunAutoYama()
                         TweenToPosition(trp.Position + Vector3.new(0,3,0), 400)
                         AutoAttackNPC(nearest, 8)
                         killed += 1
+                        State.EliteProgress = killed
                     end
                 else
                     TweenToPosition(Vector3.new(2700, 60, 3000), 500)
@@ -680,6 +776,82 @@ local function RunAutoDoughKing()
         end
         Notify("👑 Dough King Complete!") StopChain() break
     end
+end
+
+--// RACE V4 TRIAL HELPER
+local TrialV4Locations = {
+    Trial1 = Vector3.new(-12440, 550, -7100),  -- Ancient Clock area
+    Train1 = Vector3.new(-12440, 550, -7100),
+    Trial2 = Vector3.new(-12440, 550, -7100),
+    Train2 = Vector3.new(-12440, 550, -7100),
+    Trial3 = Vector3.new(-12440, 550, -7100),
+    Train3 = Vector3.new(-12440, 550, -7100),
+    Trial4 = Vector3.new(-12440, 550, -7100),
+    Train4 = Vector3.new(-12440, 550, -7100),
+}
+
+local function KillTrialMobs(count, timeout)
+    timeout = timeout or 60
+    local killed = 0
+    local startTime = tick()
+    while killed < count and tick() - startTime < timeout do
+        local hrp = GetHRP()
+        if hrp then
+            local nearest, nd = nil, math.huge
+            for _, obj in ipairs(workspace:GetChildren()) do
+                if obj:FindFirstChildOfClass("Humanoid") then
+                    local n = string.lower(obj.Name)
+                    if string.find(n, "v4") or string.find(n, "fractal") 
+                    or string.find(n, "mirror") or string.find(n, "trial")
+                    or string.find(n, "train") or string.find(n, "essence") then
+                        local trp = obj:FindFirstChild("HumanoidRootPart")
+                        local hum = obj:FindFirstChildOfClass("Humanoid")
+                        if trp and hum and hum.Health > 0 then
+                            local d = GetDist(trp.Position, hrp.Position)
+                            if d < 2000 and d < nd then nearest, nd = obj, d end
+                        end
+                    end
+                end
+            end
+            if nearest then
+                local trp = nearest:FindFirstChild("HumanoidRootPart")
+                if trp then
+                    hrp.CFrame = trp.CFrame * CFrame.new(0, 30, 0)
+                    task.wait(0.1)
+                end
+                AutoAttackNPC(nearest, 3)
+                killed += 1
+                Log("Train V4: "..killed.."/"..count)
+            else
+                task.wait(0.5)
+            end
+        end
+        task.wait(0.2)
+    end
+    return killed
+end
+
+local function WaitFragments(amount, timeout)
+    timeout = timeout or 120
+    local startTime = tick()
+    while GetFragments() < amount and tick() - startTime < timeout do
+        -- Auto collect fragment
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("BasePart") then
+                local n = string.lower(obj.Name)
+                if string.find(n, "fragment") then
+                    if obj:FindFirstChild("TouchInterest") then
+                        local hrp = GetHRP()
+                        if hrp then 
+                            TweenToPosition(obj.Position + Vector3.new(0,3,0), 400)
+                        end
+                    end
+                end
+            end
+        end
+        task.wait(1)
+    end
+    return GetFragments() >= amount
 end
 
 --// UIScale
@@ -840,6 +1012,84 @@ local function CreateButton(parent, text, cb)
     return B
 end
 
+local function CreateDropdown(parent, title, options, cb)
+    local Holder = Create("Frame", {Parent=parent, BackgroundColor3=Color3.fromRGB(17,13,29), Size=UDim2.new(1,0,0,38), BorderSizePixel=0, ZIndex=100, ClipsDescendants=false})
+    Corner(Holder, 8) Stroke(Holder, Color3.fromRGB(0,150,255), 1.2, 0.4)
+    local Selected = options[1] or "Select"
+    local TitleLbl = Create("TextLabel", {Parent=Holder, BackgroundTransparency=1, Position=UDim2.new(0,10,0,0), Size=UDim2.new(1,-35,1,0), Text=title..": "..Selected, TextColor3=Color3.fromRGB(255,255,255), TextSize=12, Font=Enum.Font.GothamMedium, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=101})
+    Create("TextLabel", {Parent=Holder, BackgroundTransparency=1, Position=UDim2.new(1,-22,0,0), Size=UDim2.new(0,18,1,0), Text="v", TextColor3=Color3.fromRGB(255,255,255), TextSize=11, Font=Enum.Font.GothamBold, ZIndex=101})
+    local clickBtn = Create("TextButton", {Parent=Holder, BackgroundTransparency=1, Size=UDim2.new(1,0,1,0), Text="", AutoButtonColor=false, ZIndex=110})
+    clickBtn.Activated:Connect(function()
+        local popup = Create("Frame", {Parent=Gui, AnchorPoint=Vector2.new(0.5,0.5), Position=UDim2.new(0.5,0,0.5,0), Size=UDim2.fromOffset(300, math.min(#options*38+80, 400)), BackgroundColor3=Color3.fromRGB(10,18,34), BorderSizePixel=0, ZIndex=999990})
+        Corner(popup, 12)
+        local ps = Instance.new("UIStroke") ps.Color = Color3.fromRGB(0,150,255) ps.Thickness = 2 ps.Parent = popup
+        Create("TextLabel", {Parent=popup, BackgroundTransparency=1, Position=UDim2.fromOffset(15,10), Size=UDim2.new(1,-60,0,25), Text=title, TextColor3=Color3.fromRGB(235,242,255), TextSize=15, Font=Enum.Font.GothamBold, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=999991})
+        local closeBtn = Create("TextButton", {Parent=popup, Position=UDim2.new(1,-40,0,10), Size=UDim2.fromOffset(30,25), Text="×", TextColor3=Color3.fromRGB(255,255,255), TextSize=22, BackgroundTransparency=1, Font=Enum.Font.GothamBold, AutoButtonColor=false, ZIndex=999992})
+        closeBtn.Activated:Connect(function() popup:Destroy() end)
+        local ls = Create("ScrollingFrame", {Parent=popup, BackgroundTransparency=1, Position=UDim2.fromOffset(10,42), Size=UDim2.new(1,-20,1,-52), CanvasSize=UDim2.new(0,0,0,0), AutomaticCanvasSize=Enum.AutomaticSize.Y, ScrollBarThickness=3, ScrollBarImageColor3=Color3.fromRGB(0,150,255), BorderSizePixel=0, ZIndex=999991})
+        local LL = Instance.new("UIListLayout") LL.Padding = UDim.new(0,4) LL.SortOrder = Enum.SortOrder.LayoutOrder LL.Parent = ls
+        for i, opt in ipairs(options) do
+            local OB = Create("TextButton", {Parent=ls, BackgroundColor3=Color3.fromRGB(17,13,29), Size=UDim2.new(1,-8,0,34), Position=UDim2.new(0,4,0,0), Text=opt, TextColor3=Color3.fromRGB(255,255,255), TextSize=13, Font=Enum.Font.GothamMedium, AutoButtonColor=false, BorderSizePixel=0, LayoutOrder=i, ZIndex=999992, TextXAlignment=Enum.TextXAlignment.Left})
+            Corner(OB, 6)
+            local pad = Instance.new("UIPadding") pad.PaddingLeft = UDim.new(0, 10) pad.Parent = OB
+            OB.MouseEnter:Connect(function() TweenService:Create(OB, TweenInfo.new(0.1), {BackgroundColor3=Color3.fromRGB(0,150,255)}):Play() end)
+            OB.MouseLeave:Connect(function() TweenService:Create(OB, TweenInfo.new(0.1), {BackgroundColor3=Color3.fromRGB(17,13,29)}):Play() end)
+            OB.Activated:Connect(function()
+                Selected = opt TitleLbl.Text = title..": "..opt
+                if cb then pcall(cb, opt) end
+                popup:Destroy()
+            end)
+        end
+    end)
+    return Holder
+end
+
+local function CreateCustomDropdown(parent, title, getOptionsFn, cb)
+    local Holder = Create("Frame", {Parent=parent, BackgroundColor3=Color3.fromRGB(17,13,29), Size=UDim2.new(1,0,0,38), BorderSizePixel=0, ZIndex=100, ClipsDescendants=false})
+    Corner(Holder, 8) Stroke(Holder, Color3.fromRGB(0,150,255), 1.2, 0.4)
+    local Selected = "..."
+    local TitleLbl = Create("TextLabel", {Parent=Holder, BackgroundTransparency=1, Position=UDim2.new(0,10,0,0), Size=UDim2.new(1,-35,1,0), Text=title..": Loading...", TextColor3=Color3.fromRGB(255,255,255), TextSize=12, Font=Enum.Font.GothamMedium, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=101})
+    Create("TextLabel", {Parent=Holder, BackgroundTransparency=1, Position=UDim2.new(1,-22,0,0), Size=UDim2.new(0,18,1,0), Text="v", TextColor3=Color3.fromRGB(255,255,255), TextSize=11, Font=Enum.Font.GothamBold, ZIndex=101})
+    local clickBtn = Create("TextButton", {Parent=Holder, BackgroundTransparency=1, Size=UDim2.new(1,0,1,0), Text="", AutoButtonColor=false, ZIndex=110})
+    clickBtn.Activated:Connect(function()
+        local sea, options = getOptionsFn()
+        if not options or #options == 0 then Notify("No options") return end
+        local popup = Create("Frame", {Parent=Gui, AnchorPoint=Vector2.new(0.5,0.5), Position=UDim2.new(0.5,0,0.5,0), Size=UDim2.fromOffset(300, math.min(#options*38+80, 400)), BackgroundColor3=Color3.fromRGB(10,18,34), BorderSizePixel=0, ZIndex=999990})
+        Corner(popup, 12)
+        local ps = Instance.new("UIStroke") ps.Color = Color3.fromRGB(0,150,255) ps.Thickness = 2 ps.Parent = popup
+        Create("TextLabel", {Parent=popup, BackgroundTransparency=1, Position=UDim2.fromOffset(15,10), Size=UDim2.new(1,-60,0,25), Text=title.." ("..sea..")", TextColor3=Color3.fromRGB(235,242,255), TextSize=15, Font=Enum.Font.GothamBold, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=999991})
+        local closeBtn = Create("TextButton", {Parent=popup, Position=UDim2.new(1,-40,0,10), Size=UDim2.fromOffset(30,25), Text="×", TextColor3=Color3.fromRGB(255,255,255), TextSize=22, BackgroundTransparency=1, Font=Enum.Font.GothamBold, AutoButtonColor=false, ZIndex=999992})
+        closeBtn.Activated:Connect(function() popup:Destroy() end)
+        local ls = Create("ScrollingFrame", {Parent=popup, BackgroundTransparency=1, Position=UDim2.fromOffset(10,42), Size=UDim2.new(1,-20,1,-52), CanvasSize=UDim2.new(0,0,0,0), AutomaticCanvasSize=Enum.AutomaticSize.Y, ScrollBarThickness=3, ScrollBarImageColor3=Color3.fromRGB(0,150,255), BorderSizePixel=0, ZIndex=999991})
+        local LL = Instance.new("UIListLayout") LL.Padding = UDim.new(0,4) LL.SortOrder = Enum.SortOrder.LayoutOrder LL.Parent = ls
+        for i, opt in ipairs(options) do
+            local OB = Create("TextButton", {Parent=ls, BackgroundColor3=Color3.fromRGB(17,13,29), Size=UDim2.new(1,-8,0,34), Position=UDim2.new(0,4,0,0), Text=opt, TextColor3=Color3.fromRGB(255,255,255), TextSize=13, Font=Enum.Font.GothamMedium, AutoButtonColor=false, BorderSizePixel=0, LayoutOrder=i, ZIndex=999992, TextXAlignment=Enum.TextXAlignment.Left})
+            Corner(OB, 6)
+            local pad = Instance.new("UIPadding") pad.PaddingLeft = UDim.new(0, 10) pad.Parent = OB
+            OB.MouseEnter:Connect(function() TweenService:Create(OB, TweenInfo.new(0.1), {BackgroundColor3=Color3.fromRGB(0,150,255)}):Play() end)
+            OB.MouseLeave:Connect(function() TweenService:Create(OB, TweenInfo.new(0.1), {BackgroundColor3=Color3.fromRGB(17,13,29)}):Play() end)
+            OB.Activated:Connect(function()
+                Selected = opt TitleLbl.Text = title.." ("..sea.."): "..opt
+                if cb then pcall(cb, opt) end
+                popup:Destroy()
+            end)
+        end
+    end)
+    task.spawn(function()
+        while task.wait(3) do
+            local sea, options = getOptionsFn()
+            if TitleLbl then
+                if not Selected or Selected == "..." or not table.find(options or {}, Selected) then
+                    Selected = (options and options[1]) or "..."
+                    if cb then pcall(cb, Selected) end
+                end
+                TitleLbl.Text = title.." ("..sea.."): "..tostring(Selected)
+            end
+        end
+    end)
+    return Holder
+end
+
 local function CreateSlider(parent, title, minVal, maxVal, defaultVal, cb)
     local val = defaultVal or minVal
     local Holder = Create("Frame", {Parent=parent, BackgroundColor3=Color3.fromRGB(17,13,29), Size=UDim2.new(1,0,0,46), BorderSizePixel=0, ZIndex=100})
@@ -861,13 +1111,19 @@ local function CreateSlider(parent, title, minVal, maxVal, defaultVal, cb)
         if cb then pcall(cb, val) end
     end
     Btn.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = true Update(input.Position.X) end
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then 
+            dragging = true Update(input.Position.X) 
+        end
     end)
     UIS.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then Update(input.Position.X) end
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then 
+            Update(input.Position.X) 
+        end
     end)
     UIS.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then 
+            dragging = false 
+        end
     end)
     return Holder
 end
@@ -913,43 +1169,14 @@ local ShopPage = CreatePage("Shop")
 local MiscPage = CreatePage("Misc")
 
 --// DISCORD
-CreateToggle(DiscordPage, "Copy Discord Link", false, function(s)
-    if s then if setclipboard then setclipboard(CONFIG.Discord) Notify("📋 Copied") end end
+CreateButton(DiscordPage, "📋 Copy Discord Link", function()
+    if setclipboard then 
+        setclipboard(CONFIG.Discord) 
+        Notify("📋 Discord Link Copied") 
+    end
 end)
 
 --// FARM
-CreateDropdown = CreateDropdown or function(parent, title, options, cb)
-    local Holder = Create("Frame", {Parent=parent, BackgroundColor3=Color3.fromRGB(17,13,29), Size=UDim2.new(1,0,0,38), BorderSizePixel=0, ZIndex=100, ClipsDescendants=false})
-    Corner(Holder, 8) Stroke(Holder, Color3.fromRGB(0,150,255), 1.2, 0.4)
-    local Selected = options[1] or "Select"
-    local TitleLbl = Create("TextLabel", {Parent=Holder, BackgroundTransparency=1, Position=UDim2.new(0,10,0,0), Size=UDim2.new(1,-35,1,0), Text=title..": "..Selected, TextColor3=Color3.fromRGB(255,255,255), TextSize=12, Font=Enum.Font.GothamMedium, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=101})
-    Create("TextLabel", {Parent=Holder, BackgroundTransparency=1, Position=UDim2.new(1,-22,0,0), Size=UDim2.new(0,18,1,0), Text="v", TextColor3=Color3.fromRGB(255,255,255), TextSize=11, Font=Enum.Font.GothamBold, ZIndex=101})
-    local clickBtn = Create("TextButton", {Parent=Holder, BackgroundTransparency=1, Size=UDim2.new(1,0,1,0), Text="", AutoButtonColor=false, ZIndex=110})
-    clickBtn.Activated:Connect(function()
-        local popup = Create("Frame", {Parent=Gui, AnchorPoint=Vector2.new(0.5,0.5), Position=UDim2.new(0.5,0,0.5,0), Size=UDim2.fromOffset(300, math.min(#options*38+80, 400)), BackgroundColor3=Color3.fromRGB(10,18,34), BorderSizePixel=0, ZIndex=999990})
-        Corner(popup, 12)
-        local ps = Instance.new("UIStroke") ps.Color = Color3.fromRGB(0,150,255) ps.Thickness = 2 ps.Parent = popup
-        Create("TextLabel", {Parent=popup, BackgroundTransparency=1, Position=UDim2.fromOffset(15,10), Size=UDim2.new(1,-60,0,25), Text=title, TextColor3=Color3.fromRGB(235,242,255), TextSize=15, Font=Enum.Font.GothamBold, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=999991})
-        local closeBtn = Create("TextButton", {Parent=popup, Position=UDim2.new(1,-40,0,10), Size=UDim2.fromOffset(30,25), Text="×", TextColor3=Color3.fromRGB(255,255,255), TextSize=22, BackgroundTransparency=1, Font=Enum.Font.GothamBold, AutoButtonColor=false, ZIndex=999992})
-        closeBtn.Activated:Connect(function() popup:Destroy() end)
-        local ls = Create("ScrollingFrame", {Parent=popup, BackgroundTransparency=1, Position=UDim2.fromOffset(10,42), Size=UDim2.new(1,-20,1,-52), CanvasSize=UDim2.new(0,0,0,0), AutomaticCanvasSize=Enum.AutomaticSize.Y, ScrollBarThickness=3, ScrollBarImageColor3=Color3.fromRGB(0,150,255), BorderSizePixel=0, ZIndex=999991})
-        local LL = Instance.new("UIListLayout") LL.Padding = UDim.new(0,4) LL.SortOrder = Enum.SortOrder.LayoutOrder LL.Parent = ls
-        for i, opt in ipairs(options) do
-            local OB = Create("TextButton", {Parent=ls, BackgroundColor3=Color3.fromRGB(17,13,29), Size=UDim2.new(1,-8,0,34), Position=UDim2.new(0,4,0,0), Text=opt, TextColor3=Color3.fromRGB(255,255,255), TextSize=13, Font=Enum.Font.GothamMedium, AutoButtonColor=false, BorderSizePixel=0, LayoutOrder=i, ZIndex=999992, TextXAlignment=Enum.TextXAlignment.Left})
-            Corner(OB, 6)
-            local pad = Instance.new("UIPadding") pad.PaddingLeft = UDim.new(0, 10) pad.Parent = OB
-            OB.MouseEnter:Connect(function() TweenService:Create(OB, TweenInfo.new(0.1), {BackgroundColor3=Color3.fromRGB(0,150,255)}):Play() end)
-            OB.MouseLeave:Connect(function() TweenService:Create(OB, TweenInfo.new(0.1), {BackgroundColor3=Color3.fromRGB(17,13,29)}):Play() end)
-            OB.Activated:Connect(function()
-                Selected = opt TitleLbl.Text = title..": "..opt
-                if cb then pcall(cb, opt) end
-                popup:Destroy()
-            end)
-        end
-    end)
-    return Holder
-end
-
 CreateDropdown(FarmPage, "Select Weapon", {"Melee","Sword","Gun","Fruit"}, function(opt) State.SelectedCategory = opt end)
 CreateToggle(FarmPage, "Auto Farm Level", false, function(s)
     State.AutoFarm = s
@@ -968,113 +1195,78 @@ CreateToggle(FarmPage, "Farm Chest", false, function(s)
     Log("Farm Chest: "..(s and "ON" or "OFF"))
 end)
 
--- Boss Custom Dropdown (auto-detect sea)
-local SelectedBossVar = nil
-local BossTitleLbl = nil
-local CurrentBossSea = nil
-
-local BossHolder = Create("Frame", {
-    Parent=FarmPage, BackgroundColor3=Color3.fromRGB(17,13,29),
-    Size=UDim2.new(1,0,0,38), BorderSizePixel=0, ZIndex=100, ClipsDescendants=false,
-})
-Corner(BossHolder, 8)
-Stroke(BossHolder, Color3.fromRGB(0,150,255), 1.2, 0.4)
-
-BossTitleLbl = Create("TextLabel", {
-    Parent=BossHolder, BackgroundTransparency=1,
-    Position=UDim2.new(0,10,0,0), Size=UDim2.new(1,-35,1,0),
-    Text="Select Boss: Loading...", TextColor3=Color3.fromRGB(255,255,255),
-    TextSize=12, Font=Enum.Font.GothamMedium,
-    TextXAlignment=Enum.TextXAlignment.Left, ZIndex=101,
-})
-Create("TextLabel", {
-    Parent=BossHolder, BackgroundTransparency=1,
-    Position=UDim2.new(1,-22,0,0), Size=UDim2.new(0,18,1,0),
-    Text="v", TextColor3=Color3.fromRGB(255,255,255),
-    TextSize=11, Font=Enum.Font.GothamBold, ZIndex=101,
-})
-local bossClickBtn = Create("TextButton", {
-    Parent=BossHolder, BackgroundTransparency=1,
-    Size=UDim2.new(1,0,1,0), Text="", AutoButtonColor=false, ZIndex=110,
-})
-
-bossClickBtn.Activated:Connect(function()
+CreateCustomDropdown(FarmPage, "Select Boss", function()
     local sea = GetCurrentSea()
-    local bosses = BossDataBySea[sea] or {"Unknown"}
-    local popup = Create("Frame", {Parent=Gui, AnchorPoint=Vector2.new(0.5,0.5), Position=UDim2.new(0.5,0,0.5,0), Size=UDim2.fromOffset(300, math.min(#bosses*38+80, 400)), BackgroundColor3=Color3.fromRGB(10,18,34), BorderSizePixel=0, ZIndex=999990})
-    Corner(popup, 12)
-    local ps = Instance.new("UIStroke") ps.Color = Color3.fromRGB(0,150,255) ps.Thickness = 2 ps.Parent = popup
-    Create("TextLabel", {Parent=popup, BackgroundTransparency=1, Position=UDim2.fromOffset(15,10), Size=UDim2.new(1,-60,0,25), Text="Select Boss ("..sea..")", TextColor3=Color3.fromRGB(235,242,255), TextSize=15, Font=Enum.Font.GothamBold, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=999991})
-    local closeBtn = Create("TextButton", {Parent=popup, Position=UDim2.new(1,-40,0,10), Size=UDim2.fromOffset(30,25), Text="×", TextColor3=Color3.fromRGB(255,255,255), TextSize=22, BackgroundTransparency=1, Font=Enum.Font.GothamBold, AutoButtonColor=false, ZIndex=999992})
-    closeBtn.Activated:Connect(function() popup:Destroy() end)
-    local ls = Create("ScrollingFrame", {Parent=popup, BackgroundTransparency=1, Position=UDim2.fromOffset(10,42), Size=UDim2.new(1,-20,1,-52), CanvasSize=UDim2.new(0,0,0,0), AutomaticCanvasSize=Enum.AutomaticSize.Y, ScrollBarThickness=3, ScrollBarImageColor3=Color3.fromRGB(0,150,255), BorderSizePixel=0, ZIndex=999991})
-    local LL = Instance.new("UIListLayout") LL.Padding = UDim.new(0,4) LL.SortOrder = Enum.SortOrder.LayoutOrder LL.Parent = ls
-    for i, opt in ipairs(bosses) do
-        local OB = Create("TextButton", {Parent=ls, BackgroundColor3=Color3.fromRGB(17,13,29), Size=UDim2.new(1,-8,0,34), Position=UDim2.new(0,4,0,0), Text=opt, TextColor3=Color3.fromRGB(255,255,255), TextSize=13, Font=Enum.Font.GothamMedium, AutoButtonColor=false, BorderSizePixel=0, LayoutOrder=i, ZIndex=999992, TextXAlignment=Enum.TextXAlignment.Left})
-        Corner(OB, 6)
-        local pad = Instance.new("UIPadding") pad.PaddingLeft = UDim.new(0, 10) pad.Parent = OB
-        OB.MouseEnter:Connect(function() TweenService:Create(OB, TweenInfo.new(0.1), {BackgroundColor3=Color3.fromRGB(0,150,255)}):Play() end)
-        OB.MouseLeave:Connect(function() TweenService:Create(OB, TweenInfo.new(0.1), {BackgroundColor3=Color3.fromRGB(17,13,29)}):Play() end)
-        OB.Activated:Connect(function()
-            SelectedBossVar = opt
-            State.SelectedBoss = opt
-            BossTitleLbl.Text = "Select Boss ("..sea.."): "..opt
-            popup:Destroy()
-            Log("Boss: "..opt.." ("..sea..")")
-        end)
-    end
+    return sea, BossDataBySea[sea] or {"Unknown"}
+end, function(opt)
+    State.SelectedBoss = opt
+    Log("Boss: "..opt)
 end)
-
-local function RefreshBossDropdown()
-    local sea = GetCurrentSea()
-    local bosses = BossDataBySea[sea] or {"Unknown"}
-    CurrentBossSea = sea
-    if BossTitleLbl then
-        if SelectedBossVar and table.find(bosses, SelectedBossVar) then
-            BossTitleLbl.Text = "Select Boss ("..sea.."): "..SelectedBossVar
-        else
-            SelectedBossVar = bosses[1] or "Unknown"
-            State.SelectedBoss = SelectedBossVar
-            BossTitleLbl.Text = "Select Boss ("..sea.."): "..SelectedBossVar
-        end
-    end
-end
-
-task.spawn(function()
-    while task.wait(2) do
-        local sea = GetCurrentSea()
-        if sea ~= CurrentBossSea then
-            RefreshBossDropdown()
-            Log("Boss list updated for "..sea)
-        end
-    end
-end)
-
-CreateButton(FarmPage, "🔄 Refresh Boss", function()
-    RefreshBossDropdown()
-    Notify("🔄 Boss refreshed ("..(CurrentBossSea or "?")..")")
-end)
-
+CreateButton(FarmPage, "🔄 Refresh Boss", function() Notify("🔄 Boss refreshed ("..GetCurrentSea()..")") end)
 CreateToggle(FarmPage, "Auto Farm Boss", false, function(s) State.AutoBoss = s Log("Auto Boss: "..(s and "ON" or "OFF")) end)
 
 CreateLabel(FarmPage, "Bones System", 34)
-CreateToggle(FarmPage, "Random Bone (Surprise)", false, function(s) if s then Invoke("Bones", "Buy", 1, 1) Notify("🦴 Surprise Bought") end end)
-CreateToggle(FarmPage, "Bone Stat Refund", false, function(s) if s then Invoke("Bones", "Buy", 1, 2) Notify("🦴 Stat Refund") end end)
-CreateToggle(FarmPage, "Bone Race Reroll", false, function(s) if s then Invoke("Bones", "Buy", 1, 3) Notify("🦴 Race Reroll") end end)
+CreateToggle(FarmPage, "Random Bone (Surprise)", false, function(s) 
+    if s then Invoke("Bones", "Buy", 1, 1) Notify("🦴 Surprise Bought") task.wait(0.5) end 
+end)
+CreateToggle(FarmPage, "Bone Stat Refund", false, function(s) 
+    if s then Invoke("Bones", "Buy", 1, 2) Notify("🦴 Stat Refund") task.wait(0.5) end 
+end)
+CreateToggle(FarmPage, "Bone Race Reroll", false, function(s) 
+    if s then Invoke("Bones", "Buy", 1, 3) Notify("🦴 Race Reroll") task.wait(0.5) end 
+end)
 
 --// SEA
-CreateDropdown(SeaPage, "Select Mob", {"Sea Beast","Terrorshark","Shark","Piranha","Fish Crew Member","Fish Crew Warrior"}, function(opt) State.SelectedSeaMob = opt State.SeaEventMob = opt Log("Sea Mob: "..opt) end)
-CreateDropdown(SeaPage, "Select Boat", {"Dinghy","Bizarre Boat","Speed Boat","Miracle","Sentinel","Guardian","Beast Hunter","Shark Boat"}, function(opt) State.SelectedBoat = opt Log("Boat: "..opt) end)
+CreateDropdown(SeaPage, "Select Mob", {"Sea Beast","Terrorshark","Shark","Piranha","Fish Crew Member","Fish Crew Warrior"}, function(opt) 
+    State.SelectedSeaMob = opt 
+    Log("Sea Mob: "..opt) 
+end)
+CreateCustomDropdown(SeaPage, "Select Boat", function()
+    local sea = GetCurrentSea()
+    return sea, BoatDataBySea[sea] or {"Dinghy"}
+end, function(opt)
+    State.SelectedBoat = opt
+    Log("Boat: "..opt)
+end)
 CreateToggle(SeaPage, "Auto Farm Sea", false, function(s) State.AutoFarmSea = s Log("Farm Sea: "..(s and "ON" or "OFF")) end)
 CreateToggle(SeaPage, "Find Mirage", false, function(s) State.FindMirage = s Log("Find Mirage: "..(s and "ON" or "OFF")) end)
 CreateToggle(SeaPage, "Tween Mirage", false, function(s) State.MirageTweenEnabled = s Log("Tween Mirage: "..(s and "ON" or "OFF")) end)
 CreateToggle(SeaPage, "Find Kitsune", false, function(s) State.FindKitsune = s Log("Find Kitsune: "..(s and "ON" or "OFF")) end)
-CreateSlider(SeaPage, "Kitsune Level", 0, 300, 35, function(v) State.KitsuneLevel = v end)
+CreateSlider(SeaPage, "Kitsune Level", 0, 300, 0, function(v) State.KitsuneLevel = v end)
 CreateToggle(SeaPage, "Find Prehistoric", false, function(s) State.FindPrehistoric = s Log("Find Prehistoric: "..(s and "ON" or "OFF")) end)
-CreateToggle(SeaPage, "Find Frozen", false, function(s) State.FindFrozenDim = s Log("Find Frozen: "..(s and "ON" or "OFF")) end)
-CreateToggle(SeaPage, "Auto Drive Tiki", false, function(s) State.AutoDriveTiki = s Log("Drive Tiki: "..(s and "ON" or "OFF")) end)
-CreateSlider(SeaPage, "Boat Speed", 20, 250, 100, function(v) State.BoatSpeed = v end)
-CreateSlider(SeaPage, "Boat Height", 0, 50, 5, function(v) State.BoatHeight = v end)
+CreateToggle(SeaPage, "Find Frozen Dimension", false, function(s) State.FindFrozenDim = s Log("Find Frozen Dim: "..(s and "ON" or "OFF")) end)
+CreateToggle(SeaPage, "Auto Drive Tiki", false, function(s) State.AutoDriveTiki = s Notify("🏝️ Drive Tiki: "..(s and "ON" or "OFF")) end)
+CreateSlider(SeaPage, "Boat Speed", 0, 1000, 500, function(v) 
+    State.BoatSpeed = v
+    pcall(function()
+        local boat = GetBoat()
+        if boat then
+            local seat = boat:FindFirstChildWhichIsA("VehicleSeat", true)
+            if seat then
+                pcall(function() seat.MaxSpeed = v end)
+                pcall(function() seat.Torque = v * 100 end)
+            end
+        end
+    end)
+end)
+CreateSlider(SeaPage, "Boat Height", 0, 100, 5, function(v) State.BoatHeight = v end)
+CreateButton(SeaPage, "🚤 Apply Boat Speed", function()
+    local boat = GetBoat()
+    if not boat then Notify("❌ Boat not found") return end
+    local seat = boat:FindFirstChildWhichIsA("VehicleSeat", true)
+    if not seat then Notify("❌ Seat not found") return end
+    pcall(function() seat.MaxSpeed = State.BoatSpeed end)
+    pcall(function() seat.Torque = State.BoatSpeed * 100 end)
+    Notify("🚤 Boat Speed: "..State.BoatSpeed)
+end)
+CreateButton(SeaPage, "⬆️ Apply Boat Height", function()
+    local boat = GetBoat()
+    if not boat or not boat.PrimaryPart then Notify("❌ Boat not found") return end
+    pcall(function()
+        boat.PrimaryPart.CFrame = boat.PrimaryPart.CFrame + Vector3.new(0, State.BoatHeight, 0)
+    end)
+    Notify("⬆️ Height: "..State.BoatHeight)
+end)
 CreateToggle(SeaPage, "Auto Buy Boat", false, function(s) State.AutoBuyBoat = s Log("Buy Boat: "..(s and "ON" or "OFF")) end)
 CreateToggle(SeaPage, "Auto Collect Bone", false, function(s) State.AutoCollectBone = s Log("Collect Bone: "..(s and "ON" or "OFF")) end)
 CreateToggle(SeaPage, "Auto Collect Dino Egg", false, function(s) State.AutoCollectDinoEgg = s Log("Collect Egg: "..(s and "ON" or "OFF")) end)
@@ -1082,41 +1274,33 @@ CreateToggle(SeaPage, "Auto Kill Golem", false, function(s) State.AutoKillGolem 
 
 --// QUEST / ITEMS
 CreateLabel(QuestItemsPage, "Sea Travel", 34)
-CreateToggle(QuestItemsPage, "Auto Sea 2", false, function(s) if s then Invoke("TravelDressrosa") Notify("🌊 Sea 2") end end)
-CreateToggle(QuestItemsPage, "Auto Sea 3", false, function(s) if s then Invoke("TravelZou") Notify("🌊 Sea 3") end end)
+CreateButton(QuestItemsPage, "🌊 Travel Sea 2", function() Invoke("TravelDressrosa") Notify("🌊 Sea 2") end)
+CreateButton(QuestItemsPage, "🌊 Travel Sea 3", function() Invoke("TravelZou") Notify("🌊 Sea 3") end)
 
 CreateLabel(QuestItemsPage, "Quest Chain (All-in-One)", 34)
 CreateToggle(QuestItemsPage, "Auto Get Saber", false, function(s)
-    if s then if StartChain("Saber") then task.spawn(RunAutoSaber) end
-    else StopChain() end
+    if s then if StartChain("Saber") then task.spawn(RunAutoSaber) end else StopChain() end
 end)
 CreateToggle(QuestItemsPage, "Auto Get CDK", false, function(s)
-    if s then if StartChain("CDK") then task.spawn(RunAutoCDK) end
-    else StopChain() end
+    if s then if StartChain("CDK") then task.spawn(RunAutoCDK) end else StopChain() end
 end)
 CreateToggle(QuestItemsPage, "Auto Get Tushita", false, function(s)
-    if s then if StartChain("Tushita") then task.spawn(RunAutoTushita) end
-    else StopChain() end
+    if s then if StartChain("Tushita") then task.spawn(RunAutoTushita) end else StopChain() end
 end)
 CreateToggle(QuestItemsPage, "Auto Get Soul Guitar", false, function(s)
-    if s then if StartChain("SoulGuitar") then task.spawn(RunAutoSoulGuitar) end
-    else StopChain() end
+    if s then if StartChain("SoulGuitar") then task.spawn(RunAutoSoulGuitar) end else StopChain() end
 end)
 CreateToggle(QuestItemsPage, "Auto Get Yama", false, function(s)
-    if s then if StartChain("Yama") then task.spawn(RunAutoYama) end
-    else StopChain() end
+    if s then if StartChain("Yama") then task.spawn(RunAutoYama) end else StopChain() end
 end)
 CreateToggle(QuestItemsPage, "Auto Get Dark Dagger", false, function(s)
-    if s then if StartChain("DarkDagger") then task.spawn(RunAutoDarkDagger) end
-    else StopChain() end
+    if s then if StartChain("DarkDagger") then task.spawn(RunAutoDarkDagger) end else StopChain() end
 end)
 CreateToggle(QuestItemsPage, "Auto Get Buddy Sword", false, function(s)
-    if s then if StartChain("BuddySword") then task.spawn(RunAutoBuddySword) end
-    else StopChain() end
+    if s then if StartChain("BuddySword") then task.spawn(RunAutoBuddySword) end else StopChain() end
 end)
 CreateToggle(QuestItemsPage, "Auto Get Dough King", false, function(s)
-    if s then if StartChain("DoughKing") then task.spawn(RunAutoDoughKing) end
-    else StopChain() end
+    if s then if StartChain("DoughKing") then task.spawn(RunAutoDoughKing) end else StopChain() end
 end)
 
 CreateLabel(QuestItemsPage, "Race", 34)
@@ -1124,16 +1308,29 @@ CreateToggle(QuestItemsPage, "Auto Race V2", false, function(s) State.AutoRaceV2
 CreateToggle(QuestItemsPage, "Auto Race V3", false, function(s) State.AutoRaceV3 = s Log("Race V3: "..(s and "ON" or "OFF")) end)
 
 CreateLabel(QuestItemsPage, "Event", 34)
-CreateToggle(QuestItemsPage, "Auto Blackbeard Reward", false, function(s) if s then Invoke("BlackbeardReward", "DragonClaw", "1") Notify("☠️ Blackbeard") end end)
-CreateToggle(QuestItemsPage, "Auto Horned Man Bet", false, function(s) if s then Invoke("HornedMan", "Bet") Notify("🎲 Horned") end end)
-CreateToggle(QuestItemsPage, "Auto Talk Trevor", false, function(s) if s then Invoke("TalkTrevor", "1") Notify("💬 Trevor") end end)
-CreateToggle(QuestItemsPage, "Abandon Quest", false, function(s) if s then Invoke("AbandonQuest") Notify("❌ Abandoned") end end)
+CreateToggle(QuestItemsPage, "Auto Blackbeard Reward", false, function(s) 
+    if s then Invoke("BlackbeardReward", "DragonClaw", "1") Notify("☠️ Blackbeard") end 
+end)
+CreateToggle(QuestItemsPage, "Auto Horned Man Bet", false, function(s) 
+    if s then Invoke("HornedMan", "Bet") Notify("🎲 Horned") end 
+end)
+CreateToggle(QuestItemsPage, "Auto Talk Trevor", false, function(s) 
+    if s then Invoke("TalkTrevor", "1") Notify("💬 Trevor") end 
+end)
+CreateButton(QuestItemsPage, "❌ Abandon Quest", function() Invoke("AbandonQuest") Notify("❌ Abandoned") end)
 
 --// FRUIT / RAID
 CreateToggle(FruitRaidPage, "Tween Fruit", false, function(s) State.FruitTweenEnabled = s Log("Tween Fruit: "..(s and "ON" or "OFF")) end)
 CreateToggle(FruitRaidPage, "Auto Store Fruit", false, function(s) State.FruitStoreEnabled = s Log("Auto Store: "..(s and "ON" or "OFF")) end)
 CreateToggle(FruitRaidPage, "Random Fruit (Gacha)", false, function(s) State.AutoGacha = s Log("Gacha: "..(s and "ON" or "OFF")) end)
-CreateDropdown(FruitRaidPage, "Select Raid", {"Flame","Ice","Sand","Dark","Light","Magma","Quake","Buddha","Spider","Phoenix","Dough"}, function(opt) State.SelectedRaid = opt Log("Raid: "..opt) end)
+CreateCustomDropdown(FruitRaidPage, "Select Raid", function()
+    local sea = GetCurrentSea()
+    return sea, RaidDataBySea[sea] or {"Flame"}
+end, function(opt)
+    State.SelectedRaid = opt
+    Log("Raid: "..opt)
+end)
+CreateButton(FruitRaidPage, "🔄 Refresh Raid", function() Notify("🔄 Raid refreshed ("..GetCurrentSea()..")") end)
 CreateToggle(FruitRaidPage, "Auto Raid", false, function(s) State.AutoRaid = s Log("Auto Raid: "..(s and "ON" or "OFF")) end)
 
 --// FISHING
@@ -1164,48 +1361,49 @@ local function GetMoonPhase()
 end
 local function GetFruitSpawn()
     local fruits = {}
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if obj:IsA("Tool") or (obj:IsA("BasePart") and string.find(string.lower(obj.Name), "fruit")) then
-            if obj.Parent == workspace or (obj.Parent and obj.Parent.Name == "Map") then
-                table.insert(fruits, obj.Name)
-            end
+    for _, obj in ipairs(workspace:GetChildren()) do
+        if obj:IsA("Tool") or obj:IsA("Model") then
+            if string.find(obj.Name, "Fruit") then table.insert(fruits, obj.Name) end
         end
     end
     if #fruits == 0 then return "None" end
     return table.concat(fruits, ", ")
 end
 local function GetSeaEventSpawn(keyword, attribute)
-    local folder = workspace:FindFirstChild("SeaEvents")
-    if folder then
-        for _, obj in ipairs(folder:GetDescendants()) do
-            if attribute and obj:GetAttribute(attribute) == true then return "Spawned" end
-            if keyword and string.find(string.lower(obj.Name), keyword) then return "Spawned" end
-        end
-    end
     for _, obj in ipairs(workspace:GetChildren()) do
         if attribute and obj:GetAttribute(attribute) == true then return "Spawned" end
         if keyword and string.find(string.lower(obj.Name), keyword) then return "Spawned" end
+    end
+    local seaFolder = workspace:FindFirstChild("SeaEvents")
+    if seaFolder then
+        for _, obj in ipairs(seaFolder:GetDescendants()) do
+            if attribute and obj:GetAttribute(attribute) == true then return "Spawned" end
+            if keyword and string.find(string.lower(obj.Name), keyword) then return "Spawned" end
+        end
     end
     return "Not Spawned"
 end
 
 task.spawn(function()
     while task.wait(1) do
-        local level = GetLevel()
-        local race = GetRace()
-        local melee = GetMelee()
-        local eliteProg = State.EliteProgress or 0
-        local moon = GetMoonPhase()
-        local fruit = GetFruitSpawn()
-        local mirage = GetSeaEventSpawn("mirage", "MirageIsland")
-        local kitsune = GetSeaEventSpawn("kitsune", "KitsuneIsland")
-        local prehistoric = GetSeaEventSpawn("prehistoric", "PrehistoricIsland")
-        local frozen = GetSeaEventSpawn("frozen", "FrozenDimension")
-        
-        StatusLabel.Text = string.format(
-            "━━━ PLAYER ━━━\nRace: %s\nLevel: %d\nMelee: %s\nElite Hunter: %d/3\n\n━━━ SERVER ━━━\nMoon Phase: %s\nFruit Spawn: %s\nMirage: %s\nKitsune Island: %s\nPrehistoric: %s\nFrozen Dimension: %s",
-            race, level, melee, eliteProg, moon, fruit, mirage, kitsune, prehistoric, frozen
-        )
+        pcall(function()
+            local level = GetLevel()
+            local race = GetRace()
+            local melee = GetMelee()
+            local eliteProg = State.EliteProgress or 0
+            local moon = GetMoonPhase()
+            local fruit = GetFruitSpawn()
+            local mirage = GetSeaEventSpawn("mirage", "MirageIsland")
+            local kitsune = GetSeaEventSpawn("kitsune", "KitsuneIsland")
+            local prehistoric = GetSeaEventSpawn("prehistoric", "PrehistoricIsland")
+            local frozen = GetSeaEventSpawn("frozen", "FrozenDimension")
+            local fragments = GetFragments()
+            
+            StatusLabel.Text = string.format(
+                "━━━ PLAYER ━━━\nRace: %s\nLevel: %d\nMelee: %s\nElite Hunter: %d/3\nFragments: %d\n\n━━━ SERVER ━━━\nMoon Phase: %s\nFruit Spawn: %s\nMirage: %s\nKitsune Island: %s\nPrehistoric: %s\nFrozen Dimension: %s",
+                race, level, melee, eliteProg, fragments, moon, fruit, mirage, kitsune, prehistoric, frozen
+            )
+        end)
     end
 end)
 
@@ -1223,8 +1421,201 @@ CreateToggle(PvPPage, "Aimbot", false, function(s)
 end)
 
 --// TRIALS
-CreateToggle(TrialsPage, "Auto Trial", false, function(s) State.AutoTrial = s Log("Trial: "..(s and "ON" or "OFF")) end)
-CreateToggle(TrialsPage, "Auto Pull Lever", false, function(s) State.AutoPullLever = s Log("Lever: "..(s and "ON" or "OFF")) end)
+CreateLabel(TrialsPage, "Race V4 Trial System", 34)
+local TrialStatusLabel = CreateLabel(TrialsPage, "RaceV4Progress: -", 34)
+
+task.spawn(function()
+    while task.wait(2) do
+        local prog = Invoke("RaceV4Progress", "Check")
+        if TrialStatusLabel then
+            local stageText = "Unknown"
+            if prog == 1 then stageText = "Trial 1 - Unlock V4"
+            elseif prog == 2 then stageText = "Train 1 - V4 x3 + 1000 Frag"
+            elseif prog == 3 then stageText = "Train 2 - V4 x5 + 1500 Frag"
+            elseif prog == 4 then stageText = "Train 3 - V4 x4/x5/x10"
+            elseif prog == 0 then stageText = "V4 Unlocked / Train 4"
+            end
+            TrialStatusLabel.Text = "RaceV4Progress: "..tostring(prog).." ("..stageText..")"
+        end
+    end
+end)
+
+CreateToggle(TrialsPage, "Auto Pull Lever", false, function(s)
+    State.AutoPullLever = s
+    Notify("🔧 Lever: "..(s and "ON" or "OFF"))
+    if s then
+        task.spawn(function()
+            while State.AutoPullLever do
+                pcall(function()
+                    local hrp = GetHRP()
+                    if not hrp then return end
+                    local leverPos = Vector3.new(-12440, 550, -7100)
+                    if (hrp.Position - leverPos).Magnitude > 20 then TweenToPosition(leverPos, 300) end
+                    for _, obj in ipairs(workspace:GetDescendants()) do
+                        if obj:IsA("BasePart") or obj:IsA("Model") then
+                            local n = string.lower(obj.Name)
+                            if string.find(n, "lever") then
+                                local part = obj:IsA("BasePart") and obj or obj.PrimaryPart
+                                if part and (part.Position - leverPos).Magnitude < 100 then
+                                    local pp = obj:FindFirstChildOfClass("ProximityPrompt") or obj:FindFirstChild("ProximityPrompt", true)
+                                    if pp then
+                                        pcall(function()
+                                            pp:InputHoldBegin() task.wait(0.3) pp:InputHoldEnd()
+                                        end)
+                                    end
+                                    local cd = obj:FindFirstChildOfClass("ClickDetector")
+                                    if cd then pcall(function() fireclickdetector(cd) end) end
+                                end
+                            end
+                        end
+                    end
+                end)
+                task.wait(3)
+            end
+        end)
+    end
+end)
+
+CreateToggle(TrialsPage, "Auto Trial Only", false, function(s)
+    State.AutoTrialOnly = s
+    Notify("⚔️ Auto Trial: "..(s and "ON" or "OFF"))
+    if s then
+        task.spawn(function()
+            while State.AutoTrialOnly do
+                pcall(function()
+                    local prog = Invoke("RaceV4Progress", "Check")
+                    if prog == 1 then
+                        Invoke("RaceV4Progress", "Begin") task.wait(1)
+                    end
+                    -- Kill trial mob
+                    KillTrialMobs(5, 30)
+                    Invoke("RaceV4Progress", "Continue")
+                end)
+                task.wait(3)
+            end
+        end)
+    end
+end)
+
+CreateToggle(TrialsPage, "Auto Train V4", false, function(s)
+    State.AutoTrainV4 = s
+    Notify("🏋️ Train V4: "..(s and "ON" or "OFF"))
+    if s then
+        task.spawn(function()
+            while State.AutoTrainV4 do
+                pcall(function()
+                    local prog = Invoke("RaceV4Progress", "Check")
+                    -- Tentukan target berdasarkan stage
+                    local targetKills = 5
+                    local targetFragments = 1000
+                    
+                    if prog == 2 then 
+                        targetKills = 3 targetFragments = 1000 
+                    elseif prog == 3 then 
+                        targetKills = 5 targetFragments = 1500 
+                    elseif prog == 4 then 
+                        targetKills = 10 targetFragments = 2500 
+                    else 
+                        targetKills = 9 targetFragments = 4000 
+                    end
+                    
+                    -- Kill V4 mobs
+                    Notify("Killing V4 mobs: "..targetKills)
+                    KillTrialMobs(targetKills, 90)
+                    
+                    -- Collect fragments
+                    Notify("Collecting "..targetFragments.." fragments")
+                    WaitFragments(targetFragments, 120)
+                    
+                    Invoke("RaceV4Progress", "Continue")
+                    task.wait(2)
+                end)
+                task.wait(3)
+            end
+        end)
+    end
+end)
+
+CreateToggle(TrialsPage, "Auto Trial V4 Complete", false, function(s)
+    State.AutoTrialV4 = s
+    Notify("🏆 Auto Trial V4: "..(s and "ON" or "OFF"))
+    if s then
+        task.spawn(function()
+            while State.AutoTrialV4 do
+                pcall(function()
+                    local prog = Invoke("RaceV4Progress", "Check")
+                    Log("V4 Progress: "..tostring(prog))
+                    
+                    if prog == 1 then
+                        -- Trial 1
+                        Notify("Stage: Trial 1")
+                        TweenToPosition(Vector3.new(-12440, 550, -7100), 300)
+                        task.wait(1)
+                        Invoke("RaceV4Progress", "Begin")
+                        task.wait(2)
+                        KillTrialMobs(5, 30)
+                        Invoke("RaceV4Progress", "Continue")
+                        
+                    elseif prog == 2 then
+                        -- Train 1: V4 x3 + 1000 Fragments
+                        Notify("Stage: Train 1 (x3 + 1000 Frag)")
+                        KillTrialMobs(3, 60)
+                        WaitFragments(1000, 90)
+                        Invoke("RaceV4Progress", "Continue")
+                        
+                    elseif prog == 3 then
+                        -- Train 2: V4 x5 + 1500 Fragments
+                        Notify("Stage: Train 2 (x5 + 1500 Frag)")
+                        KillTrialMobs(5, 90)
+                        WaitFragments(1500, 120)
+                        Invoke("RaceV4Progress", "Continue")
+                        
+                    elseif prog == 4 then
+                        -- Train 3: V4 x4/x5/x10
+                        Notify("Stage: Train 3 (x10)")
+                        KillTrialMobs(10, 120)
+                        WaitFragments(2500, 150)
+                        Invoke("RaceV4Progress", "Continue")
+                        
+                    else
+                        -- Train 4: Final
+                        Notify("Stage: Train 4 (Final)")
+                        KillTrialMobs(9, 120)
+                        WaitFragments(4000, 180)
+                        Notify("🏆 Race V4 Complete!")
+                        State.AutoTrialV4 = false
+                    end
+                end)
+                task.wait(3)
+            end
+        end)
+    end
+end)
+
+CreateToggle(TrialsPage, "Auto Fragment Collect", false, function(s)
+    State.AutoFragment = s
+    Notify("💎 Fragment: "..(s and "ON" or "OFF"))
+    if s then
+        task.spawn(function()
+            while State.AutoFragment do
+                pcall(function()
+                    for _, obj in ipairs(workspace:GetDescendants()) do
+                        if obj:IsA("BasePart") then
+                            local n = string.lower(obj.Name)
+                            if string.find(n, "fragment") then
+                                if obj:FindFirstChild("TouchInterest") then
+                                    local hrp = GetHRP()
+                                    if hrp then TweenToPosition(obj.Position + Vector3.new(0,3,0), 400) end
+                                end
+                            end
+                        end
+                    end
+                end)
+                task.wait(2)
+            end
+        end)
+    end
+end)
 
 --// SETING (ESP)
 CreateToggle(SetingPage, "ESP Player", false, function(s) State.ESPPlayer = s Log("ESP Player: "..(s and "ON" or "OFF")) end)
@@ -1235,120 +1626,25 @@ CreateToggle(SetingPage, "ESP Blue Gear", false, function(s) State.ESPBlueGear =
 CreateToggle(SetingPage, "ESP Flower", false, function(s) State.ESPFlower = s Log("ESP Flower: "..(s and "ON" or "OFF")) end)
 
 --// TELEPORT
-local SelectedIslandVar = "Starter Island"
-local IslandTitleLbl = nil
-local CurrentIslandSea = nil
-
-local IslandHolder = Create("Frame", {
-    Parent=TeleportPage, BackgroundColor3=Color3.fromRGB(17,13,29),
-    Size=UDim2.new(1,0,0,38), BorderSizePixel=0, ZIndex=100, ClipsDescendants=false,
-})
-Corner(IslandHolder, 8)
-Stroke(IslandHolder, Color3.fromRGB(0,150,255), 1.2, 0.4)
-
-IslandTitleLbl = Create("TextLabel", {
-    Parent=IslandHolder, BackgroundTransparency=1,
-    Position=UDim2.new(0,10,0,0), Size=UDim2.new(1,-35,1,0),
-    Text="Select Island: Loading...", TextColor3=Color3.fromRGB(255,255,255),
-    TextSize=12, Font=Enum.Font.GothamMedium,
-    TextXAlignment=Enum.TextXAlignment.Left, ZIndex=101,
-})
-Create("TextLabel", {
-    Parent=IslandHolder, BackgroundTransparency=1,
-    Position=UDim2.new(1,-22,0,0), Size=UDim2.new(0,18,1,0),
-    Text="v", TextColor3=Color3.fromRGB(255,255,255),
-    TextSize=11, Font=Enum.Font.GothamBold, ZIndex=101,
-})
-
-local islandClickBtn = Create("TextButton", {
-    Parent=IslandHolder, BackgroundTransparency=1,
-    Size=UDim2.new(1,0,1,0), Text="", AutoButtonColor=false, ZIndex=110,
-})
-
-islandClickBtn.Activated:Connect(function()
+CreateCustomDropdown(TeleportPage, "Select Island", function()
     local sea = GetCurrentSea()
-    local islands = SeaIslands[sea] or {"Unknown"}
-    local popup = Create("Frame", {Parent=Gui, AnchorPoint=Vector2.new(0.5,0.5), Position=UDim2.new(0.5,0,0.5,0), Size=UDim2.fromOffset(300, math.min(#islands*38+80, 400)), BackgroundColor3=Color3.fromRGB(10,18,34), BorderSizePixel=0, ZIndex=999990})
-    Corner(popup, 12)
-    local ps = Instance.new("UIStroke") ps.Color = Color3.fromRGB(0,150,255) ps.Thickness = 2 ps.Parent = popup
-    Create("TextLabel", {Parent=popup, BackgroundTransparency=1, Position=UDim2.fromOffset(15,10), Size=UDim2.new(1,-60,0,25), Text="Select Island ("..sea..")", TextColor3=Color3.fromRGB(235,242,255), TextSize=15, Font=Enum.Font.GothamBold, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=999991})
-    local closeBtn = Create("TextButton", {Parent=popup, Position=UDim2.new(1,-40,0,10), Size=UDim2.fromOffset(30,25), Text="×", TextColor3=Color3.fromRGB(255,255,255), TextSize=22, BackgroundTransparency=1, Font=Enum.Font.GothamBold, AutoButtonColor=false, ZIndex=999992})
-    closeBtn.Activated:Connect(function() popup:Destroy() end)
-    local ls = Create("ScrollingFrame", {Parent=popup, BackgroundTransparency=1, Position=UDim2.fromOffset(10,42), Size=UDim2.new(1,-20,1,-52), CanvasSize=UDim2.new(0,0,0,0), AutomaticCanvasSize=Enum.AutomaticSize.Y, ScrollBarThickness=3, ScrollBarImageColor3=Color3.fromRGB(0,150,255), BorderSizePixel=0, ZIndex=999991})
-    local LL = Instance.new("UIListLayout") LL.Padding = UDim.new(0,4) LL.SortOrder = Enum.SortOrder.LayoutOrder LL.Parent = ls
-    for i, opt in ipairs(islands) do
-        local OB = Create("TextButton", {Parent=ls, BackgroundColor3=Color3.fromRGB(17,13,29), Size=UDim2.new(1,-8,0,34), Position=UDim2.new(0,4,0,0), Text=opt, TextColor3=Color3.fromRGB(255,255,255), TextSize=13, Font=Enum.Font.GothamMedium, AutoButtonColor=false, BorderSizePixel=0, LayoutOrder=i, ZIndex=999992, TextXAlignment=Enum.TextXAlignment.Left})
-        Corner(OB, 6)
-        local pad = Instance.new("UIPadding") pad.PaddingLeft = UDim.new(0, 10) pad.Parent = OB
-        OB.MouseEnter:Connect(function() TweenService:Create(OB, TweenInfo.new(0.1), {BackgroundColor3=Color3.fromRGB(0,150,255)}):Play() end)
-        OB.MouseLeave:Connect(function() TweenService:Create(OB, TweenInfo.new(0.1), {BackgroundColor3=Color3.fromRGB(17,13,29)}):Play() end)
-        OB.Activated:Connect(function()
-            SelectedIslandVar = opt
-            State.SelectedIsland = opt
-            IslandTitleLbl.Text = "Select Island ("..sea.."): "..opt
-            popup:Destroy()
-            Log("Island: "..opt.." ("..sea..")")
-        end)
-    end
+    return sea, SeaIslands[sea] or {"Starter Island"}
+end, function(opt)
+    State.SelectedIsland = opt
+    Log("Island: "..opt)
 end)
-
-local function RefreshIslandDropdown()
-    local sea = GetCurrentSea()
-    local islands = SeaIslands[sea] or {"Unknown"}
-    CurrentIslandSea = sea
-    if IslandTitleLbl then
-        if SelectedIslandVar and table.find(islands, SelectedIslandVar) then
-            IslandTitleLbl.Text = "Select Island ("..sea.."): "..SelectedIslandVar
-        else
-            SelectedIslandVar = islands[1] or "Unknown"
-            State.SelectedIsland = SelectedIslandVar
-            IslandTitleLbl.Text = "Select Island ("..sea.."): "..SelectedIslandVar
-        end
-    end
-end
-
-task.spawn(function()
-    while task.wait(2) do
-        local sea = GetCurrentSea()
-        if sea ~= CurrentIslandSea then
-            RefreshIslandDropdown()
-        end
-    end
-end)
-
 CreateButton(TeleportPage, "📍 Tween ke Island", function()
-    local pos = IslandCoords[SelectedIslandVar]
+    local pos = IslandCoords[State.SelectedIsland]
     if pos then
         TweenToIslandSmooth(pos + Vector3.new(0,3,0))
-        Notify("📍 Tween: "..SelectedIslandVar)
+        Notify("📍 Tween: "..State.SelectedIsland)
     else
         Notify("❌ Koordinat tidak ditemukan")
     end
 end)
-
-CreateButton(TeleportPage, "🌊 Travel Sea 1", function()
-    Invoke("TravelMain")
-    Notify("🌊 Traveling to Sea 1")
-    task.wait(1)
-    CurrentBossSea = nil
-    CurrentIslandSea = nil
-end)
-
-CreateButton(TeleportPage, "🌊 Travel Sea 2", function()
-    Invoke("TravelDressrosa")
-    Notify("🌊 Traveling to Sea 2")
-    task.wait(1)
-    CurrentBossSea = nil
-    CurrentIslandSea = nil
-end)
-
-CreateButton(TeleportPage, "🌊 Travel Sea 3", function()
-    Invoke("TravelZou")
-    Notify("🌊 Traveling to Sea 3")
-    task.wait(1)
-    CurrentBossSea = nil
-    CurrentIslandSea = nil
-end)
+CreateButton(TeleportPage, "🌊 Travel Sea 1", function() Invoke("TravelMain") Notify("🌊 Sea 1") end)
+CreateButton(TeleportPage, "🌊 Travel Sea 2", function() Invoke("TravelDressrosa") Notify("🌊 Sea 2") end)
+CreateButton(TeleportPage, "🌊 Travel Sea 3", function() Invoke("TravelZou") Notify("🌊 Sea 3") end)
 
 --// STATS
 CreateToggle(StatsPage, "Auto Add Stats", false, function(s) State.AutoAddStats = s Log("Add Stats: "..(s and "ON" or "OFF")) end)
@@ -1356,37 +1652,41 @@ CreateSlider(StatsPage, "Melee", 0, 100, 0, function(v) State.StatsMelee = v end
 CreateSlider(StatsPage, "Sword", 0, 100, 0, function(v) State.StatsSword = v end)
 CreateSlider(StatsPage, "Gun", 0, 100, 0, function(v) State.StatsGun = v end)
 CreateSlider(StatsPage, "Fruit", 0, 100, 0, function(v) State.StatsBloxFruit = v end)
-CreateToggle(StatsPage, "Apply Stats Now", false, function(s)
-    if s then
-        local stats = {{Name="Melee",Value=State.StatsMelee},{Name="Sword",Value=State.StatsSword},{Name="Gun",Value=State.StatsGun},{Name="Blox Fruit",Value=State.StatsBloxFruit}}
-        for _, st in ipairs(stats) do if st.Value > 0 then Invoke("AddPoint", st.Name, st.Value) task.wait(0.3) end end
-        Notify("✅ Stats applied")
-    end
+CreateButton(StatsPage, "✅ Apply Stats Now", function()
+    local stats = {
+        {Name="Melee",Value=State.StatsMelee},
+        {Name="Sword",Value=State.StatsSword},
+        {Name="Gun",Value=State.StatsGun},
+        {Name="Blox Fruit",Value=State.StatsBloxFruit}
+    }
+    for _, st in ipairs(stats) do if st.Value > 0 then Invoke("AddPoint", st.Name, st.Value) task.wait(0.3) end end
+    Notify("✅ Stats applied")
 end)
 
 --// SHOP
 CreateDropdown(ShopPage, "Select Melee", {"Black Leg","Electro","Fishman Karate","Sharkman Karate","Dragon Talon","Electric Claw","Death Step","Superhuman","Godhuman"}, function(opt) State.SelectedMelee = opt Log("Melee: "..opt) end)
-CreateToggle(ShopPage, "Buy Selected Melee", false, function(s)
-    if s then
-        local map = {["Black Leg"]="BuyBlackLeg",["Electro"]="BuyElectro",["Fishman Karate"]="BuyFishmanKarate",["Sharkman Karate"]="BuySharkmanKarate",["Dragon Talon"]="BuyDragonTalon",["Electric Claw"]="BuyElectricClaw",["Death Step"]="BuyDeathStep",["Superhuman"]="BuySuperhuman",["Godhuman"]="BuyGodhuman"}
-        local fn = map[State.SelectedMelee]
-        if fn then Invoke(fn) Notify("🛒 "..State.SelectedMelee) else Notify("Select melee") end
-    end
+CreateButton(ShopPage, "🛒 Buy Selected Melee", function()
+    if not State.SelectedMelee then Notify("Select melee first") return end
+    local map = {["Black Leg"]="BuyBlackLeg",["Electro"]="BuyElectro",["Fishman Karate"]="BuyFishmanKarate",["Sharkman Karate"]="BuySharkmanKarate",["Dragon Talon"]="BuyDragonTalon",["Electric Claw"]="BuyElectricClaw",["Death Step"]="BuyDeathStep",["Superhuman"]="BuySuperhuman",["Godhuman"]="BuyGodhuman"}
+    local fn = map[State.SelectedMelee]
+    if fn then Invoke(fn) Notify("🛒 Bought: "..State.SelectedMelee) end
 end)
 CreateDropdown(ShopPage, "Select Sword", {"Katana","Cutlass","Iron Mace","Dual Katana","Triple Katana","Pipe","Small Sword","Dual-Headed Blade","Soul Cane","Saber","Rengoku","Shisui","Yama","Tushita","Cursed Dual Katana","Dark Dagger","Buddy Sword","Hallow Scythe","Spikey Trident","Trident"}, function(opt) State.SelectedSword = opt Log("Sword: "..opt) end)
-CreateToggle(ShopPage, "Buy Selected Sword", false, function(s) if s and State.SelectedSword then Invoke("BuyItem", State.SelectedSword) Notify("🛒 "..State.SelectedSword) end end)
-CreateDropdown(ShopPage, "Select Gun", {"Slingshot","Flintlock","Refined Flintlock","Musket","Refined Musket","Cannon","Bazooka","Sniper","Kabucha","Acidum Rifle","Bizarre Rifle","Serpent Bow"}, function(opt) State.SelectedGun = opt Log("Gun: "..opt) end)
-CreateToggle(ShopPage, "Buy Selected Gun", false, function(s) if s and State.SelectedGun then Invoke("BuyItem", State.SelectedGun) Notify("🛒 "..State.SelectedGun) end end)
-CreateDropdown(ShopPage, "Select Abilities", {"Ken","Buso","Geppo"}, function(opt) State.SelectedAbility = opt Log("Ability: "..opt) end)
-CreateToggle(ShopPage, "Buy Selected Ability", false, function(s)
-    if s then
-        if State.SelectedAbility == "Ken" then Invoke("KenTalk", "Buy")
-        elseif State.SelectedAbility == "Buso" then Invoke("BuyHaki", "Buso")
-        elseif State.SelectedAbility == "Geppo" then Invoke("BuyHaki", "Geppo") end
-        Notify("🛒 "..tostring(State.SelectedAbility))
-    end
+CreateButton(ShopPage, "🛒 Buy Selected Sword", function()
+    if State.SelectedSword then Invoke("BuyItem", State.SelectedSword) Notify("🛒 "..State.SelectedSword) end
 end)
-CreateToggle(ShopPage, "Buy Soru", false, function(s) if s then Invoke("BuyHaki", "Soru") Notify("🛒 Soru") end end)
+CreateDropdown(ShopPage, "Select Gun", {"Slingshot","Flintlock","Refined Flintlock","Musket","Refined Musket","Cannon","Bazooka","Sniper","Kabucha","Acidum Rifle","Bizarre Rifle","Serpent Bow"}, function(opt) State.SelectedGun = opt Log("Gun: "..opt) end)
+CreateButton(ShopPage, "🛒 Buy Selected Gun", function()
+    if State.SelectedGun then Invoke("BuyItem", State.SelectedGun) Notify("🛒 "..State.SelectedGun) end
+end)
+CreateDropdown(ShopPage, "Select Abilities", {"Ken","Buso","Geppo"}, function(opt) State.SelectedAbility = opt Log("Ability: "..opt) end)
+CreateButton(ShopPage, "🛒 Buy Selected Ability", function()
+    if State.SelectedAbility == "Ken" then Invoke("KenTalk", "Buy")
+    elseif State.SelectedAbility == "Buso" then Invoke("BuyHaki", "Buso")
+    elseif State.SelectedAbility == "Geppo" then Invoke("BuyHaki", "Geppo") end
+    Notify("🛒 "..tostring(State.SelectedAbility))
+end)
+CreateButton(ShopPage, "🛒 Buy Soru", function() Invoke("BuyHaki", "Soru") Notify("🛒 Soru") end)
 
 --// MISC
 CreateToggle(MiscPage, "Anti AFK", true, function(s) State.AntiAFK = s Log("Anti AFK: "..(s and "ON" or "OFF")) end)
@@ -1418,9 +1718,14 @@ CreateToggle(MiscPage, "Boost FPS", false, function(s)
         Notify("⚡ Boost FPS: OFF")
     end
 end)
-CreateToggle(MiscPage, "Rejoin Server", false, function(s) if s then TeleportService:Teleport(game.PlaceId, Player) end end)
-CreateToggle(MiscPage, "Join Marine", false, function(s) if s then Invoke("SetTeam", "Marines") Notify("⚓ Marine") end end)
-CreateToggle(MiscPage, "Join Pirate", false, function(s) if s then Invoke("SetTeam", "Pirates") Notify("🏴‍☠️ Pirate") end end)
+CreateButton(MiscPage, "🌊 Join Marine", function() Invoke("SetTeam", "Marines") Notify("⚓ Marines") end)
+CreateButton(MiscPage, "🏴‍☠️ Join Pirate", function() Invoke("SetTeam", "Pirates") Notify("🏴‍☠️ Pirates") end)
+CreateButton(MiscPage, "🎁 Redeem All Codes", function()
+    local codes = {"KITT_RESET","SUB2GAMERROBOT_RESET1","SUB2GAMERROBOT_EXP1","SUB2OFFICIALNOOBIE","AXIORE","BLUXXY","JCWK","KITTGAMING","MAGICBUS","STARCODEHEO","STRAWHATMAINE","TANTAIGAMING","THEGREATACE","ENYU_IS_PRO"}
+    for _, code in ipairs(codes) do Invoke("Redeem", code) task.wait(1) end
+    Notify("🎁 All codes redeemed")
+end)
+CreateButton(MiscPage, "🔄 Rejoin Server", function() TeleportService:Teleport(game.PlaceId, Player) end)
 
 --==================================================
 -- LOOPS
@@ -1428,7 +1733,7 @@ CreateToggle(MiscPage, "Join Pirate", false, function(s) if s then Invoke("SetTe
 
 -- FARM LEVEL
 task.spawn(function()
-    while task.wait(0.3) do
+    while task.wait(0.2) do
         if State.AutoFarm then
             pcall(function()
                 ActivateHakiOnce()
@@ -1440,55 +1745,45 @@ task.spawn(function()
                 local hrp = GetHRP()
                 if not hrp then return end
                 local nearest, nd = nil, math.huge
-                local targetName = string.lower(data.NPC)
-                for _, obj in ipairs(workspace:GetChildren()) do
-                    if obj:FindFirstChildOfClass("Humanoid") then
-                        local n = string.lower(obj.Name)
-                        if n == targetName or string.find(n, targetName, 1, true) then
-                            local hum = obj:FindFirstChildOfClass("Humanoid")
-                            local trp = obj:FindFirstChild("HumanoidRootPart")
-                            if hum and trp and hum.Health > 0 then
-                                local d = GetDist(trp.Position, hrp.Position)
-                                if d < 2000 and d < nd then nearest, nd = obj, d end
-                            end
-                        end
-                    end
-                end
-                if not nearest then
-                    local npcFolder = workspace:FindFirstChild("NPCs") or workspace:FindFirstChild("Mobs")
-                    if npcFolder then
-                        for _, obj in ipairs(npcFolder:GetChildren()) do
-                            local n = string.lower(obj.Name)
-                            if n == targetName or string.find(n, targetName, 1, true) then
+                local targetName = data.NPC
+                local searchFolders = {}
+                local ef = workspace:FindFirstChild("Enemies")
+                if ef then table.insert(searchFolders, ef) end
+                local nf = workspace:FindFirstChild("NPCs")
+                if nf then table.insert(searchFolders, nf) end
+                table.insert(searchFolders, workspace)
+                for _, folder in ipairs(searchFolders) do
+                    if nearest then break end
+                    for _, obj in ipairs(folder:GetChildren()) do
+                        if obj:FindFirstChildOfClass("Humanoid") then
+                            if obj.Name == targetName then
                                 local hum = obj:FindFirstChildOfClass("Humanoid")
                                 local trp = obj:FindFirstChild("HumanoidRootPart")
                                 if hum and trp and hum.Health > 0 then
                                     local d = GetDist(trp.Position, hrp.Position)
-                                    if d < 2000 and d < nd then nearest, nd = obj, d end
+                                    if d < nd then nearest = obj nd = d end
                                 end
                             end
                         end
                     end
                 end
-                if not nearest then
+                if nearest then
+                    local trp = nearest:FindFirstChild("HumanoidRootPart")
+                    if trp then
+                        if GetDist(hrp.Position, trp.Position) > 15 then TweenToPosition(trp.Position + Vector3.new(0,3,0), CONFIG.TweenMobSpeed) end
+                        if not State.HitboxPart or not State.HitboxPart.Parent then
+                            local hb = Instance.new("Part")
+                            hb.Name = "SysxHitbox" hb.Size = Vector3.new(30,30,30)
+                            hb.Transparency = 1 hb.CanCollide = false hb.CanTouch = true
+                            hb.Anchored = true hb.Massless = true hb.Parent = workspace
+                            State.HitboxPart = hb
+                        end
+                        State.HitboxPart.CFrame = CFrame.new(trp.Position)
+                        AutoAttackNPC(nearest, 5)
+                    end
+                else
                     local islandPos = IslandCoords[data.Island]
-                    if islandPos and (hrp.Position - islandPos).Magnitude > 200 then
-                        TweenToPosition(islandPos + Vector3.new(0,3,0), 500)
-                    end
-                    return
-                end
-                local trp = nearest:FindFirstChild("HumanoidRootPart")
-                if trp then
-                    if GetDist(hrp.Position, trp.Position) > 15 then TweenToPosition(trp.Position + Vector3.new(0,3,0), CONFIG.TweenMobSpeed) end
-                    if not State.HitboxPart or not State.HitboxPart.Parent then
-                        local hb = Instance.new("Part")
-                        hb.Name = "SysxHitbox" hb.Size = Vector3.new(30,30,30)
-                        hb.Transparency = 1 hb.CanCollide = false hb.CanTouch = true
-                        hb.Anchored = true hb.Massless = true hb.Parent = workspace
-                        State.HitboxPart = hb
-                    end
-                    State.HitboxPart.CFrame = CFrame.new(trp.Position)
-                    AutoAttackNPC(nearest, 5)
+                    if islandPos and (hrp.Position - islandPos).Magnitude > 500 then TweenToPosition(islandPos + Vector3.new(0,3,0), 500) end
                 end
             end)
         else
@@ -1604,19 +1899,27 @@ task.spawn(function()
                 if not hasBoat then Invoke("BuyBoat", State.SelectedBoat or "Dinghy") end
             end)
         end
-        if State.AutoCollectBone or State.AutoCollectDinoEgg then
+        if State.AutoCollectBone then
             pcall(function()
-                local keywords = {}
-                if State.AutoCollectBone then table.insert(keywords, "bone") end
-                if State.AutoCollectDinoEgg then table.insert(keywords, "dino") table.insert(keywords, "egg") end
+                for _, obj in ipairs(workspace:GetDescendants()) do
+                    if obj:IsA("BasePart") and string.find(string.lower(obj.Name), "bone") then
+                        if obj:FindFirstChild("TouchInterest") then
+                            local hrp = GetHRP()
+                            if hrp then TweenToPosition(obj.Position + Vector3.new(0,3,0), 400) end
+                        end
+                    end
+                end
+            end)
+        end
+        if State.AutoCollectDinoEgg then
+            pcall(function()
                 for _, obj in ipairs(workspace:GetDescendants()) do
                     if obj:IsA("BasePart") then
                         local n = string.lower(obj.Name)
-                        for _, kw in ipairs(keywords) do
-                            if string.find(n, kw) and obj:FindFirstChild("TouchInterest") then
+                        if (string.find(n, "dino") and string.find(n, "egg")) or string.find(n, "dinosaur") then
+                            if obj:FindFirstChild("TouchInterest") then
                                 local hrp = GetHRP()
                                 if hrp then TweenToPosition(obj.Position + Vector3.new(0,3,0), 400) end
-                                break
                             end
                         end
                     end
@@ -1639,68 +1942,147 @@ task.spawn(function()
                 end
             end)
         end
-        if State.FindMirage or State.MirageTweenEnabled then
-            pcall(function()
-                local folder = workspace:FindFirstChild("SeaEvents")
-                if folder then
-                    for _, obj in ipairs(folder:GetDescendants()) do
-                        if obj:GetAttribute("MirageIsland") == true or string.find(string.lower(obj.Name), "mirage") then
-                            local pos = obj:IsA("BasePart") and obj.Position or (obj.PrimaryPart and obj.PrimaryPart.Position)
-                            if pos then
-                                local hrp = GetHRP()
-                                if hrp and GetDist(hrp.Position, pos) > 20 then
-                                    Notify("🏝️ Mirage Spawned!")
-                                    TweenToPosition(pos + Vector3.new(0,12,0), 180)
+    end
+end)
+
+-- SEA EVENTS
+local function ScanSeaEvent(keywords, attributes)
+    for _, obj in ipairs(workspace:GetChildren()) do
+        local name = string.lower(obj.Name)
+        for _, kw in ipairs(keywords) do if string.find(name, kw) then return obj end end
+        for _, attr in ipairs(attributes or {}) do if obj:GetAttribute(attr) == true then return obj end end
+    end
+    local seaFolder = workspace:FindFirstChild("SeaEvents")
+    if seaFolder then
+        for _, obj in ipairs(seaFolder:GetDescendants()) do
+            local name = string.lower(obj.Name)
+            for _, kw in ipairs(keywords) do if string.find(name, kw) then return obj end end
+            for _, attr in ipairs(attributes or {}) do if obj:GetAttribute(attr) == true then return obj end end
+        end
+    end
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        local name = string.lower(obj.Name)
+        for _, kw in ipairs(keywords) do 
+            if string.find(name, kw) then
+                if obj:IsA("BasePart") or obj:IsA("Model") then return obj end
+            end
+        end
+        for _, attr in ipairs(attributes or {}) do 
+            if obj:GetAttribute(attr) == true then
+                if obj:IsA("BasePart") or obj:IsA("Model") then return obj end
+            end
+        end
+    end
+    return nil
+end
+
+local function GetPosition(obj)
+    if not obj then return nil end
+    if obj:IsA("BasePart") then return obj.Position end
+    if obj:IsA("Model") then
+        if obj.PrimaryPart then return obj.PrimaryPart.Position end
+        local part = obj:FindFirstChildWhichIsA("BasePart", true)
+        if part then return part.Position end
+    end
+    return nil
+end
+
+task.spawn(function()
+    while task.wait(2) do
+        pcall(function()
+            local hrp = GetHRP()
+            if not hrp then return end
+            
+            if State.FindFrozenDim then
+                local frozen = ScanSeaEvent({"frozen", "frozendimension", "frozenwatcher", "leviathan"}, {"FrozenDimension", "FrozenDimensionSpawn", "Leviathan"})
+                if frozen then
+                    local pos = GetPosition(frozen)
+                    if pos then
+                        Notify("❄️ Frozen Dimension Spawned!")
+                        TweenToPosition(pos + Vector3.new(0, 15, 0), 300)
+                        task.wait(2)
+                        for _, obj in ipairs(workspace:GetDescendants()) do
+                            if obj:IsA("BasePart") or obj:IsA("Model") then
+                                local n = string.lower(obj.Name)
+                                if string.find(n, "watcher") or (string.find(n, "frozen") and string.find(n, "orb")) then
+                                    local pp = obj:FindFirstChildOfClass("ProximityPrompt")
+                                    if pp then
+                                        pcall(function()
+                                            pp:InputHoldBegin() task.wait(0.5) pp:InputHoldEnd()
+                                        end)
+                                    end
                                 end
                             end
-                            break
                         end
                     end
                 end
-            end)
-        end
-        if State.FindKitsune then
-            pcall(function()
-                for _, obj in ipairs(workspace:GetDescendants()) do
-                    if obj:GetAttribute("KitsuneIsland") == true or string.find(string.lower(obj.Name), "kitsune") then
-                        local pos = obj:IsA("BasePart") and obj.Position or (obj.PrimaryPart and obj.PrimaryPart.Position)
-                        if pos then
-                            Notify("🦊 Kitsune Spawned!")
-                            TweenToPosition(pos + Vector3.new(0,8,0), 180)
+            end
+            
+            if State.FindMirage or State.MirageTweenEnabled then
+                local mirage = ScanSeaEvent({"mirage", "mirageisland"}, {"MirageIsland", "Mirage"})
+                if mirage then
+                    local pos = GetPosition(mirage)
+                    if pos and (hrp.Position - pos).Magnitude > 20 then
+                        Notify("🏝️ Mirage Spawned!")
+                        TweenToPosition(pos + Vector3.new(0, 12, 0), 180)
+                    end
+                end
+            end
+            
+            if State.FindKitsune then
+                local kitsune = ScanSeaEvent({"kitsune", "kitsuneshrine", "kitsuneisland"}, {"KitsuneIsland", "KitsuneShrine"})
+                if kitsune then
+                    local pos = GetPosition(kitsune)
+                    if pos then
+                        local lvl = kitsune:GetAttribute("Level") or kitsune:GetAttribute("KitsuneLevel") or 0
+                        if tonumber(lvl) >= (State.KitsuneLevel or 0) then
+                            Notify("🦊 Kitsune Island Spawned! (Lv "..lvl..")")
+                            TweenToPosition(pos + Vector3.new(0, 8, 0), 180)
                             State.FindKitsune = false
-                            break
                         end
                     end
                 end
-            end)
-        end
-        if State.FindPrehistoric then
-            pcall(function()
-                for _, obj in ipairs(workspace:GetDescendants()) do
-                    if obj:GetAttribute("PrehistoricIsland") == true or string.find(string.lower(obj.Name), "prehistoric") then
-                        local pos = obj:IsA("BasePart") and obj.Position or (obj.PrimaryPart and obj.PrimaryPart.Position)
-                        if pos then
-                            Notify("🦖 Prehistoric Spawned!")
-                            TweenToPosition(pos + Vector3.new(0,8,0), 180)
-                            State.FindPrehistoric = false
-                            break
-                        end
+            end
+            
+            if State.FindPrehistoric then
+                local pre = ScanSeaEvent({"prehistoric", "prehistorichisland", "volcano", "dinoisland"}, {"PrehistoricIsland", "Volcano", "DragonTether"})
+                if pre then
+                    local pos = GetPosition(pre)
+                    if pos then
+                        Notify("🦖 Prehistoric Island Spawned!")
+                        TweenToPosition(pos + Vector3.new(0, 10, 0), 180)
+                        State.FindPrehistoric = false
                     end
                 end
-            end)
-        end
-        if State.FindFrozenDim then
+            end
+        end)
+    end
+end)
+
+-- AUTO DRIVE TIKI
+task.spawn(function()
+    while task.wait(2) do
+        if State.AutoDriveTiki then
             pcall(function()
-                for _, obj in ipairs(workspace:GetDescendants()) do
-                    if obj:GetAttribute("FrozenDimension") == true or string.find(string.lower(obj.Name), "frozen") then
-                        local pos = obj:IsA("BasePart") and obj.Position or (obj.PrimaryPart and obj.PrimaryPart.Position)
-                        if pos then
-                            Notify("❄️ Frozen Spawned!")
-                            TweenToPosition(pos + Vector3.new(0,8,0), 180)
-                            State.FindFrozenDim = false
-                            break
-                        end
+                local tiki = ScanSeaEvent({"tiki", "tikioutpost"}, {"TikiIsland"})
+                local targetPos = GetPosition(tiki)
+                if not targetPos then targetPos = Vector3.new(-1000, 60, 6000) end
+                local hrp = GetHRP()
+                if not hrp then return end
+                local dist = (hrp.Position - targetPos).Magnitude
+                if dist > 50 then
+                    local boat = GetBoat()
+                    if boat and boat.PrimaryPart then
+                        local duration = math.max(dist / (State.BoatSpeed or 300), 0.5)
+                        local tw = TweenService:Create(boat.PrimaryPart, TweenInfo.new(duration, Enum.EasingStyle.Linear), { CFrame = CFrame.new(targetPos + Vector3.new(0, State.BoatHeight or 5, 0)) })
+                        tw:Play()
+                        tw.Completed:Wait()
+                    else
+                        TweenToPosition(targetPos + Vector3.new(0, 5, 0), 500)
                     end
+                else
+                    Notify("✅ Arrived at Tiki Outpost!")
+                    State.AutoDriveTiki = false
                 end
             end)
         end
@@ -1711,47 +2093,93 @@ end)
 task.spawn(function()
     while task.wait(0.3) do
         if State.FruitTweenEnabled then
-            local hrp = GetHRP()
-            if hrp then
-                local closest, cd = nil, math.huge
-                for _, obj in ipairs(FindFruits()) do
-                    local d = GetDist(obj.Position, hrp.Position)
-                    if d < 500 and d < cd then closest, cd = obj, d end
-                end
-                if closest then
-                    Notify("🍎 Fruit Spawn: "..closest.Name)
-                    local dist = GetDist(closest.Position, hrp.Position)
-                    local dur = math.max(dist / CONFIG.FruitTweenSpeed, 0.1)
-                    local tw = TweenService:Create(hrp, TweenInfo.new(dur, Enum.EasingStyle.Linear), { CFrame = closest.CFrame + Vector3.new(0,3,0) })
-                    tw:Play()
-                    tw.Completed:Wait()
-                    if State.FruitStoreEnabled then
-                        local held = GetHeldFruit()
-                        if held then Invoke("StoreFruit", held.Name, held) end
+            pcall(function()
+                local fruits = FindFruits()
+                if #fruits > 0 then
+                    local hrp = GetHRP()
+                    if hrp then
+                        local closest = fruits[1]
+                        local cd = GetDist(fruits[1].part.Position, hrp.Position)
+                        for _, f in ipairs(fruits) do
+                            local d = GetDist(f.part.Position, hrp.Position)
+                            if d < cd then closest = f cd = d end
+                        end
+                        if closest then
+                            Notify("🍎 Fruit Spawn: "..closest.model.Name)
+                            local dist = GetDist(closest.part.Position, hrp.Position)
+                            local dur = math.max(dist / CONFIG.FruitTweenSpeed, 0.1)
+                            local tw = TweenService:Create(hrp, TweenInfo.new(dur, Enum.EasingStyle.Linear), { CFrame = closest.part.CFrame * CFrame.new(0, 5, 0) })
+                            tw:Play()
+                            tw.Completed:Wait()
+                            if State.FruitStoreEnabled then
+                                task.wait(0.5)
+                                local char = Player.Character
+                                if char then
+                                    for _, tool in ipairs(char:GetChildren()) do
+                                        if tool:IsA("Tool") and tool.Name:find("Fruit") then
+                                            local fruitName = tool.Name:gsub(" Fruit", "")
+                                            if CommF then 
+                                                pcall(function() CommF:InvokeServer("StoreFruit", fruitName, tool) end)
+                                                Log("Stored: "..fruitName)
+                                            end
+                                            break
+                                        end
+                                    end
+                                end
+                            end
+                        end
                     end
                 end
-            end
+            end)
+        end
+    end
+end)
+
+-- AUTO STORE FRUIT
+task.spawn(function()
+    while task.wait(3) do
+        if State.FruitStoreEnabled and CommF then
+            pcall(function()
+                local char = Player.Character
+                if char then
+                    for _, tool in ipairs(char:GetChildren()) do
+                        if tool:IsA("Tool") and tool.Name:find("Fruit") then
+                            local fruitName = tool.Name:gsub(" Fruit", "")
+                            CommF:InvokeServer("StoreFruit", fruitName, tool)
+                            Log("Stored from Char: "..fruitName)
+                        end
+                    end
+                end
+                for _, tool in ipairs(Player.Backpack:GetChildren()) do
+                    if tool:IsA("Tool") and tool.Name:find("Fruit") then
+                        local fruitName = tool.Name:gsub(" Fruit", "")
+                        CommF:InvokeServer("StoreFruit", fruitName, tool)
+                        Log("Stored from Backpack: "..fruitName)
+                        task.wait(0.5)
+                    end
+                end
+            end)
         end
     end
 end)
 
 workspace.DescendantAdded:Connect(function(obj)
-    if obj:IsA("Tool") or (obj:IsA("BasePart") and string.find(string.lower(obj.Name), "fruit")) then
+    if obj:IsA("Tool") or obj:IsA("Model") then
         task.wait(0.1)
-        if obj.Parent and (obj.Parent == workspace or (obj.Parent.Name == "Map")) then
+        if obj.Parent == workspace and string.find(obj.Name, "Fruit") then
             Notify("🍎 Fruit Spawn: "..obj.Name)
         end
     end
 end)
 
--- AUTO GACHA
 task.spawn(function()
     while task.wait(60) do
-        if State.AutoGacha then pcall(function() if not GetHeldFruit() then Invoke("BuyFruit", "Random") end end) end
+        if State.AutoGacha then 
+            pcall(function() if not GetHeldFruit() then Invoke("BuyFruit", "Random") end end) 
+        end
     end
 end)
 
--- AUTO RAID
 task.spawn(function()
     while task.wait(10) do
         if State.AutoRaid and State.SelectedRaid then
@@ -1765,32 +2193,95 @@ task.spawn(function()
     end
 end)
 
--- AUTO STATS
 task.spawn(function()
     while task.wait(3) do
         if State.AutoAddStats then
             pcall(function()
-                local stats = {{Name="Melee",Value=State.StatsMelee},{Name="Sword",Value=State.StatsSword},{Name="Gun",Value=State.StatsGun},{Name="Blox Fruit",Value=State.StatsBloxFruit}}
+                local stats = {
+                    {Name="Melee",Value=State.StatsMelee},
+                    {Name="Sword",Value=State.StatsSword},
+                    {Name="Gun",Value=State.StatsGun},
+                    {Name="Blox Fruit",Value=State.StatsBloxFruit}
+                }
                 for _, st in ipairs(stats) do if st.Value > 0 then Invoke("AddPoint", st.Name, st.Value) task.wait(0.3) end end
             end)
         end
     end
 end)
 
--- INFINITE JUMP
+task.spawn(function()
+    while task.wait(2) do
+        if State.AutoFish then
+            pcall(function()
+                local char = Player.Character
+                if not char then return end
+                local tool = char:FindFirstChildOfClass("Tool")
+                if tool and string.find(string.lower(tool.Name), "rod") then
+                    tool:Activate()
+                end
+            end)
+        end
+    end
+end)
+
+task.spawn(function()
+    while task.wait(5) do
+        if State.AutoRaceV2 and CommF then
+            pcall(function()
+                Invoke("Alchemist", "1")
+                task.wait(1)
+                for _, obj in ipairs(workspace:GetDescendants()) do
+                    if obj:IsA("BasePart") then
+                        local n = string.lower(obj.Name)
+                        if string.find(n, "flower") then
+                            local hrp = GetHRP()
+                            if hrp then 
+                                TweenToPosition(obj.Position + Vector3.new(0,3,0), 300)
+                                task.wait(0.5)
+                            end
+                        end
+                    end
+                end
+                Invoke("Alchemist", "2")
+            end)
+        end
+    end
+end)
+
+task.spawn(function()
+    while task.wait(5) do
+        if State.AutoRaceV3 and CommF then
+            pcall(function()
+                Invoke("TalkTrevor", "1")
+                task.wait(1)
+                Invoke("Wenlocktoad", "1")
+                task.wait(1)
+                local prog = Invoke("Wenlocktoad", "2")
+                Log("V3 Progress: "..tostring(prog))
+                if prog == 2 or prog == 3 then
+                    Invoke("Wenlocktoad", "2")
+                    Notify("✅ Race V3 Complete!")
+                    State.AutoRaceV3 = false
+                end
+            end)
+        end
+    end
+end)
+
 task.spawn(function()
     while task.wait(0.1) do
         if State.InfiniteJump then
             local char = Player.Character
             if char then
                 local hum = char:FindFirstChildOfClass("Humanoid")
-                if hum and hum:GetState() == Enum.HumanoidStateType.Freefall then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+                if hum and hum:GetState() == Enum.HumanoidStateType.Freefall then 
+                    hum:ChangeState(Enum.HumanoidStateType.Jumping) 
+                end
             end
         end
     end
 end)
 
--- BRING MOB (FIXED)
 task.spawn(function()
     while task.wait(0.05) do
         if State.BringMob or State.AutoFarm or State.AutoFarmNearest then
@@ -1821,7 +2312,6 @@ task.spawn(function()
     end
 end)
 
--- ESP LOOP
 task.spawn(function()
     while task.wait(0.3) do
         local hrp = GetHRP()
@@ -1843,9 +2333,13 @@ task.spawn(function()
             end
         end
         if State.ESPFruit then
-            for _, obj in ipairs(FindFruits()) do
-                local dist = math.floor((obj.Position - myPos).Magnitude)
-                CreateESP(obj, dist.." | "..obj.Name, Color3.fromRGB(255,200,80))
+            for _, obj in ipairs(workspace:GetDescendants()) do
+                if obj:IsA("BasePart") and string.find(obj.Name, "Fruit") then
+                    if obj.Parent == workspace or (obj.Parent and obj.Parent.Name == "Map") then
+                        local dist = math.floor((obj.Position - myPos).Magnitude)
+                        CreateESP(obj, dist.." | "..obj.Name, Color3.fromRGB(255,200,80))
+                    end
+                end
             end
         end
         if State.ESPChest then
@@ -1941,7 +2435,9 @@ UIS.InputChanged:Connect(function(input)
     end
 end)
 UIS.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then IsDragging = false end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then 
+        IsDragging = false 
+    end
 end)
 
 OpenButton.Activated:Connect(function()
