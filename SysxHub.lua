@@ -1,7 +1,7 @@
 --[[
 ================================================================
- SYSX HUB - v2.1 | Fixed All Features
- Created by Ramanotsugarr
+ SYSX HUB - v2.2 | Created by Ramanotsugarr
+ Deep Fixed All Features
 ================================================================
 ]]
 
@@ -21,42 +21,43 @@ local Camera = Workspace.CurrentCamera
 
 local CONFIG = {
     Name = "SysxHub",
-    Build = "SysxHub v2.1 | Created by Ramanotsugarr",
+    Build = "SysxHub v2.2 | Created by Ramanotsugarr",
     Logo = "rbxassetid://136425814447688",
     OpenClose = "rbxassetid://70792832229220",
     Discord = "https://discord.gg/E5kQJW3hn",
-    Background = Color3.fromRGB(10, 8, 18),
-    Panel = Color3.fromRGB(17, 13, 29),
-    Panel2 = Color3.fromRGB(23, 18, 38),
-    Panel3 = Color3.fromRGB(30, 24, 48),
-    Purple = Color3.fromRGB(125, 70, 255),
-    Blue = Color3.fromRGB(80, 140, 255),
-    White = Color3.fromRGB(255, 255, 255),
+    Background = Color3.fromRGB(10,8,18),
+    Panel = Color3.fromRGB(17,13,29),
+    Panel2 = Color3.fromRGB(23,18,38),
+    Panel3 = Color3.fromRGB(30,24,48),
+    Purple = Color3.fromRGB(125,70,255),
+    Blue = Color3.fromRGB(80,140,255),
+    White = Color3.fromRGB(255,255,255),
     Radius = 10,
-    AttackRange = 25,
     FarmDelay = 0.1,
     ChestDelay = 0.5,
     KillAuraRange = 25,
     KillAuraCooldown = 0.35,
+    LevelTolerance = 50,
+    TweenFruitSpeed = 500,
+    TweenPlayerSpeed = 800,
+    TweenMobSpeed = 250,
 }
 
 local State = {
-    AutoFarm=false, AutoChest=false, AutoBoss=false, AutoMaterial=false,
+    AutoFarm=false, AutoChest=false, AutoBoss=false,
     AutoFruit=false, AutoKillNearest=false, AutoQuest=false, AutoRaid=false,
-    AutoBuyChip=false, AutoGacha=false, StoreFruit=false, AutoSecretQuest=false,
-    AutoFish=false, AutoDrive=false, AutoKillGolem=false, AutoCollectBone=false,
-    AutoAddStats=false, AutoTrade=false, AutoFarmSea=false, AutoKillSeaBeast=false,
+    AutoBuyChip=false, AutoGacha=false, StoreFruit=false,
+    AutoFish=false, AutoKillGolem=false, AutoCollectBone=false,
+    AutoAddStats=false, AutoFarmSea=false, AutoKillSeaBeast=false,
     SelectedWeapon=nil, SelectedCategory=nil,
-    SelectedBoss=nil, SelectedBossSea=nil,
-    SelectedSeaMob=nil, SelectedRaid=nil, SelectedPlayer=nil,
-    SelectedSecretLocation=nil, SelectedSecretQuest=nil,
-    HeightBoat=0, SpeedBoat=0,
+    SelectedBoss=nil, SelectedBossSea=nil, SelectedSeaMob=nil,
+    SelectedRaid=nil, SelectedPlayer=nil,
     BringMob=false, BringMobRange=50, InfiniteJump=false, BoostFPS=false,
     Hitbox=false, HitboxPart=nil, Aimbot=false,
-    KillAura=false, LastKillAura=0, LastBring=0,
+    KillAura=false, LastKillAura=0, LastBring=0, LastFruitTP=0,
     AntiAFK=true, Notifications=true,
     StatsMelee=0, StatsDefense=0, StatsSword=0, StatsGun=0, StatsBloxFruit=0,
-    OriginalLighting=nil, OpenedChests={}, JobIDInput="", CodeInput="",
+    OriginalLighting=nil, OpenedChests={}, CodeInput="",
 }
 
 local old = PlayerGui:FindFirstChild("SysxHub")
@@ -65,7 +66,7 @@ if old then old:Destroy() end
 --// HELPERS
 local function Create(cls, props)
     local o = Instance.new(cls)
-    for k, v in pairs(props or {}) do pcall(function() o[k] = v end) end
+    for k,v in pairs(props or {}) do pcall(function() o[k]=v end) end
     return o
 end
 
@@ -116,17 +117,24 @@ local function SafeCall(fn, ...)
     return true
 end
 
-local function IsAlive(m)
-    local h = m and m:FindFirstChildOfClass("Humanoid")
-    return h and h.Health > 0
-end
-
+--// FIXED NPC CHECK — only blood NPCs (can be attacked)
 local function IsNPC(m)
     if not m or m == Player.Character then return false end
-    if not m:FindFirstChildOfClass("Humanoid") then return false end
+    local hum = m:FindFirstChildOfClass("Humanoid")
+    if not hum then return false end
     if not m:FindFirstChild("HumanoidRootPart") then return false end
     if Players:GetPlayerFromCharacter(m) then return false end
-    return IsAlive(m)
+    if hum.Health <= 0 then return false end
+    if hum.MaxHealth <= 0 then return false end
+    if hum.WalkSpeed <= 0 then return false end
+    local n = string.lower(m.Name)
+    local passive = {"dealer","shop","vendor","merchant","quest","giver",
+        "bartender","chef","captain","scientist","teacher","guide","trainer",
+        "blacksmith","smith","farmer","villager","elder"}
+    for _, kw in ipairs(passive) do
+        if string.find(n, kw) then return false end
+    end
+    return true
 end
 
 local function IsEnemyPlayer(m)
@@ -134,9 +142,11 @@ local function IsEnemyPlayer(m)
     local plr = Players:GetPlayerFromCharacter(m)
     if not plr then return false end
     if plr:IsFriendsWith(Player.UserId) then return false end
-    return IsAlive(m)
+    local h = m:FindFirstChildOfClass("Humanoid")
+    return h and h.Health > 0
 end
 
+--// REMOTE
 local function FindRemote(...)
     local kws = {...}
     for _, obj in ipairs(game:GetDescendants()) do
@@ -150,10 +160,10 @@ local function FindRemote(...)
     return nil
 end
 
-local REMOTE_RandomFruit = FindRemote("randomfruit", "gacha", "zioles", "rollfruit")
-local REMOTE_StoreFruit = FindRemote("storefruit", "fruitstore", "savefruit")
 local CommF = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
+local REMOTE_StoreFruit = FindRemote("storefruit", "fruitstore", "savefruit")
 
+--// SCAN
 local function ScanEnemies()
     local list = {}
     for _, obj in ipairs(workspace:GetChildren()) do
@@ -175,7 +185,7 @@ local function FindChests()
         pcall(function()
             if obj:IsA("BasePart") then
                 local n = string.lower(obj.Name)
-                if string.find(n, "chest") or string.find(n, "treasure") or string.find(n, "reward") then
+                if string.find(n,"chest") or string.find(n,"treasure") or string.find(n,"reward") then
                     local isOpened = obj.Transparency >= 1 or obj:GetAttribute("Opened") == true
                     if not isOpened and obj.Parent then table.insert(list, obj) end
                 end
@@ -193,21 +203,9 @@ local function FindFruits()
     local list = {}
     for _, obj in ipairs(workspace:GetDescendants()) do
         if obj:IsA("BasePart") and string.find(string.lower(obj.Name), "fruit") then
-            table.insert(list, obj)
-        end
-    end
-    return list
-end
-
-local function FindMaterials()
-    local list = {}
-    local kws = {"material", "ore", "wood", "stone", "crystal", "shard", "relic"}
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if obj:IsA("BasePart") then
-            for _, kw in ipairs(kws) do
-                if string.find(string.lower(obj.Name), kw) then
-                    table.insert(list, obj) break
-                end
+            -- Only ground fruit
+            if obj.Parent == workspace or (obj.Parent and obj.Parent.Name == "Map") then
+                table.insert(list, obj)
             end
         end
     end
@@ -225,20 +223,15 @@ local function GetHeldFruit()
     return nil
 end
 
+--// WEAPON
 local function GetWeaponCategory(name)
     local n = string.lower(name)
     local swords = {"katana","cutlass","sword","saber","rapier","blade","trident","pole","reaper","scythe","dagger","hooks","anchor","cursed","hallow","buddy","shark saw","warden","rengoku","tushita","yama"}
-    for _, kw in ipairs(swords) do
-        if string.find(n, kw) then return "Sword" end
-    end
+    for _, kw in ipairs(swords) do if string.find(n, kw) then return "Sword" end end
     local guns = {"gun","pistol","slingshot","rifle","bazooka","cannon","musket","sniper","flintlock"}
-    for _, kw in ipairs(guns) do
-        if string.find(n, kw) then return "Gun" end
-    end
+    for _, kw in ipairs(guns) do if string.find(n, kw) then return "Gun" end end
     local fruits = {"fruit","dough","leopard","kitsune","dragon","venom","shadow","control","spirit","mammoth","trex","rumble","portal","phoenix","sound","spider","buddha","magma","quake","light","dark","ice","sand","flame"}
-    for _, kw in ipairs(fruits) do
-        if string.find(n, kw) then return "Fruit" end
-    end
+    for _, kw in ipairs(fruits) do if string.find(n, kw) then return "Fruit" end end
     return "Melee"
 end
 
@@ -292,22 +285,16 @@ local function EquipWeapon()
     return nil
 end
 
-local function TeleportTo(pos)
-    local hrp = GetHRP()
-    if not hrp then return end
-    hrp.CFrame = CFrame.new(pos)
-end
-
 local function AttackNearest(maxDist)
-    maxDist = maxDist or CONFIG.AttackRange
+    maxDist = maxDist or 60
     local hrp = GetHRP()
     if not hrp then return end
     local closest, dist = nil, math.huge
-    for _, enemy in ipairs(ScanEnemies()) do
-        local ehrp = enemy:FindFirstChild("HumanoidRootPart")
+    for _, e in ipairs(ScanEnemies()) do
+        local ehrp = e:FindFirstChild("HumanoidRootPart")
         if ehrp then
             local d = GetDist(ehrp.Position, hrp.Position)
-            if d < dist and d <= maxDist then closest, dist = enemy, d end
+            if d < dist and d <= maxDist then closest, dist = e, d end
         end
     end
     if closest then
@@ -316,6 +303,40 @@ local function AttackNearest(maxDist)
     end
 end
 
+--// TWEEN MOVEMENT (smooth)
+local function TweenToPosition(targetPos, speed)
+    local hrp = GetHRP()
+    if not hrp then return end
+    speed = speed or 250
+    local startCF = hrp.CFrame
+    local targetCF = CFrame.new(targetPos)
+    local distance = (startCF.Position - targetCF.Position).Magnitude
+    if distance < 1 then return end
+    local duration = distance / speed
+    local elapsed = 0
+    local conn
+    conn = RunService.Heartbeat:Connect(function(dt)
+        elapsed += dt
+        local alpha = math.clamp(elapsed / duration, 0, 1)
+        hrp.CFrame = startCF:Lerp(targetCF, alpha)
+        if alpha >= 1 then conn:Disconnect() end
+    end)
+    task.wait(duration + 0.05)
+end
+
+local function TweenToMob(mob, speed)
+    local trp = mob:FindFirstChild("HumanoidRootPart")
+    if not trp then return end
+    TweenToPosition(trp.Position + Vector3.new(0, 3, 0), speed or CONFIG.TweenMobSpeed)
+end
+
+local function TeleportTo(pos)
+    local hrp = GetHRP()
+    if not hrp then return end
+    hrp.CFrame = CFrame.new(pos)
+end
+
+--// MOB LEVEL
 local function GetMobLevel(mob)
     local lvl = mob:GetAttribute("Level") or mob:GetAttribute("level")
     if lvl then return lvl end
@@ -329,87 +350,33 @@ local function GetMobLevel(mob)
         elseif mh <= 30000 then return 600
         elseif mh <= 100000 then return 1000
         elseif mh <= 200000 then return 1300
-        else return math.floor(mh / 500) end
+        else return math.floor(mh/500) end
     end
     return 0
 end
 
 local function FindMobByLevel(playerLevel, tolerance)
-    tolerance = tolerance or 100
+    tolerance = tolerance or CONFIG.LevelTolerance
     local list = {}
     for _, mob in ipairs(ScanEnemies()) do
         local mLvl = GetMobLevel(mob)
         local diff = math.abs(mLvl - playerLevel)
         if diff <= tolerance then
-            table.insert(list, {model = mob, level = mLvl, diff = diff})
+            table.insert(list, {model=mob, level=mLvl, diff=diff})
         end
     end
-    table.sort(list, function(a, b) return a.diff < b.diff end)
+    table.sort(list, function(a,b) return a.diff < b.diff end)
     return list
 end
 
-local function TweenToMob(mob, speed)
-    local hrp = GetHRP()
-    if not hrp then return end
-    local trp = mob:FindFirstChild("HumanoidRootPart")
-    if not trp then return end
-    speed = speed or 150
-    local startCF = hrp.CFrame
-    local targetCF = CFrame.new(trp.Position + Vector3.new(0, 3, 0))
-    local distance = (startCF.Position - targetCF.Position).Magnitude
-    local duration = distance / speed
-    local elapsed = 0
-    local conn
-    conn = RunService.Heartbeat:Connect(function(dt)
-        elapsed += dt
-        local alpha = math.clamp(elapsed / duration, 0, 1)
-        hrp.CFrame = startCF:Lerp(targetCF, alpha)
-        if alpha >= 1 then conn:Disconnect() end
-    end)
-    task.wait(duration + 0.05)
-end
-
-local function FindObjectByKeyword(kw)
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if string.find(string.lower(obj.Name), string.lower(kw)) then
-            if obj:IsA("BasePart") or obj:IsA("Model") then return obj end
-        end
-    end
-    return nil
-end
-
-local function FindSeaMob(mobName)
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if obj.Name == mobName and obj:FindFirstChildOfClass("Humanoid") then
-            if obj:FindFirstChild("HumanoidRootPart") then return obj end
-        end
-    end
-    return nil
-end
-
-local function GetPlayerBoat()
-    local char = Player.Character
-    if not char then return nil end
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return nil end
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if obj:IsA("Model") and (string.find(string.lower(obj.Name), "boat") or string.find(string.lower(obj.Name), "ship")) then
-            if obj.PrimaryPart and GetDist(obj.PrimaryPart.Position, hrp.Position) < 50 then
-                return obj
-            end
-        end
-    end
-    return nil
-end
-
---// RAID ISLAND DETECTION (Kill Aura only on Island 3+)
+--// RAID ISLAND DETECTION
 local function GetRaidIsland()
     for _, obj in ipairs(workspace:GetDescendants()) do
         if obj:IsA("BasePart") or obj:IsA("Model") or obj:IsA("Folder") then
             local n = string.lower(obj.Name)
-            if string.find(n, "island3") or string.find(n, "island_3") then return 3 end
-            if string.find(n, "island4") or string.find(n, "island_4") then return 4 end
-            if string.find(n, "island5") or string.find(n, "island_5") then return 5 end
+            if string.find(n,"island3") or string.find(n,"island_3") then return 3 end
+            if string.find(n,"island4") or string.find(n,"island_4") then return 4 end
+            if string.find(n,"island5") or string.find(n,"island_5") then return 5 end
         end
     end
     local hrp = GetHRP()
@@ -418,9 +385,7 @@ local function GetRaidIsland()
     for _, obj in ipairs(workspace:GetChildren()) do
         if IsNPC(obj) then
             local trp = obj:FindFirstChild("HumanoidRootPart")
-            if trp and GetDist(trp.Position, hrp.Position) <= 100 then
-                mobCount += 1
-            end
+            if trp and GetDist(trp.Position, hrp.Position) <= 100 then mobCount += 1 end
         end
     end
     if mobCount >= 5 then return 3 end
@@ -436,7 +401,7 @@ local function IsInRaidIsland3()
     return GetRaidIsland() >= 3
 end
 
---// STATS
+--// COMMF_ FUNCTIONS
 local function AutoAddStats()
     if not CommF then Notify("CommF_ not found") return false end
     local stats = {
@@ -456,19 +421,6 @@ local function AutoAddStats()
     return true
 end
 
-local function DoAutoQuest()
-    if not CommF then return end
-    pcall(function() CommF:InvokeServer("StartQuest") end)
-end
-
-local function DoAutoRaid()
-    if not CommF or not State.SelectedRaid then return end
-    pcall(function() CommF:InvokeServer("RaidsNpc", "Select", State.SelectedRaid) end)
-    task.wait(0.5)
-    pcall(function() CommF:InvokeServer("RaidsNpc", "Start") end)
-    Notify("Raid: "..State.SelectedRaid)
-end
-
 local function DoGacha()
     if not CommF then return end
     pcall(function() CommF:InvokeServer("BuyFruit", "Random") end)
@@ -480,10 +432,26 @@ local function DoStoreFruit()
     if not held then return end
     if CommF then
         pcall(function() CommF:InvokeServer("StoreFruit", held.Name) end)
+    elseif REMOTE_StoreFruit then
+        pcall(function()
+            if REMOTE_StoreFruit:IsA("RemoteEvent") then
+                REMOTE_StoreFruit:FireServer(held)
+            else
+                REMOTE_StoreFruit:InvokeServer(held)
+            end
+        end)
     else
         pcall(function() held.Parent = Player.Backpack end)
     end
     Notify("Stored: "..held.Name)
+end
+
+local function DoAutoRaid()
+    if not CommF or not State.SelectedRaid then return end
+    pcall(function() CommF:InvokeServer("RaidsNpc", "Select", State.SelectedRaid) end)
+    task.wait(0.5)
+    pcall(function() CommF:InvokeServer("RaidsNpc", "Start") end)
+    Notify("Raid: "..State.SelectedRaid)
 end
 
 local function DoBuyChip()
@@ -491,6 +459,51 @@ local function DoBuyChip()
     pcall(function() CommF:InvokeServer("RaidsNpc", "Buy") end)
     Notify("BuyChip")
 end
+
+local function DoAutoQuest()
+    if not CommF then return end
+    pcall(function() CommF:InvokeServer("StartQuest") end)
+end
+
+--// BOSS DATA
+local BossData = {
+    Sea1 = {
+        {Name="Gorilla King", Level=25, Location="Jungle"},
+        {Name="Bobby", Level=55, Location="Pirate Village"},
+        {Name="Yeti", Level=110, Location="Frozen Village"},
+        {Name="Mob Leader", Level=120, Location="Pirate Village"},
+        {Name="Vice Admiral", Level=130, Location="Marine Fortress"},
+        {Name="Saber Expert", Level=200, Location="Jungle"},
+        {Name="Warden", Level=220, Location="Prison"},
+        {Name="Chief Warden", Level=230, Location="Prison"},
+        {Name="Swan", Level=240, Location="Prison"},
+        {Name="Magma Admiral", Level=350, Location="Magma Village"},
+        {Name="Fishman Lord", Level=425, Location="Underwater City"},
+        {Name="Wysper", Level=500, Location="Upper Skylands"},
+        {Name="Thunder God", Level=575, Location="Upper Skylands"},
+        {Name="Cyborg", Level=675, Location="Fountain City"},
+    },
+    Sea2 = {
+        {Name="Diamond", Level=750, Location="Kingdom of Rose"},
+        {Name="Jeremy", Level=850, Location="Kingdom of Rose"},
+        {Name="Fajita", Level=925, Location="Green Zone"},
+        {Name="Don Swan", Level=1000, Location="Kingdom of Rose"},
+        {Name="Darkbeard", Level=1000, Location="Dark Arena", Raid=true},
+        {Name="Smoke Admiral", Level=1150, Location="Hot and Cold"},
+        {Name="Cursed Captain", Level=1325, Location="Cursed Ship"},
+        {Name="Awakened Ice Admiral", Level=1400, Location="Ice Castle"},
+        {Name="Tide Keeper", Level=1475, Location="Forgotten Island"},
+    },
+    Sea3 = {
+        {Name="Stone", Level=1550, Location="Port Town"},
+        {Name="Island Empress", Level=1675, Location="Hydra Island"},
+        {Name="Kilo Admiral", Level=1750, Location="Great Tree"},
+        {Name="Captain Elephant", Level=1875, Location="Floating Turtle"},
+        {Name="Beautiful Pirate", Level=1950, Location="Floating Turtle"},
+        {Name="Longma", Level=2000, Location="Floating Turtle"},
+        {Name="Cake Queen", Level=2175, Location="Ice Cream Land"},
+    },
+}
 
 --// NOTIFY
 local Gui = Create("ScreenGui", {
@@ -500,8 +513,8 @@ local Gui = Create("ScreenGui", {
 })
 
 local Notification = Create("TextLabel", {
-    Name="Notification", Parent=Gui, AnchorPoint=Vector2.new(0.5, 1),
-    Position=UDim2.new(0.5, 0, 1, -20), Size=UDim2.fromOffset(340, 44),
+    Parent=Gui, AnchorPoint=Vector2.new(0.5,1),
+    Position=UDim2.new(0.5,0,1,-20), Size=UDim2.fromOffset(340,44),
     BackgroundColor3=CONFIG.Panel, BackgroundTransparency=0.05,
     Text="", TextColor3=CONFIG.White, TextSize=13,
     Font=Enum.Font.GothamMedium, Visible=false, ZIndex=500,
@@ -509,21 +522,21 @@ local Notification = Create("TextLabel", {
 Corner(Notification, 10)
 Stroke(Notification, CONFIG.Purple, 1, 0.35)
 
-local NotifyToken = 0
+local NT = 0
 local function Notify(text)
     if not State.Notifications then return end
-    NotifyToken += 1
-    local tk = NotifyToken
+    NT += 1
+    local tk = NT
     Notification.Text = tostring(text)
     Notification.Visible = true
     Notification.TextTransparency = 1
     Notification.BackgroundTransparency = 1
     Tween(Notification, {TextTransparency=0, BackgroundTransparency=0.05}, 0.2)
     task.delay(2.5, function()
-        if tk ~= NotifyToken then return end
+        if tk ~= NT then return end
         Tween(Notification, {TextTransparency=1, BackgroundTransparency=1}, 0.2)
         task.wait(0.2)
-        if tk == NotifyToken then Notification.Visible = false end
+        if tk == NT then Notification.Visible = false end
     end)
 end
 
@@ -543,44 +556,37 @@ if Camera then Camera:GetPropertyChangedSignal("ViewportSize"):Connect(UpdateSca
 
 -- OPEN BUTTON
 local OpenButton = Create("ImageButton", {
-    Name="OpenButton", Parent=Gui, BackgroundColor3=CONFIG.Panel,
-    Size=UDim2.fromOffset(64, 64), Position=UDim2.new(0, 18, 0.5, -32),
+    Parent=Gui, BackgroundColor3=CONFIG.Panel,
+    Size=UDim2.fromOffset(64,64), Position=UDim2.new(0,18,0.5,-32),
     Image=CONFIG.OpenClose, AutoButtonColor=false, Visible=true, ZIndex=100,
 })
 Corner(OpenButton, 16)
 Stroke(OpenButton, CONFIG.Purple, 2, 0.15)
 Gradient(OpenButton, CONFIG.Purple, CONFIG.Blue, 45)
 
-Create("TextLabel", {Name="Fallback", Parent=OpenButton, BackgroundTransparency=1, Size=UDim2.fromScale(1,1), Text="S", TextColor3=CONFIG.White, TextSize=24, Font=Enum.Font.GothamBold, ZIndex=101})
-
 -- MAIN
 local Main = Create("Frame", {
-    Name="Main", Parent=Gui, AnchorPoint=Vector2.new(0.5,0.5),
+    Parent=Gui, AnchorPoint=Vector2.new(0.5,0.5),
     Position=UDim2.fromScale(0.5,0.5), Size=UDim2.new(0,760,0,480),
     BackgroundColor3=CONFIG.Background, BorderSizePixel=0, Visible=true, ZIndex=10,
 })
 Corner(Main, 14)
 Stroke(Main, CONFIG.Purple, 1, 0.45)
 
-local MC = Instance.new("UISizeConstraint")
-MC.MaxSize = Vector2.new(850, 560)
-MC.MinSize = Vector2.new(310, 360)
-MC.Parent = Main
-
 -- TOPBAR
 local TopBar = Create("Frame", {
-    Name="TopBar", Parent=Main, BackgroundColor3=CONFIG.Panel,
+    Parent=Main, BackgroundColor3=CONFIG.Panel,
     Size=UDim2.new(1,0,0,64), BorderSizePixel=0, ZIndex=20,
 })
 Corner(TopBar, 14)
 Gradient(TopBar, CONFIG.Panel, CONFIG.Panel2, 0)
 
-Create("ImageLabel", {Name="Logo", Parent=TopBar, BackgroundTransparency=1, Size=UDim2.fromOffset(48,48), Position=UDim2.new(0,10,0.5,-24), Image=CONFIG.Logo, ScaleType=Enum.ScaleType.Fit, ZIndex=21})
-Create("TextLabel", {Name="Title", Parent=TopBar, BackgroundTransparency=1, Position=UDim2.new(0,66,0,8), Size=UDim2.new(0,250,0,25), Text="SysxHub", TextColor3=CONFIG.White, TextSize=20, Font=Enum.Font.GothamBold, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=21})
-Create("TextLabel", {Name="Subtitle", Parent=TopBar, BackgroundTransparency=1, Position=UDim2.new(0,67,0,33), Size=UDim2.new(0,400,0,18), Text=CONFIG.Build, TextColor3=CONFIG.White, TextSize=11, Font=Enum.Font.Gotham, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=21})
+Create("ImageLabel", {Parent=TopBar, BackgroundTransparency=1, Size=UDim2.fromOffset(48,48), Position=UDim2.new(0,10,0.5,-24), Image=CONFIG.Logo, ScaleType=Enum.ScaleType.Fit, ZIndex=21})
+Create("TextLabel", {Parent=TopBar, BackgroundTransparency=1, Position=UDim2.new(0,66,0,8), Size=UDim2.new(0,250,0,25), Text="SysxHub", TextColor3=CONFIG.White, TextSize=20, Font=Enum.Font.GothamBold, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=21})
+Create("TextLabel", {Parent=TopBar, BackgroundTransparency=1, Position=UDim2.new(0,67,0,33), Size=UDim2.new(0,400,0,18), Text=CONFIG.Build, TextColor3=CONFIG.White, TextSize=11, Font=Enum.Font.Gotham, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=21})
 
 local CloseButton = Create("TextButton", {
-    Name="Close", Parent=TopBar, BackgroundColor3=CONFIG.Panel2,
+    Parent=TopBar, BackgroundColor3=CONFIG.Panel2,
     Size=UDim2.fromOffset(38,38), Position=UDim2.new(1,-50,0.5,-19),
     Text="X", TextColor3=CONFIG.White, TextSize=20,
     Font=Enum.Font.GothamBold, AutoButtonColor=false, ZIndex=25,
@@ -590,25 +596,25 @@ Stroke(CloseButton, CONFIG.Purple, 1, 0.5)
 
 -- SIDEBAR
 local Sidebar = Create("Frame", {
-    Name="Sidebar", Parent=Main, BackgroundColor3=CONFIG.Panel,
+    Parent=Main, BackgroundColor3=CONFIG.Panel,
     Position=UDim2.new(0,0,0,64), Size=UDim2.new(0,155,1,-64),
     BorderSizePixel=0, ZIndex=15,
 })
 Corner(Sidebar, 14)
 
 local TabList = Create("ScrollingFrame", {
-    Name="Tabs", Parent=Sidebar, BackgroundTransparency=1,
+    Parent=Sidebar, BackgroundTransparency=1,
     Position=UDim2.new(0,8,0,10), Size=UDim2.new(1,-16,1,-20),
     CanvasSize=UDim2.new(0,0,0,0), AutomaticCanvasSize=Enum.AutomaticSize.Y,
     ScrollBarThickness=2, ScrollBarImageColor3=CONFIG.Purple, BorderSizePixel=0, ZIndex=16,
 })
-local TabLayout = Instance.new("UIListLayout")
-TabLayout.Padding = UDim.new(0,5)
-TabLayout.SortOrder = Enum.SortOrder.LayoutOrder
-TabLayout.Parent = TabList
+local TL = Instance.new("UIListLayout")
+TL.Padding = UDim.new(0,5)
+TL.SortOrder = Enum.SortOrder.LayoutOrder
+TL.Parent = TabList
 
 local Content = Create("Frame", {
-    Name="Content", Parent=Main, BackgroundTransparency=1,
+    Parent=Main, BackgroundTransparency=1,
     Position=UDim2.new(0,155,0,64), Size=UDim2.new(1,-155,1,-64),
     BorderSizePixel=0, ZIndex=11,
 })
@@ -676,17 +682,17 @@ local function CreateToggle(parent, text, default, cb)
     Corner(B, 9)
     Stroke(B, CONFIG.Purple, 1, 0.7)
     Create("TextLabel", {Parent=B, BackgroundTransparency=1, Position=UDim2.new(0,14,0,0), Size=UDim2.new(1,-75,1,0), Text=text, TextColor3=CONFIG.White, TextSize=13, Font=Enum.Font.GothamMedium, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=14})
-    local Indicator = Create("Frame", {Parent=B, BackgroundColor3=Color3.fromRGB(55,50,65), Size=UDim2.fromOffset(42,22), Position=UDim2.new(1,-56,0.5,-11), ZIndex=14})
-    Corner(Indicator, 20)
-    local Dot = Create("Frame", {Parent=Indicator, BackgroundColor3=Color3.fromRGB(190,185,200), Size=UDim2.fromOffset(16,16), Position=UDim2.new(0,3,0.5,-8), ZIndex=15})
+    local Ind = Create("Frame", {Parent=B, BackgroundColor3=Color3.fromRGB(55,50,65), Size=UDim2.fromOffset(42,22), Position=UDim2.new(1,-56,0.5,-11), ZIndex=14})
+    Corner(Ind, 20)
+    local Dot = Create("Frame", {Parent=Ind, BackgroundColor3=Color3.fromRGB(190,185,200), Size=UDim2.fromOffset(16,16), Position=UDim2.new(0,3,0.5,-8), ZIndex=15})
     Corner(Dot, 20)
     local function Update()
         if S2 then
-            Indicator.BackgroundColor3 = CONFIG.Purple
+            Ind.BackgroundColor3 = CONFIG.Purple
             Dot.BackgroundColor3 = Color3.new(1,1,1)
             Tween(Dot, {Position=UDim2.new(1,-19,0.5,-8)}, 0.15)
         else
-            Indicator.BackgroundColor3 = Color3.fromRGB(55,50,65)
+            Ind.BackgroundColor3 = Color3.fromRGB(55,50,65)
             Dot.BackgroundColor3 = Color3.fromRGB(190,185,200)
             Tween(Dot, {Position=UDim2.new(0,3,0.5,-8)}, 0.15)
         end
@@ -859,54 +865,6 @@ local function ShowTab(name)
     end
 end
 
---// DATA
-local BossData = {
-    Sea1 = {
-        {Name="Gorilla King", Level=25, Location="Jungle"},
-        {Name="Bobby (Chef)", Level=55, Location="Pirate Village"},
-        {Name="The Saw", Level=100, Location="Middle Town"},
-        {Name="Yeti", Level=110, Location="Frozen Village"},
-        {Name="Mob Leader", Level=120, Location="Pirate Starter Area"},
-        {Name="Vice Admiral", Level=130, Location="Marine Fortress"},
-        {Name="Saber Expert", Level=200, Location="Jungle Cave"},
-        {Name="Warden", Level=220, Location="Prison"},
-        {Name="Chief Warden", Level=230, Location="Prison"},
-        {Name="Swan", Level=240, Location="Prison"},
-        {Name="Magma Admiral", Level=350, Location="Magma Village"},
-        {Name="Fishman Lord", Level=425, Location="Underwater City"},
-        {Name="Wysper", Level=500, Location="Upper Skylands"},
-        {Name="Thunder God", Level=575, Location="Upper Skylands"},
-        {Name="Cyborg", Level=675, Location="Fountain City"},
-        {Name="Ice Admiral", Level=700, Location="Frozen Cave"},
-    },
-    Sea2 = {
-        {Name="Diamond", Level=750, Location="Kingdom of Rose"},
-        {Name="Jeremy", Level=850, Location="Kingdom of Rose"},
-        {Name="Orbitus", Level=925, Location="Green Zone"},
-        {Name="Don Swan", Level=1000, Location="Swan Mansion"},
-        {Name="Darkbeard", Level=1000, Location="Dark Arena", Raid=true},
-        {Name="Smoke Admiral", Level=1150, Location="Hot and Cold"},
-        {Name="Order", Level=1250, Location="Hot and Cold", Raid=true},
-        {Name="Cursed Captain", Level=1325, Location="Cursed Ship"},
-        {Name="Awakened Ice Admiral", Level=1400, Location="Ice Castle"},
-        {Name="Tide Keeper", Level=1475, Location="Forgotten Island"},
-    },
-    Sea3 = {
-        {Name="Stone", Level=1550, Location="Port Town"},
-        {Name="Island Empress", Level=1675, Location="Hydra Island"},
-        {Name="Kilo Admiral", Level=1750, Location="Great Tree"},
-        {Name="Captain Elephant", Level=1875, Location="Floating Turtle"},
-        {Name="Beautiful Pirate", Level=1950, Location="Floating Turtle"},
-        {Name="Longma", Level=2000, Location="Floating Turtle"},
-        {Name="Soul Reaper", Level=2100, Location="Haunted Castle", Raid=true},
-        {Name="Cake Queen", Level=2175, Location="Ice Cream Land"},
-        {Name="Cake Prince", Level=2300, Location="Sea of Treats", Raid=true},
-        {Name="Dough King", Level=2300, Location="Sea of Treats", Raid=true},
-        {Name="Tyrant of the Skies", Level=2600, Location="Tiki Outpost"},
-        {Name="rip_indra", Level=5000, Location="Castle on the Sea", Raid=true},
-    },
-}
-
 --// PAGES
 local DiscordPage = CreatePage("Discord")
 local FarmPage = CreatePage("Farm")
@@ -919,8 +877,8 @@ local PvPPage = CreatePage("PvP")
 local StatsPage = CreatePage("Stats")
 local MiscPage = CreatePage("Misc")
 
---// HOLDERS
-local WeaponListHolder = Create("Frame", {Parent=FarmPage, BackgroundColor3=CONFIG.Panel, Size=UDim2.new(1,0,0,200), BorderSizePixel=0, ZIndex=13})
+--// WEAPON HOLDER (only for Farm weapon select)
+local WeaponListHolder = Create("Frame", {Parent=FarmPage, BackgroundColor3=CONFIG.Panel, Size=UDim2.new(1,0,0,180), BorderSizePixel=0, ZIndex=13})
 Corner(WeaponListHolder, 10)
 Stroke(WeaponListHolder, CONFIG.Purple, 1, 0.7)
 local WeaponListScroll = Create("ScrollingFrame", {Parent=WeaponListHolder, BackgroundTransparency=1, Position=UDim2.new(0,8,0,8), Size=UDim2.new(1,-16,1,-16), CanvasSize=UDim2.new(0,0,0,0), AutomaticCanvasSize=Enum.AutomaticSize.Y, ScrollBarThickness=3, ScrollBarImageColor3=CONFIG.Purple, BorderSizePixel=0, ZIndex=14})
@@ -928,15 +886,6 @@ local WL = Instance.new("UIListLayout")
 WL.Padding = UDim.new(0,6)
 WL.SortOrder = Enum.SortOrder.LayoutOrder
 WL.Parent = WeaponListScroll
-
-local BossListHolder = Create("Frame", {Parent=FarmPage, BackgroundColor3=CONFIG.Panel, Size=UDim2.new(1,0,0,200), BorderSizePixel=0, ZIndex=13})
-Corner(BossListHolder, 10)
-Stroke(BossListHolder, CONFIG.Purple, 1, 0.7)
-local BossListScroll = Create("ScrollingFrame", {Parent=BossListHolder, BackgroundTransparency=1, Position=UDim2.new(0,8,0,8), Size=UDim2.new(1,-16,1,-16), CanvasSize=UDim2.new(0,0,0,0), AutomaticCanvasSize=Enum.AutomaticSize.Y, ScrollBarThickness=3, ScrollBarImageColor3=CONFIG.Purple, BorderSizePixel=0, ZIndex=14})
-local BL = Instance.new("UIListLayout")
-BL.Padding = UDim.new(0,6)
-BL.SortOrder = Enum.SortOrder.LayoutOrder
-BL.Parent = BossListScroll
 
 local function ShowWeaponsInCategory(cat)
     for _, c in ipairs(WeaponListScroll:GetChildren()) do
@@ -955,47 +904,23 @@ local function ShowWeaponsInCategory(cat)
     end
 end
 
-local function ShowBossBySea(sea)
-    for _, c in ipairs(BossListScroll:GetChildren()) do
-        if c:IsA("TextButton") then c:Destroy() end
-    end
-    for i, b in ipairs(BossData[sea] or {}) do
-        local Btn = Create("TextButton", {Parent=BossListScroll, BackgroundColor3=CONFIG.Panel2, Size=UDim2.new(1,0,0,46), Text="- "..b.Name.." (Lv "..b.Level..")\n  "..b.Location..(b.Raid and " [Raid]" or ""), TextColor3=CONFIG.White, TextSize=11, Font=Enum.Font.GothamMedium, AutoButtonColor=false, BorderSizePixel=0, LayoutOrder=i, ZIndex=15, TextXAlignment=Enum.TextXAlignment.Left, TextYAlignment=Enum.TextYAlignment.Top})
-        Corner(Btn, 8)
-        Padding(Btn, 12,12,6,6)
-        Btn.Activated:Connect(function()
-            State.SelectedBoss = b.Name
-            State.SelectedBossSea = sea
-            Notify("Boss: "..b.Name)
-        end)
-    end
-end
-
--- DISCORD
+--// DISCORD
 CreateSection(DiscordPage, "DISCORD INFO", "Join community")
-Create("TextLabel", {Parent=DiscordPage, BackgroundColor3=CONFIG.Panel, Size=UDim2.new(1,0,0,80), Text="Discord Server:\n"..CONFIG.Discord, TextColor3=CONFIG.White, TextSize=13, Font=Enum.Font.GothamMedium, TextXAlignment=Enum.TextXAlignment.Left, BorderSizePixel=0, ZIndex=13})
+Create("TextLabel", {Parent=DiscordPage, BackgroundColor3=CONFIG.Panel, Size=UDim2.new(1,0,0,80), Text="Discord:\n"..CONFIG.Discord, TextColor3=CONFIG.White, TextSize=13, Font=Enum.Font.GothamMedium, TextXAlignment=Enum.TextXAlignment.Left, BorderSizePixel=0, ZIndex=13})
 CreateButton(DiscordPage, "Copy Discord Link", function()
     if setclipboard then setclipboard(CONFIG.Discord) Notify("Copied") end
 end)
 
--- FARM
-CreateSection(FarmPage, "FARM", "Auto farm level")
-CreateToggle(FarmPage, "Auto Farm Level", false, function(s) State.AutoFarm=s Notify("Auto Farm Level: "..(s and "ON" or "OFF")) end)
+--// FARM
+CreateSection(FarmPage, "FARM", "Auto farm level + level match")
+CreateToggle(FarmPage, "Auto Farm Level", false, function(s) State.AutoFarm=s Notify("Auto Farm: "..(s and "ON" or "OFF")) end)
 CreateToggle(FarmPage, "Auto Kill Nearest", false, function(s) State.AutoKillNearest=s Notify("Auto Kill Nearest: "..(s and "ON" or "OFF")) end)
 CreateToggle(FarmPage, "Auto Quest", false, function(s) State.AutoQuest=s Notify("Auto Quest: "..(s and "ON" or "OFF")) end)
 
-CreateSection(FarmPage, "WEAPON", "Select category then weapon")
+CreateSection(FarmPage, "WEAPON", "Select weapon")
 CreateDropdown(FarmPage, "Select Tool", {"Melee", "Sword", "Gun", "Fruit"}, function(opt)
     State.SelectedCategory = opt
     ShowWeaponsInCategory(opt)
-end)
-
-CreateSection(FarmPage, "BOSS", "Select boss")
-CreateDropdown(FarmPage, "Select Sea", {"Sea1", "Sea2", "Sea3"}, function(opt) ShowBossBySea(opt) end)
-CreateToggle(FarmPage, "Auto Farm Boss", false, function(s)
-    State.AutoBoss = s
-    if s and not State.SelectedBoss then Notify("Select boss first") State.AutoBoss = false
-    else Notify("Auto Farm Boss: "..(s and "ON" or "OFF")) end
 end)
 
 CreateSection(FarmPage, "CHEST", "Auto farm chest")
@@ -1005,18 +930,17 @@ CreateToggle(FarmPage, "Farm Chest", false, function(s)
     Notify("Farm Chest: "..(s and "ON" or "OFF"))
 end)
 
--- SEA
-CreateSection(SeaPage, "SEA", "Select sea mobs")
-CreateDropdown(SeaPage, "Select Mobs", {"Piranha", "Shark", "FishCrewMember", "SeaBeast", "Terrorshark"}, function(opt)
+--// SEA
+CreateSection(SeaPage, "SEA", "Select mobs")
+CreateDropdown(SeaPage, "Select Mobs", {"Piranha","Shark","FishCrewMember","SeaBeast","Terrorshark"}, function(opt)
     State.SelectedSeaMob = opt
     Notify("Mob: "..opt)
 end)
 CreateToggle(SeaPage, "Auto Farm Sea", false, function(s) State.AutoFarmSea=s Notify("Auto Farm Sea: "..(s and "ON" or "OFF")) end)
 CreateToggle(SeaPage, "Auto Kill Sea Beast", false, function(s) State.AutoKillSeaBeast=s Notify("Auto Kill Sea Beast: "..(s and "ON" or "OFF")) end)
-CreateToggle(SeaPage, "Auto Drive", false, function(s) State.AutoDrive=s Notify("Auto Drive: "..(s and "ON" or "OFF")) end)
 
--- QUEST / ITEMS
-CreateSection(QuestItemsPage, "QUEST / ITEMS", "Auto farm rare items")
+--// QUEST / ITEMS
+CreateSection(QuestItemsPage, "QUEST / ITEMS", "Rare item features")
 CreateToggle(QuestItemsPage, "Auto CDK", false, function(s) Notify("Auto CDK: "..(s and "ON" or "OFF")) end)
 CreateToggle(QuestItemsPage, "Auto Dark Dagger", false, function(s) Notify("Auto Dark Dagger: "..(s and "ON" or "OFF")) end)
 CreateToggle(QuestItemsPage, "Auto Soul Guitar", false, function(s) Notify("Auto Soul Guitar: "..(s and "ON" or "OFF")) end)
@@ -1026,8 +950,8 @@ CreateToggle(QuestItemsPage, "Auto Buddy Sword", false, function(s) Notify("Auto
 CreateToggle(QuestItemsPage, "Auto Kill Indra", false, function(s) Notify("Auto Kill Indra: "..(s and "ON" or "OFF")) end)
 CreateToggle(QuestItemsPage, "Auto Spawn Dough King", false, function(s) Notify("Auto Spawn Dough King: "..(s and "ON" or "OFF")) end)
 
--- FRUIT / RAID
-CreateSection(FruitRaidPage, "FRUIT", "Auto collect fruit")
+--// FRUIT / RAID
+CreateSection(FruitRaidPage, "FRUIT", "Auto collect fruit (tween)")
 CreateToggle(FruitRaidPage, "Auto Collect Fruit", false, function(s) State.AutoFruit=s Notify("Auto Collect Fruit: "..(s and "ON" or "OFF")) end)
 
 CreateSection(FruitRaidPage, "GACHA ZIOLES", "Auto Gacha Box")
@@ -1042,13 +966,22 @@ end)
 CreateToggle(FruitRaidPage, "Auto Raid", false, function(s) State.AutoRaid=s Notify("Auto Raid: "..(s and "ON" or "OFF")) end)
 CreateToggle(FruitRaidPage, "Auto Buy Chip", false, function(s) State.AutoBuyChip=s Notify("Auto Buy Chip: "..(s and "ON" or "OFF")) end)
 
--- FISHING
+--// FISHING
 CreateSection(FishingPage, "FISHING", "Auto fishing")
 CreateToggle(FishingPage, "Auto Fishing", false, function(s) State.AutoFish=s Notify("Auto Fishing: "..(s and "ON" or "OFF")) end)
 
--- STATUS
-CreateSection(StatusPage, "STATUS", "Player info")
-local StatusLabel = Create("TextLabel", {Parent=StatusPage, BackgroundColor3=CONFIG.Panel, Size=UDim2.new(1,0,0,120), Text="Loading...", TextColor3=CONFIG.White, TextSize=13, Font=Enum.Font.GothamMedium, TextXAlignment=Enum.TextXAlignment.Left, BorderSizePixel=0, ZIndex=13})
+--// STATUS (BOSSES PER SEA)
+CreateSection(StatusPage, "STATUS", "Player info + boss list")
+local StatusLabel = Create("TextLabel", {
+    Parent=StatusPage, BackgroundColor3=CONFIG.Panel,
+    Size=UDim2.new(1,0,0,300),
+    Text="Loading...",
+    TextColor3=CONFIG.White, TextSize=12,
+    Font=Enum.Font.GothamMedium,
+    TextXAlignment=Enum.TextXAlignment.Left,
+    TextYAlignment=Enum.TextYAlignment.Top,
+    BorderSizePixel=0, ZIndex=13,
+})
 Corner(StatusLabel, 9)
 Padding(StatusLabel, 14,14,7,7)
 
@@ -1058,13 +991,25 @@ local LevelValue = leaderstats and leaderstats:FindFirstChild("Level")
 task.spawn(function()
     while task.wait(1) do
         if LevelValue then
-            StatusLabel.Text = string.format("Level: %d\nRaid Island: %d\nBoss: %s\nRaid: %s", LevelValue.Value, GetRaidIsland(), State.SelectedBoss or "-", State.SelectedRaid or "-")
+            local lv = LevelValue.Value
+            local sea = "Sea1"
+            if lv >= 1500 then sea = "Sea3"
+            elseif lv >= 700 then sea = "Sea2"
+            end
+            
+            local bossList = BossData[sea] or {}
+            local bossText = "\n=== BOSSES "..sea:upper().." ==="
+            for _, b in ipairs(bossList) do
+                bossText = bossText .. string.format("\n%s (Lv %d) - %s", b.Name, b.Level, b.Location)
+            end
+            
+            StatusLabel.Text = string.format("Level: %d\nSea: %s\nRaid Island: %d%s", lv, sea, GetRaidIsland(), bossText)
         end
     end
 end)
 
--- PVP
-CreateSection(PvPPage, "PLAYER CONTROL", "Select player")
+--// PVP
+CreateSection(PvPPage, "PLAYER CONTROL", "Select + tween to player")
 CreateDropdown(PvPPage, "Select Player", (function()
     local list = {}
     for _, plr in ipairs(Players:GetPlayers()) do
@@ -1074,7 +1019,7 @@ CreateDropdown(PvPPage, "Select Player", (function()
     return list
 end)(), function(opt) State.SelectedPlayer = opt Notify("Player: "..opt) end)
 
-CreateButton(PvPPage, "Teleport Player", function()
+CreateButton(PvPPage, "Teleport Player (Tween)", function()
     if not State.SelectedPlayer then Notify("Select player first") return end
     local target = nil
     for _, plr in ipairs(Players:GetPlayers()) do
@@ -1082,11 +1027,9 @@ CreateButton(PvPPage, "Teleport Player", function()
     end
     if not target or not target.Character then Notify("Player not found") return end
     local trp = target.Character:FindFirstChild("HumanoidRootPart")
-    if not trp then return end
-    local myhrp = GetHRP()
-    if not myhrp then return end
-    myhrp.CFrame = trp.CFrame * CFrame.new(0, 0, -5)
-    Notify("Teleported to: "..State.SelectedPlayer)
+    if not trp then Notify("Target no HRP") return end
+    TweenToPosition(trp.Position + Vector3.new(0, 3, 5), CONFIG.TweenPlayerSpeed)
+    Notify("Tweening to: "..State.SelectedPlayer)
 end)
 
 CreateButton(PvPPage, "Spectate Player", function()
@@ -1125,12 +1068,12 @@ task.spawn(function()
         if IsInRaidIsland3() then
             KillAuraLabel.Text = "Kill Aura: ACTIVE (Raid Island "..GetRaidIsland()..")"
         else
-            KillAuraLabel.Text = "Kill Aura: Standby (not raid island 3+)"
+            KillAuraLabel.Text = "Kill Aura: Standby (need Island 3+)"
         end
     end
 end)
 
--- STATS
+--// STATS
 CreateSection(StatsPage, "AUTO ADD STATS", "Distribute stat points")
 CreateToggle(StatsPage, "Auto Add Stats", false, function(s) State.AutoAddStats=s Notify("Auto Add Stats: "..(s and "ON" or "OFF")) end)
 CreateSlider(StatsPage, "Melee", 0, 100, 0, function(v) State.StatsMelee=v end)
@@ -1140,7 +1083,7 @@ CreateSlider(StatsPage, "Gun", 0, 100, 0, function(v) State.StatsGun=v end)
 CreateSlider(StatsPage, "BloxFruit", 0, 100, 0, function(v) State.StatsBloxFruit=v end)
 CreateButton(StatsPage, "Apply Stats Now", function() AutoAddStats() end)
 
--- MISC
+--// MISC
 CreateSection(MiscPage, "ANTI AFK", "Prevent kick")
 CreateToggle(MiscPage, "Anti AFK", true, function(s) State.AntiAFK=s Notify("Anti AFK: "..(s and "ON" or "OFF")) end)
 
@@ -1189,24 +1132,28 @@ end)
 CreateSection(MiscPage, "SERVER", "Server options")
 CreateButton(MiscPage, "Rejoin Server", function() TeleportService:Teleport(game.PlaceId, Player) end)
 
+--// =====================================================
 --// LOOPS
+--// =====================================================
+
+-- AUTO FARM LEVEL (blood NPC + level match ±50)
 task.spawn(function()
     while task.wait(CONFIG.FarmDelay) do
         if State.AutoFarm then
             SafeCall(function()
                 local lv = LevelValue and LevelValue.Value or 1
-                local mobs = FindMobByLevel(lv, 100)
+                local mobs = FindMobByLevel(lv, CONFIG.LevelTolerance)
                 if #mobs > 0 then
                     local target = mobs[1].model
-                    local trp = target:FindFirstChild("HumanoidRootPart")
-                    if trp then
-                        TweenToMob(target, 150)
-                        local tool = EquipWeapon()
-                        if tool then
-                            while target.Parent and target:FindFirstChildOfClass("Humanoid") and target.Humanoid.Health > 0 and State.AutoFarm do
-                                tool:Activate()
-                                task.wait(0.1)
-                            end
+                    TweenToMob(target, CONFIG.TweenMobSpeed)
+                    local tool = EquipWeapon()
+                    if tool then
+                        while target.Parent 
+                            and target:FindFirstChildOfClass("Humanoid")
+                            and target.Humanoid.Health > 0
+                            and State.AutoFarm do
+                            tool:Activate()
+                            task.wait(0.1)
                         end
                     end
                 end
@@ -1217,6 +1164,7 @@ task.spawn(function()
     end
 end)
 
+-- AUTO CHEST
 task.spawn(function()
     while task.wait(CONFIG.ChestDelay) do
         if State.AutoChest then
@@ -1246,39 +1194,30 @@ task.spawn(function()
     end
 end)
 
+-- AUTO FRUIT (tween fast + cooldown + ground filter)
 task.spawn(function()
-    while task.wait(1) do
-        if State.AutoBoss and State.SelectedBoss then
-            SafeCall(function()
-                local boss = FindBoss(State.SelectedBoss)
-                if boss then
-                    local hrp = boss:FindFirstChild("HumanoidRootPart")
-                    if hrp then
-                        TeleportTo(hrp.Position + Vector3.new(0, 3, 0))
-                        local tool = EquipWeapon()
-                        if tool then tool:Activate() end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(2) do
+    while task.wait(0.5) do
         if State.AutoFruit then
             SafeCall(function()
+                local now = os.clock()
+                if now - State.LastFruitTP < 1 then return end
+                local hrp = GetHRP()
+                if not hrp then return end
+                local nearest, nd = nil, math.huge
                 for _, f in ipairs(FindFruits()) do
-                    local hrp = GetHRP()
-                    if hrp and GetDist(f.Position, hrp.Position) < 500 then
-                        TeleportTo(f.Position + Vector3.new(0, 3, 0))
-                    end
+                    local d = GetDist(f.Position, hrp.Position)
+                    if d < 500 and d < nd then nearest, nd = f, d end
+                end
+                if nearest then
+                    State.LastFruitTP = now
+                    TweenToPosition(nearest.Position + Vector3.new(0, 3, 0), CONFIG.TweenFruitSpeed)
                 end
             end)
         end
     end
 end)
 
+-- AUTO FISHING
 task.spawn(function()
     while task.wait(2) do
         if State.AutoFish then
@@ -1292,6 +1231,7 @@ task.spawn(function()
     end
 end)
 
+-- AUTO GACHA
 task.spawn(function()
     while task.wait(60) do
         if State.AutoGacha then
@@ -1302,6 +1242,7 @@ task.spawn(function()
     end
 end)
 
+-- AUTO STORE FRUIT
 task.spawn(function()
     while task.wait(1.5) do
         if State.StoreFruit then
@@ -1312,25 +1253,28 @@ task.spawn(function()
     end
 end)
 
+-- AUTO RAID
 task.spawn(function()
     while task.wait(10) do
         if State.AutoRaid then SafeCall(DoAutoRaid) end
     end
 end)
 
+-- AUTO BUY CHIP
 task.spawn(function()
     while task.wait(15) do
         if State.AutoBuyChip then SafeCall(DoBuyChip) end
     end
 end)
 
+-- AUTO ADD STATS
 task.spawn(function()
     while task.wait(3) do
         if State.AutoAddStats then SafeCall(AutoAddStats) end
     end
 end)
 
--- KILL AURA (AUTO ON RAID ISLAND 3+)
+-- KILL AURA (only Island 3+ raid)
 task.spawn(function()
     while task.wait(0.1) do
         State.KillAura = IsInRaidIsland3()
@@ -1361,6 +1305,7 @@ task.spawn(function()
     end
 end)
 
+-- HITBOX
 task.spawn(function()
     while task.wait(0.05) do
         if State.Hitbox then
@@ -1369,7 +1314,7 @@ task.spawn(function()
                 if not State.HitboxPart or not State.HitboxPart.Parent then
                     local hb = Instance.new("Part")
                     hb.Name = "SysxHitbox"
-                    hb.Size = Vector3.new(10, 10, 10)
+                    hb.Size = Vector3.new(10,10,10)
                     hb.Transparency = 1
                     hb.CanCollide = false
                     hb.CanTouch = true
@@ -1386,6 +1331,7 @@ task.spawn(function()
     end
 end)
 
+-- BRING MOB
 task.spawn(function()
     while task.wait(0.1) do
         if State.BringMob then
@@ -1409,6 +1355,7 @@ task.spawn(function()
     end
 end)
 
+-- INFINITE JUMP
 task.spawn(function()
     while task.wait(0.1) do
         if State.InfiniteJump then
@@ -1423,6 +1370,7 @@ task.spawn(function()
     end
 end)
 
+-- AIMBOT
 task.spawn(function()
     while task.wait(0.05) do
         if State.Aimbot then
@@ -1436,9 +1384,7 @@ task.spawn(function()
                     end
                 end
             end
-            if closest then
-                Camera.CFrame = CFrame.new(Camera.CFrame.Position, closest.Position)
-            end
+            if closest then Camera.CFrame = CFrame.new(Camera.CFrame.Position, closest.Position) end
         end
     end
 end)
@@ -1478,12 +1424,12 @@ Player.Idled:Connect(function()
     end
 end)
 
-ShowTab("Discord")
+ShowTab("Farm")
 
 print("================================")
-print("        SYSX HUB LOADED v2.1")
+print("        SYSX HUB LOADED v2.2")
 print("        "..CONFIG.Build)
 print("================================")
 
-Notify("SysxHub v2.1 loaded")
+Notify("SysxHub v2.2 loaded")
 return true
