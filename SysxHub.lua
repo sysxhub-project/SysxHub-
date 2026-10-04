@@ -1,7 +1,7 @@
 --[[
 ================================================================
- SYSX HUB - FREEMIUM VERSION | v1.3 | Created by Ramanotsugarr
- Single File - Full Code
+ SYSX HUB - FREEMIUM VERSION | v1.6 | Created by Ramanotsugarr
+ Single File
 ================================================================
 ]]
 
@@ -13,6 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local VirtualUser = game:GetService("VirtualUser")
 local TeleportService = game:GetService("TeleportService")
+local Lighting = game:GetService("Lighting")
 
 local Player = Players.LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")
@@ -20,7 +21,7 @@ local Camera = Workspace.CurrentCamera
 
 local CONFIG = {
     Name = "SysxHub",
-    Build = "Freemium Version | v1.3 | Created by Ramanotsugarr",
+    Build = "Freemium Version | v1.6 | Created by Ramanotsugarr",
     Credit = "Ramanotsugarr",
     Logo = "rbxassetid://136425814447688",
     OpenClose = "rbxassetid://70792832229220",
@@ -42,7 +43,8 @@ local CONFIG = {
     FarmDelay = 0.12,
     RandomFruitCooldown = 7200,
     RaidMinLevel = 1500,
-    ChestDelay = 0.8,
+    ChestDelay = 0.5,
+    ChestWaitCooldown = 5,
 }
 
 local State = {
@@ -55,15 +57,17 @@ local State = {
     AutoBuddySword=false, AutoKillIndra=false, AutoSpawnDoughKing=false,
     FruitSniper=false, PvPMode=false, ESPPlayers=false, Aimbot=false,
     KillAura=false, Hitbox=false, BringMob=false,
+    InfiniteJump=false, BoostFPS=false,
     UIAnimation=true, Notifications=true, AntiAFK=true,
-    CurrentIsland=nil, CurrentSword=nil, CurrentBoss=nil, CurrentRaid=nil,
-    KillCount=0, StartTime=os.time(), SelectedSword=nil,
+    CurrentIsland=nil, CurrentBoss=nil,
+    SelectedWeapon=nil, SelectedCategory=nil,
+    SelectedBoss=nil, SelectedBossSea=nil,
+    SelectedSecretQuest=nil, SelectedSecretLocation=nil, ActiveSecretQuest=nil,
     RandomFruit=false, StoreFruit=false, LastRandomFruit=0,
     AutoBuyChip=false, StoreChip=false, LastBuyChip=0,
-    AutoFragment=false,
-    LastAttack=0, LastKillAura=0, LastBring=0,
-    HitboxPart=nil,
-    OpenedChests = {},
+    LastKillAura=0, LastBring=0,
+    HitboxPart=nil, OpenedChests={},
+    JobIDInput="", CodeInput="", OriginalLighting=nil,
 }
 
 local old = PlayerGui:FindFirstChild("SysxHub")
@@ -146,36 +150,24 @@ local function IsEnemyPlayer(model)
     return IsAlive(model)
 end
 
---// REMOTE AUTO DETECT
 local function FindRemote(...)
     local keywords = {...}
     for _, obj in ipairs(game:GetDescendants()) do
         if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
             local lname = string.lower(obj.Name)
             for _, kw in ipairs(keywords) do
-                if string.find(lname, string.lower(kw)) then
-                    return obj
-                end
+                if string.find(lname, string.lower(kw)) then return obj end
             end
         end
     end
     return nil
 end
 
-local function FindRemoteExact(name)
-    for _, obj in ipairs(game:GetDescendants()) do
-        if obj.Name == name and (obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction")) then
-            return obj
-        end
-    end
-    return nil
-end
+local REMOTE_RandomFruit = FindRemote("randomfruit","gacha","zioles","rollfruit")
+local REMOTE_BuyChip = FindRemote("buychip","purchasechip","raidchip","microchip")
+local REMOTE_StoreFruit = FindRemote("storefruit","fruitstore","savefruit")
+local REMOTE_Redeem = FindRemote("redeem","promocode","code")
 
-local REMOTE_RandomFruit = FindRemoteExact("RandomFruit") or FindRemote("randomfruit","gacha","zioles","rollfruit","fruitgacha")
-local REMOTE_BuyChip = FindRemoteExact("BuyChip") or FindRemote("buychip","purchasechip","raidchip","microchip")
-local REMOTE_StoreFruit = FindRemoteExact("StoreFruit") or FindRemote("storefruit","fruitstore","savefruit")
-
---// GUI BASE
 local Gui = Create("ScreenGui", {
     Name="SysxHub", Parent=PlayerGui, ResetOnSpawn=false,
     IgnoreGuiInset=true, DisplayOrder=999999,
@@ -311,8 +303,7 @@ local function Notify(text)
     end)
 end
 
-local Pages = {}
-local Tabs = {}
+local Pages, Tabs = {}, {}
 
 local function CreatePage(name)
     local Page = Create("ScrollingFrame", {
@@ -403,11 +394,11 @@ local function CreateToggle(parent, text, default, callback)
     local function Update()
         if S2 then
             Indicator.BackgroundColor3 = CONFIG.Purple
-            Dot.BackgroundColor3 = Color3.new(1, 1, 1)
+            Dot.BackgroundColor3 = Color3.new(1,1,1)
             Tween(Dot, {Position=UDim2.new(1, -19, 0.5, -8)}, 0.15)
         else
-            Indicator.BackgroundColor3 = Color3.fromRGB(55, 50, 65)
-            Dot.BackgroundColor3 = Color3.fromRGB(190, 185, 200)
+            Indicator.BackgroundColor3 = Color3.fromRGB(55,50,65)
+            Dot.BackgroundColor3 = Color3.fromRGB(190,185,200)
             Tween(Dot, {Position=UDim2.new(0, 3, 0.5, -8)}, 0.15)
         end
     end
@@ -426,7 +417,7 @@ local function CreateInput(parent, placeholder, callback)
     local Box = Create("TextBox", {
         Parent=parent, BackgroundColor3=CONFIG.Panel2,
         Size=UDim2.new(1, 0, 0, 40), Text="",
-        PlaceholderText=placeholder or "Search...",
+        PlaceholderText=placeholder or "Input...",
         PlaceholderColor3=CONFIG.SubText,
         TextColor3=CONFIG.Text, TextSize=13,
         Font=Enum.Font.GothamMedium, AutoButtonColor=false,
@@ -437,13 +428,8 @@ local function CreateInput(parent, placeholder, callback)
     Corner(Box, 9)
     Stroke(Box, CONFIG.Purple, 1, 0.7)
     Padding(Box, 12, 12, 0, 0)
-    Box.Focused:Connect(function() Tween(Box, {BackgroundColor3=CONFIG.Panel3}, 0.15) end)
     Box.FocusLost:Connect(function()
-        Tween(Box, {BackgroundColor3=CONFIG.Panel2}, 0.15)
-        if callback then
-            local ok, err = pcall(callback, Box.Text)
-            if not ok then warn("[Input Error]", err) end
-        end
+        if callback then pcall(callback, Box.Text) end
     end)
     return Box
 end
@@ -473,7 +459,7 @@ local function ShowTab(name)
         local active = tabName == name
         if active then
             data.Button.BackgroundColor3 = CONFIG.Purple
-            data.Label.TextColor3 = Color3.new(1, 1, 1)
+            data.Label.TextColor3 = Color3.new(1,1,1)
         else
             data.Button.BackgroundColor3 = CONFIG.Panel
             data.Label.TextColor3 = CONFIG.SubText
@@ -481,7 +467,7 @@ local function ShowTab(name)
     end
 end
 
---// DATA ISLANDS
+--// ISLANDS
 local Sea1Islands = {
     {Name="Starter Island", MinLevel=1, MaxLevel=9},
     {Name="Jungle", MinLevel=10, MaxLevel=14},
@@ -531,122 +517,116 @@ local function GetIslandByLevel(level)
     return nil, nil
 end
 
---// SECRET QUEST DATA
+local BossData = {
+    Sea1 = {
+        {Name="Gorilla King", Level=25, Location="Jungle"},
+        {Name="Bobby (Chef)", Level=55, Location="Pirate Village"},
+        {Name="The Saw", Level=100, Location="Middle Town"},
+        {Name="Yeti", Level=110, Location="Frozen Village"},
+        {Name="Mob Leader", Level=120, Location="Pirate Starter Area"},
+        {Name="Vice Admiral", Level=130, Location="Marine Fortress"},
+        {Name="Saber Expert", Level=200, Location="Jungle Cave"},
+        {Name="Warden", Level=220, Location="Prison"},
+        {Name="Chief Warden", Level=230, Location="Prison"},
+        {Name="Swan", Level=240, Location="Prison"},
+        {Name="Magma Admiral", Level=350, Location="Magma Village"},
+        {Name="Fishman Lord", Level=425, Location="Underwater City"},
+        {Name="Wysper", Level=500, Location="Upper Skylands"},
+        {Name="Thunder God", Level=575, Location="Upper Skylands"},
+        {Name="Cyborg", Level=675, Location="Fountain City"},
+        {Name="Ice Admiral", Level=700, Location="Frozen Cave"},
+    },
+    Sea2 = {
+        {Name="Diamond", Level=750, Location="Kingdom of Rose"},
+        {Name="Jeremy", Level=850, Location="Kingdom of Rose"},
+        {Name="Orbitus", Level=925, Location="Green Zone"},
+        {Name="Don Swan", Level=1000, Location="Swan Mansion"},
+        {Name="Darkbeard", Level=1000, Location="Dark Arena", Raid=true},
+        {Name="Smoke Admiral", Level=1150, Location="Hot and Cold"},
+        {Name="Order", Level=1250, Location="Hot and Cold", Raid=true},
+        {Name="Cursed Captain", Level=1325, Location="Cursed Ship"},
+        {Name="Awakened Ice Admiral", Level=1400, Location="Ice Castle"},
+        {Name="Tide Keeper", Level=1475, Location="Forgotten Island"},
+    },
+    Sea3 = {
+        {Name="Stone", Level=1550, Location="Port Town"},
+        {Name="Island Empress", Level=1675, Location="Hydra Island"},
+        {Name="Kilo Admiral", Level=1750, Location="Great Tree"},
+        {Name="Captain Elephant", Level=1875, Location="Floating Turtle"},
+        {Name="Beautiful Pirate", Level=1950, Location="Floating Turtle"},
+        {Name="Longma", Level=2000, Location="Floating Turtle"},
+        {Name="Soul Reaper", Level=2100, Location="Haunted Castle", Raid=true},
+        {Name="Cake Queen", Level=2175, Location="Ice Cream Land"},
+        {Name="Cake Prince", Level=2300, Location="Sea of Treats", Raid=true},
+        {Name="Dough King", Level=2300, Location="Sea of Treats", Raid=true},
+        {Name="Tyrant of the Skies", Level=2600, Location="Tiki Outpost"},
+        {Name="rip_indra", Level=5000, Location="Castle on the Sea", Raid=true},
+    },
+}
+
 local SecretQuests = {
     Jungle = {
-        {Name="Find Grappling Hook + repair Zipline", Steps={"Cari Grappling Hook", "Repair Zipline"}},
-        {Name="Find Monkey tracks + knock Monkey down + return Hat", Steps={"Cari jejak Monkey", "Knock Monkey", "Return Hat"}},
-        {Name="Trigger Gorilla King + knock bananas + defeat Gorilla King", Steps={"Trigger Gorilla King", "Knock bananas", "Defeat Gorilla King"}},
+        {Name="Find Grappling Hook + repair Zipline", Steps={"Cari Grappling Hook","Repair Zipline"}},
+        {Name="Find Monkey tracks + knock Monkey down + return Hat", Steps={"Cari jejak Monkey","Knock Monkey","Return Hat"}},
+        {Name="Trigger Gorilla King + knock bananas + defeat Gorilla King", Steps={"Trigger Gorilla King","Knock bananas","Defeat Gorilla King"}},
     },
     ["Pirate Village"] = {
-        {Name="Break all Windmill ropes", Steps={"Cari windmill", "Putus semua tali"}},
-        {Name="Wait Tavern enemies + defeat them + talk Bartender", Steps={"Tunggu musuh", "Kalahkan", "Talk Bartender"}},
-        {Name="Help Chef + complete his task", Steps={"Bantu Chef", "Selesaikan task"}},
+        {Name="Break all Windmill ropes", Steps={"Cari windmill","Putus semua tali"}},
+        {Name="Wait Tavern enemies + defeat them + talk Bartender", Steps={"Tunggu musuh","Kalahkan","Talk Bartender"}},
+        {Name="Help Chef + complete his task", Steps={"Bantu Chef","Selesaikan task"}},
     },
     Desert = {
-        {Name="Rescue Hasan under the Pyramid", Steps={"Masuk Pyramid", "Cari Hasan", "Rescue"}},
-        {Name="Find and interact with 8 stone monuments", Steps={"Cari 8 monument", "Interact semua"}},
-        {Name="Collect Cactus fruits", Steps={"Cari cactus", "Collect fruit"}},
+        {Name="Rescue Hasan under the Pyramid", Steps={"Masuk Pyramid","Cari Hasan","Rescue"}},
+        {Name="Find and interact with 8 stone monuments", Steps={"Cari 8 monument","Interact semua"}},
+        {Name="Collect Cactus fruits", Steps={"Cari cactus","Collect fruit"}},
     },
     ["Frozen Village"] = {
-        {Name="Find Ability Teacher + complete his task", Steps={"Cari Teacher", "Selesaikan task"}},
-        {Name="Build 3 Snowmen", Steps={"Kumpulkan bahan", "Build 3"}},
-        {Name="Trigger Yeti + defeat Yeti", Steps={"Trigger Yeti", "Defeat Yeti"}},
+        {Name="Find Ability Teacher + complete his task", Steps={"Cari Teacher","Selesaikan task"}},
+        {Name="Build 3 Snowmen", Steps={"Kumpulkan bahan","Build 3"}},
+        {Name="Trigger Yeti + defeat Yeti", Steps={"Trigger Yeti","Defeat Yeti"}},
     },
     ["Marine Fortress"] = {
-        {Name="Find Rope + raise the Flag", Steps={"Cari Rope", "Naikkan Flag"}},
-        {Name="Wait for Pirate Raid + defeat invading ships", Steps={"Tunggu Raid", "Defeat ships"}},
-        {Name="Trigger Vice Admiral + defeat Vice Admiral", Steps={"Trigger", "Defeat"}},
+        {Name="Find Rope + raise the Flag", Steps={"Cari Rope","Naikkan Flag"}},
+        {Name="Wait for Pirate Raid + defeat invading ships", Steps={"Tunggu Raid","Defeat ships"}},
+        {Name="Trigger Vice Admiral + defeat Vice Admiral", Steps={"Trigger","Defeat"}},
     },
     ["Lower Skylands"] = {
-        {Name="Find Angel Guard + retrieve the Golden Chest", Steps={"Cari Angel Guard", "Ambil Chest"}},
-        {Name="Find Lightning Bolt + return to Mad Scientist", Steps={"Cari Bolt", "Return"}},
-        {Name="Find the Crumpled Letter + deliver it", Steps={"Cari Letter", "Deliver"}},
+        {Name="Find Angel Guard + retrieve the Golden Chest", Steps={"Cari Angel Guard","Ambil Chest"}},
+        {Name="Find Lightning Bolt + return to Mad Scientist", Steps={"Cari Bolt","Return"}},
+        {Name="Find the Crumpled Letter + deliver it", Steps={"Cari Letter","Deliver"}},
     },
     Prison = {
-        {Name="Stop 3 Escaped Prisoners", Steps={"Cari 3 prisoner", "Stop"}},
-        {Name="Find Cell Block Key + retrieve the Coat", Steps={"Cari Key", "Ambil Coat"}},
-        {Name="Activate Lever + defeat Prison Boss", Steps={"Activate Lever", "Defeat Boss"}},
+        {Name="Stop 3 Escaped Prisoners", Steps={"Cari 3 prisoner","Stop"}},
+        {Name="Find Cell Block Key + retrieve the Coat", Steps={"Cari Key","Ambil Coat"}},
+        {Name="Activate Lever + defeat Prison Boss", Steps={"Activate Lever","Defeat Boss"}},
     },
     Colosseum = {
-        {Name="Defeat the 3 waves in the Colosseum", Steps={"Wave 1", "Wave 2", "Wave 3"}},
-        {Name="Interact with Former Champions statues", Steps={"Cari statues", "Interact"}},
-        {Name="Complete the Crowd Favorite 1v1", Steps={"Masuk 1v1", "Menang"}},
+        {Name="Defeat the 3 waves in the Colosseum", Steps={"Wave 1","Wave 2","Wave 3"}},
+        {Name="Interact with Former Champions statues", Steps={"Cari statues","Interact"}},
+        {Name="Complete the Crowd Favorite 1v1", Steps={"Masuk 1v1","Menang"}},
     },
     ["Magma Village"] = {
-        {Name="Defeat the Evil Slimes", Steps={"Cari Slimes", "Defeat"}},
-        {Name="Collect Magma Ore + complete extraction", Steps={"Collect Ore", "Extract"}},
-        {Name="Trigger Magma General + defeat Magma General", Steps={"Trigger", "Defeat"}},
+        {Name="Defeat the Evil Slimes", Steps={"Cari Slimes","Defeat"}},
+        {Name="Collect Magma Ore + complete extraction", Steps={"Collect Ore","Extract"}},
+        {Name="Trigger Magma General + defeat Magma General", Steps={"Trigger","Defeat"}},
     },
     ["Underwater City"] = {
-        {Name="Find Bubble Cove + help King Neptune", Steps={"Cari Cove", "Bantu Neptune"}},
-        {Name="Activate Crystal Beam + help Water Kung Fu Teacher", Steps={"Activate", "Bantu Teacher"}},
-        {Name="Find Black Pearl + defeat Fishman Lord", Steps={"Cari Pearl", "Defeat Lord"}},
+        {Name="Find Bubble Cove + help King Neptune", Steps={"Cari Cove","Bantu Neptune"}},
+        {Name="Activate Crystal Beam + help Water Kung Fu Teacher", Steps={"Activate","Bantu Teacher"}},
+        {Name="Find Black Pearl + defeat Fishman Lord", Steps={"Cari Pearl","Defeat Lord"}},
     },
     ["Upper Skylands"] = {
         {Name="Find Temple Intel", Steps={"Cari Intel"}},
-        {Name="Trigger Sky Warlord + defeat Sky Warlord", Steps={"Trigger", "Defeat"}},
-        {Name="Find Yellow Bell + trigger Thunder God", Steps={"Cari Bell", "Trigger"}},
+        {Name="Trigger Sky Warlord + defeat Sky Warlord", Steps={"Trigger","Defeat"}},
+        {Name="Find Yellow Bell + trigger Thunder God", Steps={"Cari Bell","Trigger"}},
     },
     ["Fountain City"] = {
-        {Name="Repair the broken Pipes", Steps={"Cari pipes", "Repair"}},
-        {Name="Enter Sewer + defeat Sewer Gang", Steps={"Masuk Sewer", "Defeat Gang"}},
-        {Name="Repair Cyborg's wires + defeat Cyborg", Steps={"Repair wires", "Defeat Cyborg"}},
+        {Name="Repair the broken Pipes", Steps={"Cari pipes","Repair"}},
+        {Name="Enter Sewer + defeat Sewer Gang", Steps={"Masuk Sewer","Defeat Gang"}},
+        {Name="Repair Cyborg's wires + defeat Cyborg", Steps={"Repair wires","Defeat Cyborg"}},
     },
 }
 
---// SWORD DATA
-local SwordLocationData = {
-    DropSwords = {
-        {Name="Shark Saw", Boss="The Saw", Location="Middle Town", Sea=1},
-        {Name="Warden's Sword", Boss="Chief Warden", Location="Prison", Sea=1},
-        {Name="Trident", Boss="Fishman Lord", Location="Underwater City", Sea=1},
-        {Name="Pole", Boss="Thunder God", Location="Upper Skylands", Sea=1},
-        {Name="KOKO", Boss="Order", Location="Hot and Cold Lab", Sea=2},
-        {Name="Rengoku", Boss=nil, Location="Ice Castle", Sea=2},
-        {Name="Dragon Trident", Boss="Tide Keeper", Location="Forgotten Island", Sea=2},
-        {Name="Twin Hooks", Boss="Captain Elephant", Location="Floating Turtle", Sea=3, LevelReq=1875},
-        {Name="Buddy Sword", Boss="Cake Queen", Location="Sea of Treats", Sea=3},
-        {Name="Dark Dagger", Boss="rip_indra", Location="Castle on the Sea", Sea=3},
-        {Name="Hallow Scythe", Boss="Soul Reaper", Location="Haunted Castle", Sea=3},
-        {Name="Shark Anchor", Boss="Anchor Terrorshark", Location="Sea Event", Sea=3},
-    },
-    QuestSwords = {
-        {Name="Saber", Location="Jungle", Sea=1, LevelReq=200, NPC="Saber Expert"},
-        {Name="Yama", Location="Hydra Island", Sea=3, NPC="Elite Hunter"},
-        {Name="Tushita", Location="Floating Turtle", Sea=3, LevelReq=2000, NPC="Longma"},
-        {Name="Cursed Dual Katana", Location="Floating Turtle", Sea=3, LevelReq=2200},
-    }
-}
-
---// RAID DATA
-local RaidData = {
-    Basic = {
-        {Fruit="Flame", Chip="Basic", Price=100000},
-        {Fruit="Ice", Chip="Basic", Price=100000},
-        {Fruit="Sand", Chip="Basic", Price=100000},
-        {Fruit="Dark", Chip="Basic", Price=100000},
-        {Fruit="Light", Chip="Basic", Price=100000},
-        {Fruit="Magma", Chip="Basic", Price=100000},
-        {Fruit="Quake", Chip="Basic", Price=100000},
-        {Fruit="Buddha", Chip="Basic", Price=100000},
-        {Fruit="Spider", Chip="Basic", Price=100000},
-    },
-    Advanced = {
-        {Fruit="Phoenix", Chip="Advanced", FragPrice=1000},
-        {Fruit="Dough", Chip="Advanced", FragPrice=1000},
-    },
-}
-
-local AllRaids = {}
-for tier, list in pairs(RaidData) do
-    for _, r in ipairs(list) do
-        r.Tier = tier
-        table.insert(AllRaids, r)
-    end
-end
-
---// HELPERS
 local function ScanEnemies()
     local list = {}
     for _, obj in ipairs(workspace:GetChildren()) do
@@ -674,16 +654,26 @@ end
 local function FindChests()
     local list = {}
     for _, obj in ipairs(workspace:GetDescendants()) do
-        if obj:IsA("BasePart") then
-            local name = string.lower(obj.Name)
-            if (string.find(name, "chest") or string.find(name, "treasure") or string.find(name, "reward")) then
-                if obj.Transparency < 1 and obj.Parent then
-                    table.insert(list, obj)
+        pcall(function()
+            if obj:IsA("BasePart") then
+                local name = string.lower(obj.Name)
+                if string.find(name, "chest") or string.find(name, "treasure") or string.find(name, "reward") then
+                    local isOpened = obj.Transparency >= 1 
+                        or obj:GetAttribute("Opened") == true
+                        or (obj.Parent and obj.Parent:FindFirstChild("Opened"))
+                    if not isOpened and obj.Parent then
+                        table.insert(list, obj)
+                    end
                 end
             end
-        end
+        end)
     end
     return list
+end
+
+local function GetChestKey(chest)
+    local pos = chest.Position
+    return string.format("%.1f_%.1f_%.1f", pos.X, pos.Y, pos.Z)
 end
 
 local function FindMaterials()
@@ -733,13 +723,73 @@ local function GetHeldChip()
     return nil
 end
 
+local function GetWeaponCategory(weaponName)
+    local name = string.lower(weaponName)
+    local swordKws = {"katana","cutlass","sword","saber","rapier","blade","trident","pole","reaper","scythe","dagger","hooks","anchor","cursed","hallow","buddy","shark saw","warden","rengoku","tushita","yama"}
+    for _, kw in ipairs(swordKws) do
+        if string.find(name, kw) then return "Sword" end
+    end
+    local gunKws = {"gun","pistol","slingshot","rifle","bazooka","cannon","musket","sniper","flintlock"}
+    for _, kw in ipairs(gunKws) do
+        if string.find(name, kw) then return "Gun" end
+    end
+    local fruitKws = {"fruit","dough","leopard","kitsune","dragon","venom","shadow","control","spirit","mammoth","trex","rumble","portal","phoenix","sound","spider","buddha","magma","quake","light","dark","ice","sand","flame"}
+    for _, kw in ipairs(fruitKws) do
+        if string.find(name, kw) then return "Fruit" end
+    end
+    return "Melee"
+end
+
+local function GetWeaponsByCategory(category)
+    local list = {}
+    local char = Player.Character
+    if not char then return list end
+    local function check(t)
+        if t:IsA("Tool") and GetWeaponCategory(t.Name) == category then
+            table.insert(list, t)
+        end
+    end
+    for _, t in ipairs(char:GetChildren()) do check(t) end
+    for _, t in ipairs(Player.Backpack:GetChildren()) do check(t) end
+    return list
+end
+
+local function SelectWeapon(weaponName)
+    local char = Player.Character
+    if not char then return false end
+    local found = nil
+    for _, c in ipairs(char:GetChildren()) do
+        if c:IsA("Tool") and c.Name == weaponName then found = c break end
+    end
+    if not found then
+        for _, c in ipairs(Player.Backpack:GetChildren()) do
+            if c:IsA("Tool") and c.Name == weaponName then found = c break end
+        end
+    end
+    if not found then Notify("Weapon tidak ada: "..weaponName) return false end
+    State.SelectedWeapon = found.Name
+    State.SelectedCategory = GetWeaponCategory(found.Name)
+    pcall(function() found.Parent = char end)
+    Notify("Equipped ["..State.SelectedCategory.."]: "..found.Name)
+    return true
+end
+
 local function EquipWeapon()
     local char = Player.Character
     if not char then return nil end
+    if State.SelectedWeapon then
+        local held = char:FindFirstChild(State.SelectedWeapon)
+        if held and held:IsA("Tool") then return held end
+        for _, c in ipairs(Player.Backpack:GetChildren()) do
+            if c:IsA("Tool") and c.Name == State.SelectedWeapon then
+                c.Parent = char return c
+            end
+        end
+    end
     local tool = char:FindFirstChildOfClass("Tool")
     if tool then return tool end
-    for _, child in ipairs(Player.Backpack:GetChildren()) do
-        if child:IsA("Tool") then child.Parent = char return child end
+    for _, c in ipairs(Player.Backpack:GetChildren()) do
+        if c:IsA("Tool") then c.Parent = char return c end
     end
     return nil
 end
@@ -768,7 +818,6 @@ local function TeleportTo(pos)
     hrp.CFrame = CFrame.new(pos)
 end
 
---// LOOPS
 task.spawn(function()
     while task.wait(CONFIG.FarmDelay) do
         if State.AutoFarm or State.AutoKillNearest then
@@ -783,22 +832,30 @@ task.spawn(function()
             SafeCall(function()
                 local chests = FindChests()
                 local hrp = GetHRP()
-                if not hrp or #chests == 0 then return end
-                local nearest, dist = nil, math.huge
+                if not hrp then return end
+                if #chests == 0 then
+                    Notify("Menunggu chest spawn...")
+                    task.wait(CONFIG.ChestWaitCooldown)
+                    return
+                end
+                local nearest, nearestDist = nil, math.huge
                 for _, c in ipairs(chests) do
-                    local key = tostring(c.Position)
+                    local key = GetChestKey(c)
                     if not State.OpenedChests[key] then
                         local d = GetDistance(c.Position, hrp.Position)
-                        if d < dist then nearest, dist = c, d end
+                        if d < nearestDist then nearest, nearestDist = c, d end
                     end
                 end
-                if nearest then
-                    TeleportTo(nearest.Position + Vector3.new(0, 3, 0))
-                    State.OpenedChests[tostring(nearest.Position)] = true
-                    task.delay(300, function()
-                        State.OpenedChests[tostring(nearest.Position)] = nil
-                    end)
+                if not nearest then
+                    Notify("Semua chest diambil, tunggu respawn...")
+                    State.OpenedChests = {}
+                    task.wait(CONFIG.ChestWaitCooldown)
+                    return
                 end
+                TeleportTo(nearest.Position + Vector3.new(0, 3, 0))
+                Notify(string.format("Chest: %s (%.0f stud)", nearest.Name, nearestDist))
+                State.OpenedChests[GetChestKey(nearest)] = true
+                task.wait(0.6)
             end)
         end
     end
@@ -806,9 +863,9 @@ end)
 
 task.spawn(function()
     while task.wait(1) do
-        if State.AutoBoss and State.CurrentBoss then
+        if State.AutoBoss and State.SelectedBoss then
             SafeCall(function()
-                local boss = FindBoss(State.CurrentBoss)
+                local boss = FindBoss(State.SelectedBoss)
                 if boss then
                     local hrp = boss:FindFirstChild("HumanoidRootPart")
                     if hrp then TeleportTo(hrp.Position + Vector3.new(0, 3, 0)) end
@@ -874,63 +931,40 @@ local LevelValue = leaderstats and leaderstats:FindFirstChild("Level")
 
 local function OnLevelChanged(newLevel)
     if newLevel > CONFIG.MaxLevel then newLevel = CONFIG.MaxLevel end
-    local target, sea = GetIslandByLevel(newLevel)
-    if target and target ~= State.CurrentIsland then
-        State.CurrentIsland = target
-        Notify("Auto Island: " .. target .. " (" .. tostring(sea) .. ")")
-    end
+    local target = GetIslandByLevel(newLevel)
+    if target then State.CurrentIsland = target end
 end
-
 if LevelValue then
     LevelValue.Changed:Connect(OnLevelChanged)
     OnLevelChanged(LevelValue.Value)
 end
 
-local function FarmSwordDrop(swordName)
-    for _, s in ipairs(SwordLocationData.DropSwords) do
-        if s.Name == swordName then
-            if s.Boss then
-                local target = FindBoss(s.Boss)
-                if not target then Notify("Boss tidak ada: "..s.Boss) return false end
-                State.CurrentBoss = s.Boss
-                State.AutoBoss = true
-                Notify("Farming "..swordName)
-            end
-            return true
-        end
-    end
-    Notify("Sword tidak ada")
-    return false
-end
-
 local function FarmKOKO()
     local koko = FindKOKO()
-    if not koko then Notify("KOKO tidak ditemukan") return false end
+    if not koko then return false end
     local hrp = koko:FindFirstChild("HumanoidRootPart")
     if hrp then
         TeleportTo(hrp.Position + Vector3.new(0, 3, 0))
-        Notify("Interaksi KOKO")
         return true
     end
     return false
 end
 
---// GACHA ZIOLES (Random Fruit)
+task.spawn(function()
+    while task.wait(3) do
+        if State.AutoKOKO then SafeCall(FarmKOKO) end
+    end
+end)
+
 local function RandomFruitDirect()
+    if not REMOTE_RandomFruit then Notify("Remote RandomFruit tidak ada") return false end
     local now = os.time()
     if now - State.LastRandomFruit < CONFIG.RandomFruitCooldown then
         local rem = CONFIG.RandomFruitCooldown - (now - State.LastRandomFruit)
         Notify(string.format("Cooldown: %dh %dm", math.floor(rem/3600), math.floor((rem%3600)/60)))
         return false
     end
-    if GetHeldFruit() then
-        Notify("Masih pegang fruit")
-        return false
-    end
-    if not REMOTE_RandomFruit then
-        Notify("Remote RandomFruit tidak ada")
-        return false
-    end
+    if GetHeldFruit() then Notify("Masih pegang fruit") return false end
     local ok = pcall(function()
         if REMOTE_RandomFruit:IsA("RemoteEvent") then
             REMOTE_RandomFruit:FireServer()
@@ -945,7 +979,6 @@ local function RandomFruitDirect()
         if State.StoreFruit then SafeCall(StoreFruit) end
         return true
     end
-    Notify("Gagal fire RandomFruit")
     return false
 end
 
@@ -968,16 +1001,9 @@ function StoreFruit()
     return true
 end
 
---// BUY CHIP
 local function BuyChipDirect()
-    if GetHeldChip() then
-        Notify("Masih pegang chip")
-        return false
-    end
-    if not REMOTE_BuyChip then
-        Notify("Remote BuyChip tidak ada")
-        return false
-    end
+    if not REMOTE_BuyChip then Notify("Remote BuyChip tidak ada") return false end
+    if GetHeldChip() then Notify("Masih pegang chip") return false end
     local ok = pcall(function()
         if REMOTE_BuyChip:IsA("RemoteEvent") then
             REMOTE_BuyChip:FireServer()
@@ -989,10 +1015,6 @@ local function BuyChipDirect()
         State.LastBuyChip = os.time()
         Notify("BuyChip fired")
         task.wait(1)
-        if State.StoreChip then
-            local held = GetHeldChip()
-            if held then pcall(function() held.Parent = Player.Backpack end) end
-        end
         return true
     end
     return false
@@ -1020,28 +1042,16 @@ task.spawn(function()
     end
 end)
 
-task.spawn(function()
-    while task.wait(3) do
-        if State.AutoKOKO then SafeCall(FarmKOKO) end
-    end
-end)
-
---// KILL AURA
 local function IsInRaidArea()
-    if not LevelValue or LevelValue.Value < CONFIG.RaidMinLevel then
-        return false
-    end
+    if not LevelValue or LevelValue.Value < CONFIG.RaidMinLevel then return false end
     local hrp = GetHRP()
     if not hrp then return false end
     for _, obj in ipairs(workspace:GetDescendants()) do
         if obj:IsA("BasePart") or obj:IsA("Folder") or obj:IsA("Model") then
             local name = string.lower(obj.Name)
-            if string.find(name, "raid") or string.find(name, "room") or string.find(name, "pass") then
-                if obj:IsA("BasePart") then
-                    if GetDistance(obj.Position, hrp.Position) <= 500 then return true end
-                elseif obj:IsA("Model") and obj.PrimaryPart then
-                    if GetDistance(obj.PrimaryPart.Position, hrp.Position) <= 500 then return true end
-                end
+            if string.find(name,"raid") or string.find(name,"room") or string.find(name,"pass") then
+                if obj:IsA("BasePart") and GetDistance(obj.Position, hrp.Position) <= 500 then return true end
+                if obj:IsA("Model") and obj.PrimaryPart and GetDistance(obj.PrimaryPart.Position, hrp.Position) <= 500 then return true end
             end
         end
     end
@@ -1050,30 +1060,26 @@ end
 
 task.spawn(function()
     while task.wait(0.1) do
+        State.KillAura = IsInRaidArea()
         if State.KillAura then
-            if not IsInRaidArea() then
-                State.KillAura = false
-                Notify("Kill Aura OFF - bukan area raid")
-            else
-                local now = os.clock()
-                if now - State.LastKillAura >= 0.35 then
-                    local hrp = GetHRP()
-                    if hrp then
-                        local found = false
-                        for _, obj in ipairs(workspace:GetChildren()) do
-                            if IsNPC(obj) or IsEnemyPlayer(obj) then
-                                local targetHRP = obj:FindFirstChild("HumanoidRootPart")
-                                if targetHRP and GetDistance(targetHRP.Position, hrp.Position) <= 25 then
-                                    found = true break
-                                end
+            local now = os.clock()
+            if now - State.LastKillAura >= 0.35 then
+                local hrp = GetHRP()
+                if hrp then
+                    local found = false
+                    for _, obj in ipairs(workspace:GetChildren()) do
+                        if IsNPC(obj) or IsEnemyPlayer(obj) then
+                            local targetHRP = obj:FindFirstChild("HumanoidRootPart")
+                            if targetHRP and GetDistance(targetHRP.Position, hrp.Position) <= 25 then
+                                found = true break
                             end
                         end
-                        if found then
-                            local tool = EquipWeapon()
-                            if tool then
-                                pcall(function() tool:Activate() end)
-                                State.LastKillAura = now
-                            end
+                    end
+                    if found then
+                        local tool = EquipWeapon()
+                        if tool then
+                            pcall(function() tool:Activate() end)
+                            State.LastKillAura = now
                         end
                     end
                 end
@@ -1082,7 +1088,6 @@ task.spawn(function()
     end
 end)
 
---// HITBOX
 task.spawn(function()
     while task.wait(0.05) do
         if State.Hitbox then
@@ -1091,7 +1096,7 @@ task.spawn(function()
                 if not State.HitboxPart or not State.HitboxPart.Parent then
                     local hb = Instance.new("Part")
                     hb.Name = "SysxHitbox"
-                    hb.Size = Vector3.new(10, 10, 10)
+                    hb.Size = Vector3.new(10,10,10)
                     hb.Transparency = 1
                     hb.CanCollide = false
                     hb.CanTouch = true
@@ -1111,7 +1116,6 @@ task.spawn(function()
     end
 end)
 
---// BRING MOB
 task.spawn(function()
     while task.wait(0.1) do
         if State.BringMob then
@@ -1135,7 +1139,23 @@ task.spawn(function()
     end
 end)
 
---// PAGES
+task.spawn(function()
+    while task.wait(0.1) do
+        if State.InfiniteJump then
+            local char = Player.Character
+            if char then
+                local humanoid = char:FindFirstChildOfClass("Humanoid")
+                if humanoid then
+                    local st = humanoid:GetState()
+                    if st == Enum.HumanoidStateType.Freefall then
+                        humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                    end
+                end
+            end
+        end
+    end
+end)
+
 local DiscordPage = CreatePage("Discord")
 local FarmPage = CreatePage("Farm")
 local QuestItemsPage = CreatePage("Quest / Items")
@@ -1146,17 +1166,16 @@ local PvPPage = CreatePage("PvP")
 local StatsPage = CreatePage("Stats")
 local MiscPage = CreatePage("Misc")
 
---// DISCORD
 CreateSection(DiscordPage, "DISCORD INFO", "Join community")
 local DiscordLabel = Create("TextLabel", {
     Parent=DiscordPage, BackgroundColor3=CONFIG.Panel,
-    Size=UDim2.new(1, 0, 0, 80),
+    Size=UDim2.new(1,0,0,80),
     Text="Discord Server:\n"..CONFIG.Discord,
     TextColor3=CONFIG.Text, TextSize=13, Font=Enum.Font.GothamMedium,
     TextXAlignment=Enum.TextXAlignment.Left, BorderSizePixel=0, ZIndex=13,
 })
 Corner(DiscordLabel, 9)
-Padding(DiscordLabel, 14, 14, 7, 7)
+Padding(DiscordLabel, 14,14,7,7)
 
 CreateButton(DiscordPage, "Copy Discord Link", function()
     if setclipboard then
@@ -1167,32 +1186,238 @@ CreateButton(DiscordPage, "Copy Discord Link", function()
     end
 end)
 
---// FARM
 CreateSection(FarmPage, "FARM", "Auto farm level")
 CreateToggle(FarmPage, "Auto Farm Level", false, function(s) State.AutoFarm=s Notify("Auto Farm Level: "..(s and "ON" or "OFF")) end)
 CreateToggle(FarmPage, "Auto Quest", false, function(s) State.AutoQuest=s Notify("Auto Quest: "..(s and "ON" or "OFF")) end)
 CreateToggle(FarmPage, "Auto Kill Nearest", false, function(s) State.AutoKillNearest=s Notify("Auto Kill Nearest: "..(s and "ON" or "OFF")) end)
 
-CreateSection(FarmPage, "BOSS", "Auto farm boss")
-CreateButton(FarmPage, "Select Boss", function()
-    for _, b in ipairs({"The Saw","Chief Warden","Fishman Lord","Thunder God","Order","Tide Keeper","Captain Elephant","Cake Queen","rip_indra","Soul Reaper","Anchor Terrorshark","Dough King","Longma","Elite Pirate","Kitsune"}) do
-        print("[Boss]", b)
-    end
-    Notify("Boss list di console")
-end)
-CreateToggle(FarmPage, "Auto Farm Boss", false, function(s) State.AutoBoss=s Notify("Auto Farm Boss: "..(s and "ON" or "OFF")) end)
+CreateSection(FarmPage, "WEAPON", "Pilih kategori lalu weapon")
+local WeaponLabel = Create("TextLabel", {
+    Parent=FarmPage, BackgroundColor3=CONFIG.Panel,
+    Size=UDim2.new(1,0,0,50),
+    Text="Category: -\nWeapon: -",
+    TextColor3=CONFIG.Text, TextSize=13, Font=Enum.Font.GothamMedium,
+    TextXAlignment=Enum.TextXAlignment.Left, BorderSizePixel=0, ZIndex=13,
+})
+Corner(WeaponLabel, 9)
+Padding(WeaponLabel, 14,14,7,7)
 
-CreateSection(FarmPage, "MATERIAL", "Auto farm material")
-CreateButton(FarmPage, "Select Material", function()
-    for _, m in ipairs({"Leather","Cloth","Scrap Metal","Angel Wings","Magma Ore","Fish Tail","Mystic Droplet","Magic Ivy","Radioactive Material","Vampire Fang","Snow Crystal","Cursed Fragment","Dragon Scale","Sea King Hide","Terror Jaw","Void Essence"}) do
-        print("[Material]", m)
+task.spawn(function()
+    while task.wait(1) do
+        WeaponLabel.Text = string.format("Category: %s\nWeapon: %s",
+            State.SelectedCategory or "-", State.SelectedWeapon or "-")
     end
-    Notify("Material list di console")
 end)
-CreateToggle(FarmPage, "Auto Farm Material", false, function(s) State.AutoMaterial=s Notify("Auto Farm Material: "..(s and "ON" or "OFF")) end)
+
+local WeaponHolder = Create("Frame", {
+    Parent=FarmPage, BackgroundColor3=CONFIG.Panel,
+    Size=UDim2.new(1,0,0,250), BorderSizePixel=0, ZIndex=13,
+})
+Corner(WeaponHolder, 10)
+Stroke(WeaponHolder, CONFIG.Purple, 1, 0.7)
+
+local WeaponScroll = Create("ScrollingFrame", {
+    Parent=WeaponHolder, BackgroundTransparency=1,
+    Position=UDim2.new(0,8,0,8), Size=UDim2.new(1,-16,1,-16),
+    CanvasSize=UDim2.new(0,0,0,0), AutomaticCanvasSize=Enum.AutomaticSize.Y,
+    ScrollBarThickness=3, ScrollBarImageColor3=CONFIG.Purple,
+    BorderSizePixel=0, ZIndex=14,
+})
+local WeaponLayout = Instance.new("UIListLayout")
+WeaponLayout.Padding = UDim.new(0,6)
+WeaponLayout.SortOrder = Enum.SortOrder.LayoutOrder
+WeaponLayout.Parent = WeaponScroll
+
+local function ShowWeaponCategories()
+    for _, c in ipairs(WeaponScroll:GetChildren()) do
+        if c:IsA("TextButton") then c:Destroy() end
+    end
+    local cats = {"Melee","Sword","Gun","Fruit"}
+    for i, cat in ipairs(cats) do
+        local count = #GetWeaponsByCategory(cat)
+        local Btn = Create("TextButton", {
+            Parent=WeaponScroll, BackgroundColor3=CONFIG.Panel2,
+            Size=UDim2.new(1,0,0,40), Text=cat.." ("..count..")",
+            TextColor3=CONFIG.Text, TextSize=13,
+            Font=Enum.Font.GothamBold, AutoButtonColor=false,
+            BorderSizePixel=0, LayoutOrder=i, ZIndex=15,
+            TextXAlignment=Enum.TextXAlignment.Left,
+        })
+        Corner(Btn, 8)
+        Padding(Btn, 12,12,0,0)
+        Stroke(Btn, CONFIG.Purple, 1, 0.8)
+        Btn.MouseEnter:Connect(function() Tween(Btn,{BackgroundColor3=CONFIG.Purple},0.15) end)
+        Btn.MouseLeave:Connect(function() Tween(Btn,{BackgroundColor3=CONFIG.Panel2},0.15) end)
+        Btn.Activated:Connect(function() ShowWeaponsInCategory(cat) end)
+    end
+end
+
+function ShowWeaponsInCategory(cat)
+    for _, c in ipairs(WeaponScroll:GetChildren()) do
+        if c:IsA("TextButton") then c:Destroy() end
+    end
+    local Back = Create("TextButton", {
+        Parent=WeaponScroll, BackgroundColor3=CONFIG.Panel2,
+        Size=UDim2.new(1,0,0,36), Text="< Back",
+        TextColor3=CONFIG.Warning, TextSize=12,
+        Font=Enum.Font.GothamBold, AutoButtonColor=false,
+        BorderSizePixel=0, LayoutOrder=1, ZIndex=15,
+        TextXAlignment=Enum.TextXAlignment.Left,
+    })
+    Corner(Back, 8)
+    Padding(Back, 12,12,0,0)
+    Back.Activated:Connect(ShowWeaponCategories)
+
+    local weapons = GetWeaponsByCategory(cat)
+    if #weapons == 0 then
+        Create("TextLabel", {
+            Parent=WeaponScroll, BackgroundTransparency=1,
+            Size=UDim2.new(1,0,0,36), Text="Tidak ada weapon "..cat,
+            TextColor3=CONFIG.SubText, TextSize=12, LayoutOrder=2, ZIndex=15,
+        })
+        return
+    end
+    for i, w in ipairs(weapons) do
+        local Btn = Create("TextButton", {
+            Parent=WeaponScroll, BackgroundColor3=CONFIG.Panel2,
+            Size=UDim2.new(1,0,0,36), Text="• "..w.Name,
+            TextColor3=CONFIG.Text, TextSize=12,
+            Font=Enum.Font.GothamMedium, AutoButtonColor=false,
+            BorderSizePixel=0, LayoutOrder=i+1, ZIndex=15,
+            TextXAlignment=Enum.TextXAlignment.Left,
+        })
+        Corner(Btn, 8)
+        Padding(Btn, 12,12,0,0)
+        Btn.MouseEnter:Connect(function() Tween(Btn,{BackgroundColor3=CONFIG.Panel3},0.15) end)
+        Btn.MouseLeave:Connect(function() Tween(Btn,{BackgroundColor3=CONFIG.Panel2},0.15) end)
+        Btn.Activated:Connect(function() SelectWeapon(w.Name) end)
+    end
+end
+ShowWeaponCategories()
+
+CreateSection(FarmPage, "BOSS", "Pilih boss")
+local BossLabel = Create("TextLabel", {
+    Parent=FarmPage, BackgroundColor3=CONFIG.Panel,
+    Size=UDim2.new(1,0,0,50),
+    Text="Boss: -\nLocation: -",
+    TextColor3=CONFIG.Text, TextSize=13, Font=Enum.Font.GothamMedium,
+    TextXAlignment=Enum.TextXAlignment.Left, BorderSizePixel=0, ZIndex=13,
+})
+Corner(BossLabel, 9)
+Padding(BossLabel, 14,14,7,7)
+
+task.spawn(function()
+    while task.wait(1) do
+        local loc = "-"
+        if State.SelectedBossSea and State.SelectedBoss then
+            for _, b in ipairs(BossData[State.SelectedBossSea] or {}) do
+                if b.Name == State.SelectedBoss then loc = b.Location break end
+            end
+        end
+        BossLabel.Text = string.format("Boss: %s\nLocation: %s", State.SelectedBoss or "-", loc)
+    end
+end)
+
+local BossHolder = Create("Frame", {
+    Parent=FarmPage, BackgroundColor3=CONFIG.Panel,
+    Size=UDim2.new(1,0,0,250), BorderSizePixel=0, ZIndex=13,
+})
+Corner(BossHolder, 10)
+Stroke(BossHolder, CONFIG.Purple, 1, 0.7)
+
+local BossScroll = Create("ScrollingFrame", {
+    Parent=BossHolder, BackgroundTransparency=1,
+    Position=UDim2.new(0,8,0,8), Size=UDim2.new(1,-16,1,-16),
+    CanvasSize=UDim2.new(0,0,0,0), AutomaticCanvasSize=Enum.AutomaticSize.Y,
+    ScrollBarThickness=3, ScrollBarImageColor3=CONFIG.Purple,
+    BorderSizePixel=0, ZIndex=14,
+})
+local BossLayout = Instance.new("UIListLayout")
+BossLayout.Padding = UDim.new(0,6)
+BossLayout.SortOrder = Enum.SortOrder.LayoutOrder
+BossLayout.Parent = BossScroll
+
+local function ShowBossSeas()
+    for _, c in ipairs(BossScroll:GetChildren()) do
+        if c:IsA("TextButton") then c:Destroy() end
+    end
+    local seas = {"Sea1","Sea2","Sea3"}
+    for i, sea in ipairs(seas) do
+        local count = #(BossData[sea] or {})
+        local Btn = Create("TextButton", {
+            Parent=BossScroll, BackgroundColor3=CONFIG.Panel2,
+            Size=UDim2.new(1,0,0,40), Text=sea.." ("..count..")",
+            TextColor3=CONFIG.Text, TextSize=13,
+            Font=Enum.Font.GothamBold, AutoButtonColor=false,
+            BorderSizePixel=0, LayoutOrder=i, ZIndex=15,
+            TextXAlignment=Enum.TextXAlignment.Left,
+        })
+        Corner(Btn, 8)
+        Padding(Btn, 12,12,0,0)
+        Stroke(Btn, CONFIG.Purple, 1, 0.8)
+        Btn.MouseEnter:Connect(function() Tween(Btn,{BackgroundColor3=CONFIG.Purple},0.15) end)
+        Btn.MouseLeave:Connect(function() Tween(Btn,{BackgroundColor3=CONFIG.Panel2},0.15) end)
+        Btn.Activated:Connect(function() ShowBossBySea(sea) end)
+    end
+end
+
+function ShowBossBySea(sea)
+    for _, c in ipairs(BossScroll:GetChildren()) do
+        if c:IsA("TextButton") then c:Destroy() end
+    end
+    local Back = Create("TextButton", {
+        Parent=BossScroll, BackgroundColor3=CONFIG.Panel2,
+        Size=UDim2.new(1,0,0,36), Text="< Back",
+        TextColor3=CONFIG.Warning, TextSize=12,
+        Font=Enum.Font.GothamBold, AutoButtonColor=false,
+        BorderSizePixel=0, LayoutOrder=1, ZIndex=15,
+        TextXAlignment=Enum.TextXAlignment.Left,
+    })
+    Corner(Back, 8)
+    Padding(Back, 12,12,0,0)
+    Back.Activated:Connect(ShowBossSeas)
+
+    for i, b in ipairs(BossData[sea] or {}) do
+        local Btn = Create("TextButton", {
+            Parent=BossScroll, BackgroundColor3=CONFIG.Panel2,
+            Size=UDim2.new(1,0,0,46),
+            Text="• "..b.Name.." (Lv "..b.Level..")\n  "..b.Location..(b.Raid and " [Raid]" or ""),
+            TextColor3=CONFIG.Text, TextSize=11,
+            Font=Enum.Font.GothamMedium, AutoButtonColor=false,
+            BorderSizePixel=0, LayoutOrder=i+1, ZIndex=15,
+            TextXAlignment=Enum.TextXAlignment.Left,
+            TextYAlignment=Enum.TextYAlignment.Top,
+        })
+        Corner(Btn, 8)
+        Padding(Btn, 12,12,6,6)
+        Btn.MouseEnter:Connect(function() Tween(Btn,{BackgroundColor3=CONFIG.Panel3},0.15) end)
+        Btn.MouseLeave:Connect(function() Tween(Btn,{BackgroundColor3=CONFIG.Panel2},0.15) end)
+        Btn.Activated:Connect(function()
+            State.SelectedBoss = b.Name
+            State.SelectedBossSea = sea
+            Notify("Boss: "..b.Name)
+        end)
+    end
+end
+ShowBossSeas()
+
+CreateToggle(FarmPage, "Auto Farm Boss", false, function(s)
+    State.AutoBoss = s
+    if s and not State.SelectedBoss then
+        Notify("Pilih boss dulu")
+        State.AutoBoss = false
+    else
+        Notify("Auto Farm Boss: "..(s and "ON" or "OFF"))
+    end
+end)
 
 CreateSection(FarmPage, "CHEST", "Auto farm chest")
-CreateToggle(FarmPage, "Farm Chest", false, function(s) State.AutoChest=s Notify("Farm Chest: "..(s and "ON" or "OFF")) end)
+CreateToggle(FarmPage, "Farm Chest", false, function(s)
+    State.AutoChest = s
+    if s then State.OpenedChests = {} end
+    Notify("Farm Chest: "..(s and "ON" or "OFF"))
+end)
+
 CreateButton(FarmPage, "Teleport Chest Terdekat", function()
     local chests = FindChests()
     local hrp = GetHRP()
@@ -1203,12 +1428,16 @@ CreateButton(FarmPage, "Teleport Chest Terdekat", function()
         if d < dist then nearest, dist = c, d end
     end
     if nearest then
-        TeleportTo(nearest.Position + Vector3.new(0, 3, 0))
+        TeleportTo(nearest.Position + Vector3.new(0,3,0))
         Notify("Teleport: "..nearest.Name)
     end
 end)
 
---// QUEST / ITEMS
+CreateButton(FarmPage, "Reset Chest Cache", function()
+    State.OpenedChests = {}
+    Notify("Chest cache cleared")
+end)
+
 CreateSection(QuestItemsPage, "QUEST / ITEMS", "Auto farm item langka")
 CreateToggle(QuestItemsPage, "Auto CDK", false, function(s) State.AutoCDK=s Notify("Auto CDK: "..(s and "ON" or "OFF")) end)
 CreateToggle(QuestItemsPage, "Auto Dark Dagger", false, function(s) State.AutoDarkDagger=s Notify("Auto Dark Dagger: "..(s and "ON" or "OFF")) end)
@@ -1219,31 +1448,180 @@ CreateToggle(QuestItemsPage, "Auto Buddy Sword", false, function(s) State.AutoBu
 CreateToggle(QuestItemsPage, "Auto Kill Indra", false, function(s) State.AutoKillIndra=s Notify("Auto Kill Indra: "..(s and "ON" or "OFF")) end)
 CreateToggle(QuestItemsPage, "Auto Spawn Dough King", false, function(s) State.AutoSpawnDoughKing=s Notify("Auto Spawn Dough King: "..(s and "ON" or "OFF")) end)
 
-CreateSection(QuestItemsPage, "SECRET QUEST", "Cari quest")
-CreateInput(QuestItemsPage, "Search quest...", function(text)
-    if not text or text == "" then return end
+CreateSection(QuestItemsPage, "SECRET QUEST", "Pilih quest")
+local SecretLabel = Create("TextLabel", {
+    Parent=QuestItemsPage, BackgroundColor3=CONFIG.Panel,
+    Size=UDim2.new(1,0,0,50),
+    Text="Location: -\nQuest: -",
+    TextColor3=CONFIG.Text, TextSize=13, Font=Enum.Font.GothamMedium,
+    TextXAlignment=Enum.TextXAlignment.Left, BorderSizePixel=0, ZIndex=13,
+})
+Corner(SecretLabel, 9)
+Padding(SecretLabel, 14,14,7,7)
+
+task.spawn(function()
+    while task.wait(1) do
+        SecretLabel.Text = string.format("Location: %s\nQuest: %s",
+            State.SelectedSecretLocation or "-",
+            State.SelectedSecretQuest and State.SelectedSecretQuest.Name or "-")
+    end
+end)
+
+CreateInput(QuestItemsPage, "Search secret quest...", function(text)
+    if not text or text == "" then ShowSecretLocations() return end
     local found = {}
     for loc, quests in pairs(SecretQuests) do
         for _, q in ipairs(quests) do
             if string.find(string.lower(q.Name), string.lower(text)) then
-                table.insert(found, loc.." - "..q.Name)
+                table.insert(found, {location=loc, quest=q})
             end
         end
     end
-    if #found > 0 then
-        Notify("Found "..#found.." quest")
-        for _, f in ipairs(found) do print("[Search]", f) end
-    else
-        Notify("Tidak ada hasil")
-    end
+    ShowSecretFiltered(found)
 end)
 
---// FRUIT / RAID
+local SecretHolder = Create("Frame", {
+    Parent=QuestItemsPage, BackgroundColor3=CONFIG.Panel,
+    Size=UDim2.new(1,0,0,250), BorderSizePixel=0, ZIndex=13,
+})
+Corner(SecretHolder, 10)
+Stroke(SecretHolder, CONFIG.Purple, 1, 0.7)
+
+local SecretScroll = Create("ScrollingFrame", {
+    Parent=SecretHolder, BackgroundTransparency=1,
+    Position=UDim2.new(0,8,0,8), Size=UDim2.new(1,-16,1,-16),
+    CanvasSize=UDim2.new(0,0,0,0), AutomaticCanvasSize=Enum.AutomaticSize.Y,
+    ScrollBarThickness=3, ScrollBarImageColor3=CONFIG.Purple,
+    BorderSizePixel=0, ZIndex=14,
+})
+local SecretLayout = Instance.new("UIListLayout")
+SecretLayout.Padding = UDim.new(0,6)
+SecretLayout.SortOrder = Enum.SortOrder.LayoutOrder
+SecretLayout.Parent = SecretScroll
+
+function ShowSecretLocations()
+    for _, c in ipairs(SecretScroll:GetChildren()) do
+        if c:IsA("TextButton") then c:Destroy() end
+    end
+    local i = 0
+    for loc, quests in pairs(SecretQuests) do
+        i += 1
+        local Btn = Create("TextButton", {
+            Parent=SecretScroll, BackgroundColor3=CONFIG.Panel2,
+            Size=UDim2.new(1,0,0,38), Text=loc.." ("..#quests..")",
+            TextColor3=CONFIG.Text, TextSize=12,
+            Font=Enum.Font.GothamBold, AutoButtonColor=false,
+            BorderSizePixel=0, LayoutOrder=i, ZIndex=15,
+            TextXAlignment=Enum.TextXAlignment.Left,
+        })
+        Corner(Btn, 8)
+        Padding(Btn, 12,12,0,0)
+        Stroke(Btn, CONFIG.Purple, 1, 0.8)
+        Btn.MouseEnter:Connect(function() Tween(Btn,{BackgroundColor3=CONFIG.Purple},0.15) end)
+        Btn.MouseLeave:Connect(function() Tween(Btn,{BackgroundColor3=CONFIG.Panel2},0.15) end)
+        Btn.Activated:Connect(function() ShowSecretQuests(loc) end)
+    end
+end
+
+function ShowSecretQuests(location)
+    for _, c in ipairs(SecretScroll:GetChildren()) do
+        if c:IsA("TextButton") then c:Destroy() end
+    end
+    local Back = Create("TextButton", {
+        Parent=SecretScroll, BackgroundColor3=CONFIG.Panel2,
+        Size=UDim2.new(1,0,0,36), Text="< Back",
+        TextColor3=CONFIG.Warning, TextSize=12,
+        Font=Enum.Font.GothamBold, AutoButtonColor=false,
+        BorderSizePixel=0, LayoutOrder=1, ZIndex=15,
+        TextXAlignment=Enum.TextXAlignment.Left,
+    })
+    Corner(Back, 8)
+    Padding(Back, 12,12,0,0)
+    Back.Activated:Connect(ShowSecretLocations)
+
+    for i, q in ipairs(SecretQuests[location] or {}) do
+        local Btn = Create("TextButton", {
+            Parent=SecretScroll, BackgroundColor3=CONFIG.Panel2,
+            Size=UDim2.new(1,0,0,42), Text="• "..q.Name,
+            TextColor3=CONFIG.Text, TextSize=11,
+            Font=Enum.Font.GothamMedium, AutoButtonColor=false,
+            BorderSizePixel=0, LayoutOrder=i+1, ZIndex=15,
+            TextXAlignment=Enum.TextXAlignment.Left,
+        })
+        Corner(Btn, 8)
+        Padding(Btn, 12,12,0,0)
+        Btn.MouseEnter:Connect(function() Tween(Btn,{BackgroundColor3=CONFIG.Panel3},0.15) end)
+        Btn.MouseLeave:Connect(function() Tween(Btn,{BackgroundColor3=CONFIG.Panel2},0.15) end)
+        Btn.Activated:Connect(function()
+            State.SelectedSecretLocation = location
+            State.SelectedSecretQuest = q
+            Notify("Quest: "..q.Name)
+        end)
+    end
+end
+
+function ShowSecretFiltered(found)
+    for _, c in ipairs(SecretScroll:GetChildren()) do
+        if c:IsA("TextButton") then c:Destroy() end
+    end
+    local Back = Create("TextButton", {
+        Parent=SecretScroll, BackgroundColor3=CONFIG.Panel2,
+        Size=UDim2.new(1,0,0,36), Text="< Back",
+        TextColor3=CONFIG.Warning, TextSize=12,
+        Font=Enum.Font.GothamBold, AutoButtonColor=false,
+        BorderSizePixel=0, LayoutOrder=1, ZIndex=15,
+        TextXAlignment=Enum.TextXAlignment.Left,
+    })
+    Corner(Back, 8)
+    Padding(Back, 12,12,0,0)
+    Back.Activated:Connect(ShowSecretLocations)
+
+    for i, item in ipairs(found) do
+        local Btn = Create("TextButton", {
+            Parent=SecretScroll, BackgroundColor3=CONFIG.Panel2,
+            Size=UDim2.new(1,0,0,42),
+            Text="["..item.location.."] "..item.quest.Name,
+            TextColor3=CONFIG.Text, TextSize=11,
+            Font=Enum.Font.GothamMedium, AutoButtonColor=false,
+            BorderSizePixel=0, LayoutOrder=i+1, ZIndex=15,
+            TextXAlignment=Enum.TextXAlignment.Left,
+        })
+        Corner(Btn, 8)
+        Padding(Btn, 12,12,0,0)
+        Btn.Activated:Connect(function()
+            State.SelectedSecretLocation = item.location
+            State.SelectedSecretQuest = item.quest
+            Notify("Quest: "..item.quest.Name)
+        end)
+    end
+end
+
+ShowSecretLocations()
+
+CreateButton(QuestItemsPage, "Start Secret Quest", function()
+    if not State.SelectedSecretQuest then Notify("Pilih quest dulu") return end
+    State.ActiveSecretQuest = State.SelectedSecretQuest
+    Notify("Starting: "..State.SelectedSecretQuest.Name)
+    task.spawn(function()
+        for i, step in ipairs(State.SelectedSecretQuest.Steps) do
+            Notify("Step "..i..": "..step)
+            task.wait(1.5)
+        end
+        Notify("Selesai: "..State.SelectedSecretQuest.Name)
+        State.ActiveSecretQuest = nil
+    end)
+end)
+
+CreateButton(QuestItemsPage, "Cancel Secret Quest", function()
+    State.ActiveSecretQuest = nil
+    Notify("Quest dibatalkan")
+end)
+
 CreateSection(FruitRaidPage, "FRUIT", "Auto collect fruit")
 CreateToggle(FruitRaidPage, "Auto Collect Fruit", false, function(s) State.AutoFruit=s Notify("Auto Collect Fruit: "..(s and "ON" or "OFF")) end)
 CreateToggle(FruitRaidPage, "Fruit Sniper", false, function(s) State.FruitSniper=s Notify("Fruit Sniper: "..(s and "ON" or "OFF")) end)
 
-CreateSection(FruitRaidPage, "GACHA ZIOLES", "Buka Gacha Box Zioles")
+CreateSection(FruitRaidPage, "GACHA ZIOLES", "Buka Gacha Box")
 CreateButton(FruitRaidPage, "Gacha Fruit", function() RandomFruitDirect() end)
 CreateToggle(FruitRaidPage, "Auto Gacha", false, function(s) State.RandomFruit=s Notify("Auto Gacha: "..(s and "ON" or "OFF")) end)
 CreateToggle(FruitRaidPage, "Store Fruit", false, function(s) State.StoreFruit=s Notify("Store Fruit: "..(s and "ON" or "OFF")) end)
@@ -1256,22 +1634,20 @@ CreateToggle(FruitRaidPage, "Auto Buy Chip", false, function(s) State.AutoBuyChi
 CreateSection(FruitRaidPage, "RAID", "Auto raid")
 CreateToggle(FruitRaidPage, "Auto Raid", false, function(s) State.AutoRaid=s Notify("Auto Raid: "..(s and "ON" or "OFF")) end)
 
---// FISHING
 CreateSection(FishingPage, "FISHING", "Auto fishing")
 CreateToggle(FishingPage, "Auto Fishing", false, function(s) State.AutoFishing=s Notify("Auto Fishing: "..(s and "ON" or "OFF")) end)
 CreateToggle(FishingPage, "Auto Catch", false, function(s) State.AutoCatch=s Notify("Auto Catch: "..(s and "ON" or "OFF")) end)
 
---// STATUS
 CreateSection(StatusPage, "STATUS", "Info player")
 local StatusLabel = Create("TextLabel", {
     Parent=StatusPage, BackgroundColor3=CONFIG.Panel,
-    Size=UDim2.new(1, 0, 0, 100),
-    Text="Level: -\nIsland: -\nSea: -\nSword: -\nRaid: -",
+    Size=UDim2.new(1,0,0,100),
+    Text="Level: -\nIsland: -\nSea: -\nBoss: -",
     TextColor3=CONFIG.Text, TextSize=13, Font=Enum.Font.GothamMedium,
     TextXAlignment=Enum.TextXAlignment.Left, BorderSizePixel=0, ZIndex=13,
 })
 Corner(StatusLabel, 9)
-Padding(StatusLabel, 14, 14, 7, 7)
+Padding(StatusLabel, 14,14,7,7)
 
 task.spawn(function()
     while task.wait(1) do
@@ -1279,36 +1655,50 @@ task.spawn(function()
             local lv = LevelValue.Value
             local island, sea = GetIslandByLevel(lv)
             StatusLabel.Text = string.format(
-                "Level: %d\nIsland: %s\nSea: %s\nSword: %s\nRaid: %s",
-                lv, island or "-", tostring(sea) or "-",
-                State.SelectedSword or "-", State.CurrentRaid or "-"
+                "Level: %d\nIsland: %s\nSea: %s\nBoss: %s",
+                lv, island or "-", tostring(sea) or "-", State.SelectedBoss or "-"
             )
         end
     end
 end)
 
---// PVP
 CreateSection(PvPPage, "PVP", "PVP Control")
 CreateToggle(PvPPage, "PvP Mode", false, function(s) State.PvPMode=s Notify("PvP Mode: "..(s and "ON" or "OFF")) end)
 CreateToggle(PvPPage, "ESP Players", false, function(s) State.ESPPlayers=s Notify("ESP Players: "..(s and "ON" or "OFF")) end)
 CreateToggle(PvPPage, "Aimbot", false, function(s) State.Aimbot=s Notify("Aimbot: "..(s and "ON" or "OFF")) end)
-CreateToggle(PvPPage, "Kill Aura (Raid Only)", false, function(s)
-    if s and not IsInRaidArea() then Notify("Harus di Raid Area (Sea 3)") return end
-    State.KillAura = s
-    Notify("Kill Aura: "..(s and "ON" or "OFF"))
-end)
 CreateToggle(PvPPage, "Hitbox", false, function(s) State.Hitbox=s Notify("Hitbox: "..(s and "ON" or "OFF")) end)
-CreateToggle(PvPPage, "Bring Mob", false, function(s) State.BringMob=s Notify("Bring Mob: "..(s and "ON" or "OFF")) end)
+
+local KillAuraLabel = Create("TextLabel", {
+    Parent=PvPPage, BackgroundColor3=CONFIG.Panel,
+    Size=UDim2.new(1,0,0,40),
+    Text="Kill Aura: Auto (bawaan)",
+    TextColor3=CONFIG.Success, TextSize=13, Font=Enum.Font.GothamMedium,
+    TextXAlignment=Enum.TextXAlignment.Left, BorderSizePixel=0, ZIndex=13,
+})
+Corner(KillAuraLabel, 9)
+Padding(KillAuraLabel, 14,14,7,7)
+
+task.spawn(function()
+    while task.wait(1) do
+        if IsInRaidArea() then
+            KillAuraLabel.Text = "Kill Aura: Active (di Raid)"
+            KillAuraLabel.TextColor3 = CONFIG.Success
+        else
+            KillAuraLabel.Text = "Kill Aura: Standby (bukan Raid)"
+            KillAuraLabel.TextColor3 = CONFIG.SubText
+        end
+    end
+end)
 
 local CurrentTargetLabel = Create("TextLabel", {
     Parent=PvPPage, BackgroundColor3=CONFIG.Panel,
-    Size=UDim2.new(1, 0, 0, 40),
+    Size=UDim2.new(1,0,0,40),
     Text="Current Target: -",
     TextColor3=CONFIG.Text, TextSize=13, Font=Enum.Font.GothamMedium,
     TextXAlignment=Enum.TextXAlignment.Left, BorderSizePixel=0, ZIndex=13,
 })
 Corner(CurrentTargetLabel, 9)
-Padding(CurrentTargetLabel, 14, 14, 7, 7)
+Padding(CurrentTargetLabel, 14,14,7,7)
 
 task.spawn(function()
     while task.wait(1) do
@@ -1317,9 +1707,9 @@ task.spawn(function()
         if hrp then
             for _, obj in ipairs(workspace:GetChildren()) do
                 if IsNPC(obj) or IsEnemyPlayer(obj) then
-                    local targetHRP = obj:FindFirstChild("HumanoidRootPart")
-                    if targetHRP then
-                        local d = GetDistance(targetHRP.Position, hrp.Position)
+                    local trp = obj:FindFirstChild("HumanoidRootPart")
+                    if trp then
+                        local d = GetDistance(trp.Position, hrp.Position)
                         if d < dist then nearest, dist = obj, d end
                     end
                 end
@@ -1329,17 +1719,16 @@ task.spawn(function()
     end
 end)
 
---// STATS
 CreateSection(StatsPage, "STATS", "Player stats")
 local StatsInfoLabel = Create("TextLabel", {
     Parent=StatsPage, BackgroundColor3=CONFIG.Panel,
-    Size=UDim2.new(1, 0, 0, 80),
+    Size=UDim2.new(1,0,0,80),
     Text="Melee: -\nDefense: -\nSword: -\nGun: -",
     TextColor3=CONFIG.Text, TextSize=13, Font=Enum.Font.GothamMedium,
     TextXAlignment=Enum.TextXAlignment.Left, BorderSizePixel=0, ZIndex=13,
 })
 Corner(StatsInfoLabel, 9)
-Padding(StatsInfoLabel, 14, 14, 7, 7)
+Padding(StatsInfoLabel, 14,14,7,7)
 
 task.spawn(function()
     while task.wait(2) do
@@ -1356,29 +1745,118 @@ task.spawn(function()
     end
 end)
 
---// MISC
-CreateSection(MiscPage, "MISC", "Additional settings")
+CreateSection(MiscPage, "ANTI AFK", "Cegah kick idle")
 CreateToggle(MiscPage, "Anti AFK", true, function(s) State.AntiAFK=s Notify("Anti AFK: "..(s and "ON" or "OFF")) end)
+
+CreateSection(MiscPage, "JOB ID", "Join server by Job ID")
+local JobIDLabel = Create("TextLabel", {
+    Parent=MiscPage, BackgroundColor3=CONFIG.Panel,
+    Size=UDim2.new(1,0,0,60),
+    Text="Current Job ID:\n"..tostring(game.JobId),
+    TextColor3=CONFIG.Text, TextSize=12, Font=Enum.Font.GothamMedium,
+    TextXAlignment=Enum.TextXAlignment.Left, BorderSizePixel=0, ZIndex=13,
+})
+Corner(JobIDLabel, 9)
+Padding(JobIDLabel, 14,14,7,7)
+
+CreateButton(MiscPage, "Copy Job ID", function()
+    if setclipboard then
+        setclipboard(tostring(game.JobId))
+        Notify("Job ID copied")
+    else
+        Notify("Clipboard tidak tersedia")
+    end
+end)
+
+CreateInput(MiscPage, "Paste Job ID here...", function(text)
+    State.JobIDInput = text
+    if text and text ~= "" then Notify("Job ID set") end
+end)
+
+CreateButton(MiscPage, "Join Job", function()
+    if not State.JobIDInput or State.JobIDInput == "" then Notify("Isi Job ID dulu") return end
+    local ok = pcall(function()
+        TeleportService:TeleportToPlaceInstance(game.PlaceId, State.JobIDInput, Player)
+    end)
+    if ok then Notify("Joining job: "..State.JobIDInput) else Notify("Gagal join") end
+end)
+
+CreateSection(MiscPage, "MOVEMENT", "Movement control")
+CreateToggle(MiscPage, "Bring Mob", false, function(s) State.BringMob=s Notify("Bring Mob: "..(s and "ON" or "OFF")) end)
+CreateToggle(MiscPage, "Infinite Jump", false, function(s) State.InfiniteJump=s Notify("Infinite Jump: "..(s and "ON" or "OFF")) end)
+
+CreateSection(MiscPage, "PERFORMANCE", "Boost FPS")
+CreateToggle(MiscPage, "Boost FPS", false, function(s)
+    State.BoostFPS = s
+    if s then
+        pcall(function()
+            State.OriginalLighting = {
+                GlobalShadows = Lighting.GlobalShadows,
+                Brightness = Lighting.Brightness,
+                Ambient = Lighting.Ambient,
+            }
+            Lighting.GlobalShadows = false
+            Lighting.Brightness = 0
+            Lighting.Ambient = Color3.fromRGB(0,0,0)
+            Lighting.FogEnd = 100
+            Lighting.Outlines = false
+        end)
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            pcall(function()
+                if obj:IsA("ParticleEmitter") then obj.Enabled = false end
+                if obj:IsA("Smoke") then obj.Enabled = false end
+                if obj:IsA("Fire") then obj.Enabled = false end
+                if obj:IsA("Sparkles") then obj.Enabled = false end
+                if obj:IsA("Trail") then obj.Enabled = false end
+                if obj:IsA("Beam") then obj.Enabled = false end
+            end)
+        end
+        Notify("Boost FPS: ON")
+    else
+        if State.OriginalLighting then
+            pcall(function()
+                Lighting.GlobalShadows = State.OriginalLighting.GlobalShadows
+                Lighting.Brightness = State.OriginalLighting.Brightness
+                Lighting.Ambient = State.OriginalLighting.Ambient
+            end)
+        end
+        Notify("Boost FPS: OFF")
+    end
+end)
+
+CreateSection(MiscPage, "REDEEM CODE", "Redeem Blox Fruits code")
+CreateInput(MiscPage, "Enter code...", function(text)
+    State.CodeInput = text
+end)
+CreateButton(MiscPage, "Redeem Code", function()
+    if not State.CodeInput or State.CodeInput == "" then Notify("Isi code dulu") return end
+    if REMOTE_Redeem then
+        local ok = pcall(function()
+            if REMOTE_Redeem:IsA("RemoteEvent") then
+                REMOTE_Redeem:FireServer(State.CodeInput)
+            else
+                REMOTE_Redeem:InvokeServer(State.CodeInput)
+            end
+        end)
+        if ok then Notify("Redeem: "..State.CodeInput) else Notify("Gagal redeem") end
+    else
+        Notify("Remote redeem tidak ditemukan")
+    end
+end)
+
+CreateSection(MiscPage, "SERVER", "Server options")
 CreateButton(MiscPage, "Rejoin Server", function()
     TeleportService:Teleport(game.PlaceId, Player)
 end)
 
---// TABS
 local TabDefinitions = {
-    {"Discord"},
-    {"Farm"},
-    {"Quest / Items"},
-    {"Fruit / Raid"},
-    {"Fishing"},
-    {"Status"},
-    {"PvP"},
-    {"Stats"},
-    {"Misc"},
+    {"Discord"},{"Farm"},{"Quest / Items"},{"Fruit / Raid"},{"Fishing"},
+    {"Status"},{"PvP"},{"Stats"},{"Misc"},
 }
 
 for index, data in ipairs(TabDefinitions) do
-    local button = CreateTab(data[1], "", index)
-    button.Activated:Connect(function() ShowTab(data[1]) end)
+    local btn = CreateTab(data[1], "", index)
+    btn.Activated:Connect(function() ShowTab(data[1]) end)
 end
 
 CloseButton.Activated:Connect(function() Main.Visible=false OpenButton.Visible=true end)
@@ -1397,7 +1875,7 @@ UIS.InputChanged:Connect(function(input)
     if not dragging then return end
     if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then return end
     local delta = input.Position - dragStart
-    Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset+delta.X, startPos.Y.Scale, startPos.Y.Offset+delta.Y)
 end)
 
 local openDragging, openDragStart, openStartPos = false, nil, nil
@@ -1413,7 +1891,7 @@ UIS.InputChanged:Connect(function(input)
     if not openDragging then return end
     if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then return end
     local delta = input.Position - openDragStart
-    OpenButton.Position = UDim2.new(openStartPos.X.Scale, openStartPos.X.Offset + delta.X, openStartPos.Y.Scale, openStartPos.Y.Offset + delta.Y)
+    OpenButton.Position = UDim2.new(openStartPos.X.Scale, openStartPos.X.Offset+delta.X, openStartPos.Y.Scale, openStartPos.Y.Offset+delta.Y)
 end)
 
 Player.Idled:Connect(function()
@@ -1426,7 +1904,7 @@ end)
 ShowTab("Discord")
 
 print("================================")
-print("        SYSX HUB LOADED v1.3")
+print("        SYSX HUB LOADED v1.6")
 print("        " .. CONFIG.Build)
 print("================================")
 
