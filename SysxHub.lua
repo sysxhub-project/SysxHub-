@@ -1,7 +1,7 @@
 --[[
 ================================================================
  SYSX HUB | Freemium v1.0 | Created by Ramanotsugarr
- Logo + Banner UI + Full Feature + CommF_ + CDK Auto
+ Logo + Banner + Full 14 Tabs + Fruit System + Fixed Dropdown
 ================================================================
 ]]
 
@@ -14,6 +14,7 @@ local Workspace = game:GetService("Workspace")
 local VirtualUser = game:GetService("VirtualUser")
 local TeleportService = game:GetService("TeleportService")
 local Lighting = game:GetService("Lighting")
+local StarterGui = game:GetService("StarterGui")
 
 local Player = Players.LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")
@@ -28,13 +29,14 @@ local CONFIG = {
     Discord = "https://discord.gg/E5kQJW3hn",
     TweenMobSpeed = 350,
     IslandTweenSpeed = 180,
+    FruitTweenSpeed = 180,
 }
 
 local State = {
     AutoFarm=false, AutoChest=false, AutoBoss=false,
     AutoFruit=false, AutoKillNearest=false, AutoRaid=false,
     AutoGacha=false, StoreFruit=false, AutoFish=false, AutoAddStats=false,
-    AutoRaceV2=false, AutoRaceV3=false, CousinBuy=false,
+    AutoRaceV2=false, AutoRaceV3=false,
     AutoCastleRaid=false, AutoFactoryRaid=false,
     AutoEliteHunter=false, EliteProgress=0, KilledElites={},
     CastleRaidActive=false, FactoryRaidActive=false,
@@ -52,8 +54,7 @@ local State = {
     SelectedBoss=nil, SelectedRaid=nil, SelectedPlayer=nil,
     SelectedIsland="Starter Island", SelectedMelee=nil, SelectedSword=nil,
     SelectedGun=nil, SelectedAbility=nil,
-    SelectedFruit="All", FruitTweenSpeed=250,
-    FruitTweenEnabled=false, FruitStoreEnabled=false,
+    FruitTweenEnabled=false, FruitStoreEnabled=true,
     BringMob=false, BringMobRange=50, InfiniteJump=false, BoostFPS=false,
     Hitbox=false, HitboxPart=nil, Aimbot=false, WalkWater=false,
     LastBring=0, AntiAFK=true, Notifications=true,
@@ -63,8 +64,15 @@ local State = {
     ESPChest=false, ESPFlower=false, ESPObjects={},
 }
 
-local old = PlayerGui:FindFirstChild("SysxHubVisual")
+local FruitFolder = workspace:WaitForChild("Fruits", 5)
+local FruitSystem = ReplicatedStorage:FindFirstChild("SysxFruit")
+local StoreFruitRemote = FruitSystem and FruitSystem:FindFirstChild("StoreFruit")
+local StoreResultRemote = FruitSystem and FruitSystem:FindFirstChild("StoreResult")
+
+local old = PlayerGui:FindFirstChild("SysxHub")
 if old then old:Destroy() end
+local old2 = PlayerGui:FindFirstChild("SysxHubVisual")
+if old2 then old2:Destroy() end
 
 --// HELPERS
 local function Create(cls, props)
@@ -362,6 +370,18 @@ local function DisableWalkWater()
     if WalkWaterConnection then WalkWaterConnection:Disconnect() WalkWaterConnection = nil end
 end
 
+--// FRUIT SYSTEM HELPERS
+local function getFruitPart(obj)
+    if obj:IsA("BasePart") then return obj end
+    if obj:IsA("Model") then return obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true) end
+    return nil
+end
+local function getFruitName(obj)
+    local attr = obj:GetAttribute("FruitName")
+    if typeof(attr) == "string" and attr ~= "" then return attr end
+    return obj.Name
+end
+
 --// LEVEL DATA
 local LEVEL_DATA = {
     {min=1,max=10,quest="BanditQuest1",questNum=1,mobs={"Bandit","Trainee"}},
@@ -406,29 +426,11 @@ local function GetLevelData(level)
     return LEVEL_DATA[#LEVEL_DATA]
 end
 
---// FRUIT LIST
-local FruitList = {"Rocket","Spin","Blade","Bomb","Smoke","Flame","Ice","Sand","Dark","Light","Magma","Quake","Buddha","Love","Spider","Sound","Phoenix","Portal","Rumble","Pain","Blizzard","Gravity","Venom","Control","Spirit","Dragon","Leopard","Kitsune"}
-local FruitLookup = {}
-for _, name in ipairs(FruitList) do FruitLookup[name:lower()] = true end
-local function isFruitObj(obj)
-    if not obj then return false end
-    local n = obj.Name:lower()
-    if FruitLookup[n] then return true end
-    for _, f in ipairs(FruitList) do if string.find(n, f:lower()) then return true end end
-    return false
-end
-local function getFruitPart(obj)
-    if obj:IsA("BasePart") then return obj end
-    if obj:IsA("Model") then return obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true) end
-    return nil
-end
-local FruitBusy = false
-local SeenFruits = {}
-
---// ============== SCREEN GUI ==============
+--// GUI
 local Gui = Create("ScreenGui", {
-    Name="SysxHubVisual", ResetOnSpawn=false, IgnoreGuiInset=true,
-    ZIndexBehavior=Enum.ZIndexBehavior.Sibling, Parent=PlayerGui,
+    Name="SysxHub", Parent=PlayerGui, ResetOnSpawn=false,
+    IgnoreGuiInset=true, DisplayOrder=999999,
+    ZIndexBehavior=Enum.ZIndexBehavior.Global,
 })
 
 local Notification = Create("TextLabel", {
@@ -436,7 +438,7 @@ local Notification = Create("TextLabel", {
     Position=UDim2.new(0.5,0,1,-20), Size=UDim2.fromOffset(340,44),
     BackgroundColor3=Color3.fromRGB(17,13,29), BackgroundTransparency=0.05,
     Text="", TextColor3=Color3.fromRGB(255,255,255), TextSize=13,
-    Font=Enum.Font.GothamMedium, Visible=false, ZIndex=500,
+    Font=Enum.Font.GothamMedium, Visible=false, ZIndex=999999,
 })
 Corner(Notification, 10)
 Stroke(Notification, Color3.fromRGB(0,150,255), 1.5, 0.3)
@@ -471,7 +473,7 @@ end
 UpdateScale()
 if Camera then Camera:GetPropertyChangedSignal("ViewportSize"):Connect(UpdateScale) end
 
---// OPEN BUTTON (LOGO)
+--// OPEN BUTTON
 local OpenButton = Create("ImageButton", {
     Name="SysxLogo", Parent=Gui,
     Size=UDim2.fromOffset(62,62), Position=UDim2.new(0,18,0.5,-31),
@@ -483,7 +485,7 @@ Corner(OpenButton, 18)
 local OS = Instance.new("UIStroke")
 OS.Color = Color3.fromRGB(35,125,255) OS.Thickness = 1.5 OS.Transparency = 0.1 OS.Parent = OpenButton
 
---// MAIN FRAME
+--// MAIN
 local Main = Create("Frame", {
     Name="Main", Parent=Gui,
     Size=UDim2.fromOffset(780,600), Position=UDim2.new(0.5,-390,0.5,-300),
@@ -497,11 +499,7 @@ MS.Color = Color3.fromRGB(38,100,190) MS.Thickness = 1.2 MS.Transparency = 0.25 
 --// HEADER
 local Header = Create("Frame", {Name="Header", Parent=Main, Size=UDim2.new(1,0,0,82), BackgroundTransparency=1, ZIndex=20})
 
-local HeaderLogo = Create("ImageLabel", {
-    Name="Logo", Parent=Header,
-    Size=UDim2.fromOffset(55,55), Position=UDim2.fromOffset(14,8),
-    BackgroundTransparency=1, Image=LOGO_ID, ScaleType=Enum.ScaleType.Fit,
-})
+Create("ImageLabel", {Name="Logo", Parent=Header, Size=UDim2.fromOffset(55,55), Position=UDim2.fromOffset(14,8), BackgroundTransparency=1, Image=LOGO_ID, ScaleType=Enum.ScaleType.Fit})
 Create("TextLabel", {Parent=Header, BackgroundTransparency=1, Position=UDim2.fromOffset(78,12), Size=UDim2.fromOffset(320,30), Text="SysxHub", TextColor3=Color3.fromRGB(235,242,255), TextSize=23, Font=Enum.Font.GothamBold, TextXAlignment=Enum.TextXAlignment.Left})
 Create("TextLabel", {Parent=Header, BackgroundTransparency=1, Position=UDim2.fromOffset(79,39), Size=UDim2.fromOffset(320,20), Text="Play Smarter, Not Harder", TextColor3=Color3.fromRGB(120,150,195), TextSize=12, Font=Enum.Font.Gotham, TextXAlignment=Enum.TextXAlignment.Left})
 
@@ -510,7 +508,6 @@ Corner(StatusDot, 10)
 Create("TextLabel", {Parent=Header, BackgroundTransparency=1, Position=UDim2.new(1,-265,0,19), Size=UDim2.fromOffset(90,25), Text="Game Loaded", TextColor3=Color3.fromRGB(210,220,235), TextSize=11, Font=Enum.Font.GothamMedium, TextXAlignment=Enum.TextXAlignment.Left})
 Create("TextLabel", {Parent=Header, BackgroundTransparency=1, Position=UDim2.new(1,-165,0,19), Size=UDim2.fromOffset(60,25), Text="v1.0.0", TextColor3=Color3.fromRGB(130,145,175), TextSize=11, Font=Enum.Font.Gotham, TextXAlignment=Enum.TextXAlignment.Center})
 
--- CLOSE BUTTON (pakai LOGO)
 local CloseButton = Create("ImageButton", {
     Parent=Header, Size=UDim2.fromOffset(38,38),
     Position=UDim2.new(1,-54,0,16),
@@ -521,7 +518,7 @@ local CloseButton = Create("ImageButton", {
 Corner(CloseButton, 10)
 Stroke(CloseButton, Color3.fromRGB(0,150,255), 1.5, 0.3)
 
-local HeaderLine = Create("Frame", {Parent=Header, Size=UDim2.new(1,0,0,1), Position=UDim2.new(0,0,1,-1), BackgroundColor3=Color3.fromRGB(35,55,85), BackgroundTransparency=0.35, BorderSizePixel=0})
+Create("Frame", {Parent=Header, Size=UDim2.new(1,0,0,1), Position=UDim2.new(0,0,1,-1), BackgroundColor3=Color3.fromRGB(35,55,85), BackgroundTransparency=0.35, BorderSizePixel=0})
 
 --// BANNER
 local BannerHolder = Create("Frame", {
@@ -531,21 +528,16 @@ local BannerHolder = Create("Frame", {
 })
 Corner(BannerHolder, 14)
 Stroke(BannerHolder, Color3.fromRGB(35,95,175), 1, 0.3)
-local Banner = Create("ImageLabel", {
-    Name="Banner", Parent=BannerHolder,
-    Size=UDim2.fromScale(1,1), Position=UDim2.fromScale(0,0),
-    BackgroundTransparency=1, Image=BANNER_ID, ScaleType=Enum.ScaleType.Crop,
-})
+Create("ImageLabel", {Name="Banner", Parent=BannerHolder, Size=UDim2.fromScale(1,1), Position=UDim2.fromScale(0,0), BackgroundTransparency=1, Image=BANNER_ID, ScaleType=Enum.ScaleType.Crop})
 Create("Frame", {Parent=BannerHolder, Size=UDim2.fromScale(1,1), BackgroundColor3=Color3.fromRGB(0,10,25), BackgroundTransparency=0.72, BorderSizePixel=0})
 
---// CONTENT AREA (Tabs + Features)
+--// CONTENT
 local Content = Create("Frame", {
     Name="Content", Parent=Main,
     Size=UDim2.new(1,-32,1,-264), Position=UDim2.fromOffset(16,256),
-    BackgroundTransparency=1, ZIndex=14,
+    BackgroundTransparency=1, ZIndex=14, ClipsDescendants=false,
 })
 
--- SIDEBAR TABS
 local Sidebar = Create("Frame", {
     Parent=Content, BackgroundColor3=Color3.fromRGB(17,13,29),
     Size=UDim2.new(0,140,1,0), BorderSizePixel=0, ZIndex=15,
@@ -567,7 +559,7 @@ local ContentScroll = Create("ScrollingFrame", {
     Position=UDim2.new(0,148,0,0), Size=UDim2.new(1,-148,1,0),
     CanvasSize=UDim2.new(0,0,0,0), AutomaticCanvasSize=Enum.AutomaticSize.Y,
     ScrollBarThickness=3, ScrollBarImageColor3=Color3.fromRGB(0,150,255),
-    BorderSizePixel=0, ZIndex=14,
+    BorderSizePixel=0, ZIndex=14, ClipsDescendants=false,
 })
 
 local Pages, Tabs = {}, {}
@@ -578,7 +570,7 @@ local function CreatePage(name)
         Position=UDim2.new(0,4,0,4), Size=UDim2.new(1,-8,1,-8),
         CanvasSize=UDim2.new(0,0,0,0), AutomaticCanvasSize=Enum.AutomaticSize.Y,
         ScrollBarThickness=3, ScrollBarImageColor3=Color3.fromRGB(0,150,255),
-        BorderSizePixel=0, Visible=false, ZIndex=12,
+        BorderSizePixel=0, Visible=false, ZIndex=12, ClipsDescendants=false,
     })
     local L = Instance.new("UIListLayout")
     L.Padding = UDim.new(0,5) L.SortOrder = Enum.SortOrder.LayoutOrder L.Parent = P
@@ -619,14 +611,14 @@ local function CreateToggle(parent, text, default, cb)
 end
 
 local function CreateDropdown(parent, title, options, cb)
-    local Holder = Create("Frame", {Parent=parent, BackgroundColor3=Color3.fromRGB(17,13,29), Size=UDim2.new(1,0,0,38), BorderSizePixel=0, ZIndex=13, ClipsDescendants=false})
+    local Holder = Create("Frame", {Parent=parent, BackgroundColor3=Color3.fromRGB(17,13,29), Size=UDim2.new(1,0,0,38), BorderSizePixel=0, ZIndex=45000, ClipsDescendants=false})
     Corner(Holder, 8)
     Stroke(Holder, Color3.fromRGB(0,150,255), 1.2, 0.4)
     local Selected = options[1] or "Select"
     local IsOpen = false
-    local TitleLbl = Create("TextLabel", {Parent=Holder, BackgroundTransparency=1, Position=UDim2.new(0,10,0,0), Size=UDim2.new(1,-35,1,0), Text=title..": "..Selected, TextColor3=Color3.fromRGB(255,255,255), TextSize=12, Font=Enum.Font.GothamMedium, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=14})
-    Create("TextLabel", {Parent=Holder, BackgroundTransparency=1, Position=UDim2.new(1,-22,0,0), Size=UDim2.new(0,18,1,0), Text="v", TextColor3=Color3.fromRGB(255,255,255), TextSize=11, Font=Enum.Font.GothamBold, ZIndex=14})
-    local ListHolder = Create("ScrollingFrame", {Parent=Holder, BackgroundColor3=Color3.fromRGB(23,18,38), Position=UDim2.new(0,0,1,4), Size=UDim2.new(1,0,0,0), CanvasSize=UDim2.new(0,0,0,0), AutomaticCanvasSize=Enum.AutomaticSize.Y, ScrollBarThickness=3, ScrollBarImageColor3=Color3.fromRGB(0,150,255), BorderSizePixel=0, ZIndex=200, Visible=false})
+    local TitleLbl = Create("TextLabel", {Parent=Holder, BackgroundTransparency=1, Position=UDim2.new(0,10,0,0), Size=UDim2.new(1,-35,1,0), Text=title..": "..Selected, TextColor3=Color3.fromRGB(255,255,255), TextSize=12, Font=Enum.Font.GothamMedium, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=45001})
+    Create("TextLabel", {Parent=Holder, BackgroundTransparency=1, Position=UDim2.new(1,-22,0,0), Size=UDim2.new(0,18,1,0), Text="v", TextColor3=Color3.fromRGB(255,255,255), TextSize=11, Font=Enum.Font.GothamBold, ZIndex=45001})
+    local ListHolder = Create("ScrollingFrame", {Parent=Holder, BackgroundColor3=Color3.fromRGB(23,18,38), Position=UDim2.new(0,0,1,4), Size=UDim2.new(1,0,0,0), CanvasSize=UDim2.new(0,0,0,0), AutomaticCanvasSize=Enum.AutomaticSize.Y, ScrollBarThickness=3, ScrollBarImageColor3=Color3.fromRGB(0,150,255), BorderSizePixel=0, ZIndex=50000, Visible=false, ClipsDescendants=true})
     Corner(ListHolder, 8)
     Stroke(ListHolder, Color3.fromRGB(0,150,255), 1.2, 0.3)
     local LL = Instance.new("UIListLayout")
@@ -636,7 +628,7 @@ local function CreateDropdown(parent, title, options, cb)
             if c:IsA("TextButton") then c:Destroy() end
         end
         for i, opt in ipairs(options) do
-            local OB = Create("TextButton", {Parent=ListHolder, BackgroundColor3=Color3.fromRGB(17,13,29), Size=UDim2.new(1,-8,0,28), Position=UDim2.new(0,4,0,4), Text=opt, TextColor3=Color3.fromRGB(255,255,255), TextSize=11, Font=Enum.Font.GothamMedium, AutoButtonColor=false, BorderSizePixel=0, LayoutOrder=i, ZIndex=201, TextXAlignment=Enum.TextXAlignment.Left})
+            local OB = Create("TextButton", {Parent=ListHolder, BackgroundColor3=Color3.fromRGB(17,13,29), Size=UDim2.new(1,-8,0,28), Position=UDim2.new(0,4,0,4), Text=opt, TextColor3=Color3.fromRGB(255,255,255), TextSize=11, Font=Enum.Font.GothamMedium, AutoButtonColor=false, BorderSizePixel=0, LayoutOrder=i, ZIndex=50001, TextXAlignment=Enum.TextXAlignment.Left})
             Corner(OB, 6)
             OB.Activated:Connect(function()
                 Selected = opt TitleLbl.Text = title..": "..opt
@@ -872,15 +864,10 @@ CreateToggle(QuestItemsPage, "Auto Blackbeard Reward", false, function(s) if s t
 CreateToggle(QuestItemsPage, "Auto Horned Man Bet", false, function(s) if s then Invoke("HornedMan", "Bet") Notify("Horned Man") end end)
 CreateToggle(QuestItemsPage, "Auto Talk Trevor", false, function(s) if s then Invoke("TalkTrevor", "1") Notify("Trevor") end end)
 
---// FRUIT / RAID
-local FruitOpts = {"All"}
-for _, f in ipairs(FruitList) do table.insert(FruitOpts, f) end
-CreateDropdown(FruitRaidPage, "Select Fruit", FruitOpts, function(opt) State.SelectedFruit = opt Notify("Fruit: "..opt) end)
+--// FRUIT / RAID (Fixed: hapus Select Fruit, Speed, Store Held, Cousin, Bones)
 CreateToggle(FruitRaidPage, "Tween Fruit", false, function(s) State.FruitTweenEnabled = s Notify("Tween Fruit: "..(s and "ON" or "OFF")) end)
 CreateToggle(FruitRaidPage, "Auto Store Fruit", false, function(s) State.FruitStoreEnabled = s Notify("Auto Store: "..(s and "ON" or "OFF")) end)
-CreateSlider(FruitRaidPage, "Fruit Tween Speed", 50, 1000, 250, function(v) State.FruitTweenSpeed = v end)
 CreateToggle(FruitRaidPage, "Random Fruit (Gacha)", false, function(s) State.AutoGacha = s Notify("Random Fruit: "..(s and "ON" or "OFF")) end)
-CreateToggle(FruitRaidPage, "Store Held Fruit", false, function(s) State.StoreFruit = s Notify("Store Held: "..(s and "ON" or "OFF")) end)
 CreateDropdown(FruitRaidPage, "Select Raid", {"Flame","Ice","Sand","Dark","Light","Magma","Quake","Buddha","Spider","Phoenix","Dough"}, function(opt) State.SelectedRaid = opt Notify("Raid: "..opt) end)
 CreateToggle(FruitRaidPage, "Auto Raid", false, function(s) State.AutoRaid = s Notify("Auto Raid: "..(s and "ON" or "OFF")) end)
 CreateToggle(FruitRaidPage, "Buy Chip", false, function(s)
@@ -895,11 +882,6 @@ CreateToggle(FruitRaidPage, "Buy Chip", false, function(s)
         Notify("Buy Chip")
     end
 end)
-CreateToggle(FruitRaidPage, "Cousin Buy", false, function(s) State.CousinBuy = s Notify("Cousin Buy: "..(s and "ON" or "OFF")) end)
-CreateToggle(FruitRaidPage, "Bones Check", false, function(s) if s then local res = Invoke("Bones", "Check") Notify("Bones: "..tostring(res)) end end)
-CreateToggle(FruitRaidPage, "Bones Surprise", false, function(s) if s then Invoke("Bones", "Buy", 1, 1) Notify("Surprise") end end)
-CreateToggle(FruitRaidPage, "Bones Stat Refund", false, function(s) if s then Invoke("Bones", "Buy", 1, 2) Notify("Stat Refund") end end)
-CreateToggle(FruitRaidPage, "Bones Race Reroll", false, function(s) if s then Invoke("Bones", "Buy", 1, 3) Notify("Race Reroll") end end)
 
 --// FISHING
 CreateToggle(FishingPage, "Auto Fishing", false, function(s) State.AutoFish = s Notify("Auto Fishing: "..(s and "ON" or "OFF")) end)
@@ -1486,62 +1468,58 @@ task.spawn(function()
     end
 end)
 
+--// FRUIT SYSTEM LOOP (pakai FruitFolder + StoreFruitRemote)
 task.spawn(function()
     while task.wait(0.3) do
-        if State.FruitTweenEnabled and not FruitBusy then
-            FruitBusy = true
+        if State.FruitTweenEnabled and FruitFolder then
             local hrp = GetHRP()
             if hrp then
                 local closest, cd = nil, math.huge
-                for _, obj in ipairs(workspace:GetDescendants()) do
-                    if isFruitObj(obj) then
-                        local part = getFruitPart(obj)
-                        if part then
-                            local correct = State.SelectedFruit == "All" or obj.Name == State.SelectedFruit
-                            if correct then
-                                local d = GetDist(part.Position, hrp.Position)
-                                if d < 500 and d < cd then closest, cd = obj, d end
-                            end
-                        end
+                for _, fruit in ipairs(FruitFolder:GetChildren()) do
+                    local part = getFruitPart(fruit)
+                    if part then
+                        local d = GetDist(part.Position, hrp.Position)
+                        if d < 500 and d < cd then closest, cd = fruit, d end
                     end
                 end
                 if closest then
-                    if not SeenFruits[closest] then
-                        SeenFruits[closest] = true
-                        Notify("Fruit Spawn: "..closest.Name)
-                    end
                     local part = getFruitPart(closest)
                     if part then
                         local dist = GetDist(part.Position, hrp.Position)
-                        local dur = math.max(dist / State.FruitTweenSpeed, 0.1)
-                        local tw = TweenService:Create(hrp, TweenInfo.new(dur, Enum.EasingStyle.Linear), { CFrame = part.CFrame + Vector3.new(0,3,0) })
-                        tw:Play() tw.Completed:Wait()
-                        if State.FruitStoreEnabled then
-                            local held = GetHeldFruit()
-                            if held then Invoke("StoreFruit", held.Name, held) end
+                        local dur = math.max(dist / CONFIG.FruitTweenSpeed, 0.1)
+                        local tw = TweenService:Create(hrp, TweenInfo.new(dur, Enum.EasingStyle.Linear), { CFrame = CFrame.new(part.Position + Vector3.new(0,3,0)) })
+                        tw:Play()
+                        tw.Completed:Wait()
+                        if State.FruitStoreEnabled and StoreFruitRemote and closest:IsDescendantOf(FruitFolder) then
+                            StoreFruitRemote:FireServer(closest)
+                            task.wait(0.35)
                         end
                     end
                 end
             end
-            FruitBusy = false
         end
     end
 end)
+
+if StoreResultRemote then
+    StoreResultRemote.OnClientEvent:Connect(function(success, data)
+        if success then Notify("Stored: "..tostring(data))
+        elseif data == "TooFar" then Notify("Fruit terlalu jauh") end
+    end)
+end
+
+if FruitFolder then
+    FruitFolder.ChildAdded:Connect(function(fruit)
+        task.wait(0.05)
+        if fruit:IsDescendantOf(FruitFolder) then
+            Notify("Fruit Spawn: "..getFruitName(fruit))
+        end
+    end)
+end
 
 task.spawn(function()
     while task.wait(60) do
         if State.AutoGacha then pcall(function() if not GetHeldFruit() then Invoke("BuyFruit", "Random") end end) end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(1.5) do
-        if State.StoreFruit and not State.FruitStoreEnabled then
-            pcall(function()
-                local held = GetHeldFruit()
-                if held then Invoke("StoreFruit", held.Name, held) Notify("Stored: "..held.Name) end
-            end)
-        end
     end
 end)
 
@@ -1566,12 +1544,6 @@ task.spawn(function()
                 for _, st in ipairs(stats) do if st.Value > 0 then Invoke("AddPoint", st.Name, st.Value) task.wait(0.3) end end
             end)
         end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(1) do
-        if State.CousinBuy then pcall(function() Invoke("Cousin", "Buy") end) end
     end
 end)
 
@@ -1616,6 +1588,7 @@ task.spawn(function()
     end
 end)
 
+--// ESP LOOP
 task.spawn(function()
     while task.wait(0.3) do
         local hrp = GetHRP()
@@ -1714,18 +1687,7 @@ task.spawn(function()
     end
 end)
 
-workspace.DescendantAdded:Connect(function(obj)
-    if isFruitObj(obj) and not SeenFruits[obj] then
-        task.wait()
-        if obj.Parent then
-            SeenFruits[obj] = true
-            Notify("Fruit Spawn: "..obj.Name)
-        end
-    end
-end)
-workspace.DescendantRemoving:Connect(function(obj) SeenFruits[obj] = nil end)
-
---// ============== TABS ==============
+--// TABS
 local TabDefs = {
     {"Discord"}, {"Farm"}, {"Sea"}, {"Quest / Items"}, {"Fruit / Raid"},
     {"Fishing"}, {"Status"}, {"PvP"}, {"Trials"}, {"Seting"},
@@ -1755,32 +1717,55 @@ local function CloseGUI()
     tw.Completed:Once(function() Main.Visible = false end)
 end
 
-OpenButton.MouseButton1Click:Connect(function()
+--// DRAG LOGO
+local IsDragging, DragStart, StartPosition, HasMoved = false, nil, nil, false
+OpenButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        IsDragging = true HasMoved = false
+        DragStart = input.Position
+        StartPosition = OpenButton.Position
+    end
+end)
+UIS.InputChanged:Connect(function(input)
+    if not IsDragging then return end
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        local delta = input.Position - DragStart
+        if math.abs(delta.X) > 5 or math.abs(delta.Y) > 5 then HasMoved = true end
+        OpenButton.Position = UDim2.new(StartPosition.X.Scale, StartPosition.X.Offset + delta.X, StartPosition.Y.Scale, StartPosition.Y.Offset + delta.Y)
+    end
+end)
+UIS.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        IsDragging = false
+    end
+end)
+
+OpenButton.Activated:Connect(function()
+    if HasMoved then HasMoved = false return end
     if Main.Visible then CloseGUI() else OpenGUI() end
 end)
-CloseButton.MouseButton1Click:Connect(function() CloseGUI() end)
+CloseButton.Activated:Connect(function() CloseGUI() end)
 
--- Hover open button
+--// DRAG MAIN (via Header)
+local MDragging, MDragStart, MStartPos = false, nil, nil
+Header.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        MDragging = true MDragStart = input.Position MStartPos = Main.Position
+        input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then MDragging = false end end)
+    end
+end)
+UIS.InputChanged:Connect(function(input)
+    if not MDragging then return end
+    if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then return end
+    local delta = input.Position - MDragStart
+    Main.Position = UDim2.new(MStartPos.X.Scale, MStartPos.X.Offset + delta.X, MStartPos.Y.Scale, MStartPos.Y.Offset + delta.Y)
+end)
+
 OpenButton.MouseEnter:Connect(function()
     TweenService:Create(OpenButton, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.fromOffset(68,68)}):Play()
 end)
 OpenButton.MouseLeave:Connect(function()
     TweenService:Create(OpenButton, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.fromOffset(62,62)}):Play()
-end)
-
--- Drag
-local dragging, dragStart, startPos = false, nil, nil
-Header.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true dragStart = input.Position startPos = Main.Position
-        input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
-    end
-end)
-UIS.InputChanged:Connect(function(input)
-    if not dragging then return end
-    if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then return end
-    local delta = input.Position - dragStart
-    Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
 end)
 
 Player.Idled:Connect(function()
@@ -1790,12 +1775,11 @@ Player.Idled:Connect(function()
     end
 end)
 
---// PUBLIC API
 _G.SysxHubVisual = {
     Open = OpenGUI, Close = CloseGUI,
     Toggle = function() if Main.Visible then CloseGUI() else OpenGUI() end end,
     GetMain = function() return Main end,
-    GetBanner = function() return Banner end,
+    GetBanner = function() return BannerHolder end,
 }
 
 ShowTab("Farm")
