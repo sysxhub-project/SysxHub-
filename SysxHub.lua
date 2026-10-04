@@ -1,7 +1,7 @@
 --[[
 ================================================================
- SYSX HUB - v1.0.2 | Created by Ramanotsugarr
- Single File
+ SYSX HUB - v1.0.4 | Created by Ramanotsugarr
+ Full Working Code - English Only
 ================================================================
 ]]
 
@@ -21,8 +21,7 @@ local Camera = Workspace.CurrentCamera
 
 local CONFIG = {
     Name = "SysxHub",
-    Version = "v1.0.2",
-    Build = "SysxHub v1.0.2 | Created by Ramanotsugarr",
+    Build = "SysxHub v1.0.4 | Created by Ramanotsugarr",
     Logo = "rbxassetid://136425814447688",
     OpenClose = "rbxassetid://70792832229220",
     Discord = "https://discord.gg/E5kQJW3hn",
@@ -46,32 +45,26 @@ local CONFIG = {
 }
 
 local State = {
-    AutoFarm = false, AutoChest = false, AutoBoss = false,
-    AutoMaterial = false, AutoFruit = false, AutoKillNearest = false,
-    SelectedWeapon = nil, SelectedCategory = nil,
-    SelectedBoss = nil, SelectedBossSea = nil,
-    SelectedSeaMob = nil, AutoFarmSea = false, AutoKillSeaBeast = false,
-    AutoDrive = false, DeleteRocks = false,
-    HeightBoat = 0, SpeedBoat = 0, LockMoon = false, AzureEmberCount = 0,
-    AutoKillGolem = false, AutoCollectBone = false, AutoTrade = false,
-    AutoCDK = false, AutoDarkDagger = false, AutoSoulGuitar = false,
-    AutoYama = false, AutoTushita = false, AutoBuddySword = false,
-    AutoKillIndra = false, AutoSpawnDoughKing = false,
-    SelectedSecretLocation = nil, SelectedSecretQuest = nil,
-    AutoRaid = false, AutoBuyChip = false,
-    RandomFruit = false, StoreFruit = false, LastRandomFruit = 0,
-    SelectedRaid = nil,
-    AutoFishing = false, AutoCatch = false,
-    KillAura = false, LastKillAura = 0, Hitbox = false,
-    HitboxPart = nil, Aimbot = false,
-    SelectedPlayer = nil, SpectateTarget = nil, Spectating = false,
-    AutoAddStats = false,
-    StatsMelee = 0, StatsDefense = 0, StatsSword = 0, StatsGun = 0, StatsBloxFruit = 0,
-    AntiAFK = true, BringMob = false, LastBring = 0, BringMobRange = 50,
-    InfiniteJump = false, BoostFPS = false, OriginalLighting = nil,
-    JobIDInput = "", CodeInput = "",
-    Notifications = true, CurrentIsland = nil,
-    OpenedChests = {}, SearchInput = "",
+    AutoFarm=false, AutoChest=false, AutoBoss=false, AutoMaterial=false,
+    AutoFruit=false, AutoKillNearest=false,
+    SelectedWeapon=nil, SelectedCategory=nil,
+    SelectedBoss=nil, SelectedBossSea=nil,
+    SelectedSeaMob=nil, AutoFarmSea=false, AutoKillSeaBeast=false,
+    AutoDrive=false, DeleteRocks=false, HeightBoat=0, SpeedBoat=0,
+    LockMoon=false, AzureEmberCount=0, AutoKillGolem=false, AutoCollectBone=false,
+    AutoTrade=false, SelectedSecretLocation=nil, SelectedSecretQuest=nil,
+    AutoSecretQuest=false,
+    AutoRaid=false, AutoBuyChip=false,
+    RandomFruit=false, StoreFruit=false, LastRandomFruit=0, SelectedRaid=nil,
+    AutoFishing=false, AutoCatch=false,
+    KillAura=false, LastKillAura=0, Hitbox=false, HitboxPart=nil, Aimbot=false,
+    SelectedPlayer=nil, SpectateTarget=nil, Spectating=false,
+    AutoAddStats=false,
+    StatsMelee=0, StatsDefense=0, StatsSword=0, StatsGun=0, StatsBloxFruit=0,
+    AntiAFK=true, BringMob=false, LastBring=0, BringMobRange=50,
+    InfiniteJump=false, BoostFPS=false, OriginalLighting=nil,
+    JobIDInput="", CodeInput="",
+    Notifications=true, OpenedChests={},
 }
 
 local old = PlayerGui:FindFirstChild("SysxHub")
@@ -122,11 +115,7 @@ local function Tween(o, props, time)
     TweenService:Create(o, TweenInfo.new(time or 0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), props):Play()
 end
 
-local function GetHRP()
-    local c = Player.Character
-    return c and c:FindFirstChild("HumanoidRootPart")
-end
-
+local function GetHRP() local c = Player.Character return c and c:FindFirstChild("HumanoidRootPart") end
 local function GetDist(a, b) return (a - b).Magnitude end
 
 local function SafeCall(fn, ...)
@@ -173,6 +162,7 @@ local REMOTE_RandomFruit = FindRemote("randomfruit", "gacha", "zioles", "rollfru
 local REMOTE_BuyChip = FindRemote("buychip", "purchasechip", "raidchip", "microchip")
 local REMOTE_StoreFruit = FindRemote("storefruit", "fruitstore", "savefruit")
 local REMOTE_Redeem = FindRemote("redeem", "promocode", "code")
+local CommF = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
 
 --// GUI
 local Gui = Create("ScreenGui", {
@@ -196,26 +186,25 @@ UpdateScale()
 if Camera then Camera:GetPropertyChangedSignal("ViewportSize"):Connect(UpdateScale) end
 
 local OpenButton = Create("ImageButton", {
-    Name = "OpenButton", Parent = Gui, BackgroundColor3 = CONFIG.Panel,
-    Size = UDim2.fromOffset(64, 64),
-    Position = UDim2.new(0, 18, 0.5, -32), Image = CONFIG.OpenClose,
-    AutoButtonColor = false, Visible = true, ZIndex = 100,
+    Name="OpenButton", Parent=Gui, BackgroundColor3=CONFIG.Panel,
+    Size=UDim2.fromOffset(64, 64), Position=UDim2.new(0, 18, 0.5, -32),
+    Image=CONFIG.OpenClose, AutoButtonColor=false, Visible=true, ZIndex=100,
 })
 Corner(OpenButton, 16)
 Stroke(OpenButton, CONFIG.Purple, 2, 0.15)
 Gradient(OpenButton, CONFIG.Purple, CONFIG.Blue, 45)
 
 Create("TextLabel", {
-    Name = "Fallback", Parent = OpenButton, BackgroundTransparency = 1,
-    Size = UDim2.fromScale(1, 1), Text = "S", TextColor3 = CONFIG.White,
-    TextSize = 24, Font = Enum.Font.GothamBold, ZIndex = 101,
+    Name="Fallback", Parent=OpenButton, BackgroundTransparency=1,
+    Size=UDim2.fromScale(1, 1), Text="S", TextColor3=CONFIG.White,
+    TextSize=24, Font=Enum.Font.GothamBold, ZIndex=101,
 })
 
 local Main = Create("Frame", {
-    Name = "Main", Parent = Gui, AnchorPoint = Vector2.new(0.5, 0.5),
-    Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.new(0, 760, 0, 480),
-    BackgroundColor3 = CONFIG.Background, BorderSizePixel = 0,
-    Visible = true, ZIndex = 10,
+    Name="Main", Parent=Gui, AnchorPoint=Vector2.new(0.5, 0.5),
+    Position=UDim2.fromScale(0.5, 0.5), Size=UDim2.new(0, 760, 0, 480),
+    BackgroundColor3=CONFIG.Background, BorderSizePixel=0,
+    Visible=true, ZIndex=10,
 })
 Corner(Main, 14)
 Stroke(Main, CONFIG.Purple, 1, 0.45)
@@ -226,55 +215,54 @@ MC.MinSize = Vector2.new(310, 360)
 MC.Parent = Main
 
 local TopBar = Create("Frame", {
-    Name = "TopBar", Parent = Main, BackgroundColor3 = CONFIG.Panel,
-    Size = UDim2.new(1, 0, 0, 64), BorderSizePixel = 0, ZIndex = 20,
+    Name="TopBar", Parent=Main, BackgroundColor3=CONFIG.Panel,
+    Size=UDim2.new(1, 0, 0, 64), BorderSizePixel=0, ZIndex=20,
 })
 Corner(TopBar, 14)
 Gradient(TopBar, CONFIG.Panel, CONFIG.Panel2, 0)
 
 Create("ImageLabel", {
-    Name = "Logo", Parent = TopBar, BackgroundTransparency = 1,
-    Size = UDim2.fromOffset(48, 48), Position = UDim2.new(0, 10, 0.5, -24),
-    Image = CONFIG.Logo, ScaleType = Enum.ScaleType.Fit, ZIndex = 21,
+    Name="Logo", Parent=TopBar, BackgroundTransparency=1,
+    Size=UDim2.fromOffset(48, 48), Position=UDim2.new(0, 10, 0.5, -24),
+    Image=CONFIG.Logo, ScaleType=Enum.ScaleType.Fit, ZIndex=21,
 })
 
 Create("TextLabel", {
-    Name = "Title", Parent = TopBar, BackgroundTransparency = 1,
-    Position = UDim2.new(0, 66, 0, 8), Size = UDim2.new(0, 250, 0, 25),
-    Text = "SysxHub", TextColor3 = CONFIG.White, TextSize = 20,
-    Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 21,
+    Name="Title", Parent=TopBar, BackgroundTransparency=1,
+    Position=UDim2.new(0, 66, 0, 8), Size=UDim2.new(0, 250, 0, 25),
+    Text="SysxHub", TextColor3=CONFIG.White, TextSize=20,
+    Font=Enum.Font.GothamBold, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=21,
 })
 
 Create("TextLabel", {
-    Name = "Subtitle", Parent = TopBar, BackgroundTransparency = 1,
-    Position = UDim2.new(0, 67, 0, 33), Size = UDim2.new(0, 400, 0, 18),
-    Text = CONFIG.Build, TextColor3 = CONFIG.White,
-    TextSize = 11, Font = Enum.Font.Gotham,
-    TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 21,
+    Name="Subtitle", Parent=TopBar, BackgroundTransparency=1,
+    Position=UDim2.new(0, 67, 0, 33), Size=UDim2.new(0, 400, 0, 18),
+    Text=CONFIG.Build, TextColor3=CONFIG.White, TextSize=11,
+    Font=Enum.Font.Gotham, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=21,
 })
 
 local CloseButton = Create("TextButton", {
-    Name = "Close", Parent = TopBar, BackgroundColor3 = CONFIG.Panel2,
-    Size = UDim2.fromOffset(38, 38), Position = UDim2.new(1, -50, 0.5, -19),
-    Text = "X", TextColor3 = CONFIG.White, TextSize = 20,
-    Font = Enum.Font.GothamBold, AutoButtonColor = false, ZIndex = 25,
+    Name="Close", Parent=TopBar, BackgroundColor3=CONFIG.Panel2,
+    Size=UDim2.fromOffset(38, 38), Position=UDim2.new(1, -50, 0.5, -19),
+    Text="X", TextColor3=CONFIG.White, TextSize=20,
+    Font=Enum.Font.GothamBold, AutoButtonColor=false, ZIndex=25,
 })
 Corner(CloseButton, 10)
 Stroke(CloseButton, CONFIG.Purple, 1, 0.5)
 
 local Sidebar = Create("Frame", {
-    Name = "Sidebar", Parent = Main, BackgroundColor3 = CONFIG.Panel,
-    Position = UDim2.new(0, 0, 0, 64), Size = UDim2.new(0, 155, 1, -64),
-    BorderSizePixel = 0, ZIndex = 15,
+    Name="Sidebar", Parent=Main, BackgroundColor3=CONFIG.Panel,
+    Position=UDim2.new(0, 0, 0, 64), Size=UDim2.new(0, 155, 1, -64),
+    BorderSizePixel=0, ZIndex=15,
 })
 Corner(Sidebar, 14)
 
 local TabList = Create("ScrollingFrame", {
-    Name = "Tabs", Parent = Sidebar, BackgroundTransparency = 1,
-    Position = UDim2.new(0, 8, 0, 10), Size = UDim2.new(1, -16, 1, -20),
-    CanvasSize = UDim2.new(0, 0, 0, 0), AutomaticCanvasSize = Enum.AutomaticSize.Y,
-    ScrollBarThickness = 2, ScrollBarImageColor3 = CONFIG.Purple,
-    BorderSizePixel = 0, ZIndex = 16,
+    Name="Tabs", Parent=Sidebar, BackgroundTransparency=1,
+    Position=UDim2.new(0, 8, 0, 10), Size=UDim2.new(1, -16, 1, -20),
+    CanvasSize=UDim2.new(0, 0, 0, 0), AutomaticCanvasSize=Enum.AutomaticSize.Y,
+    ScrollBarThickness=2, ScrollBarImageColor3=CONFIG.Purple,
+    BorderSizePixel=0, ZIndex=16,
 })
 
 local TabLayout = Instance.new("UIListLayout")
@@ -283,17 +271,17 @@ TabLayout.SortOrder = Enum.SortOrder.LayoutOrder
 TabLayout.Parent = TabList
 
 local Content = Create("Frame", {
-    Name = "Content", Parent = Main, BackgroundTransparency = 1,
-    Position = UDim2.new(0, 155, 0, 64), Size = UDim2.new(1, -155, 1, -64),
-    BorderSizePixel = 0, ZIndex = 11,
+    Name="Content", Parent=Main, BackgroundTransparency=1,
+    Position=UDim2.new(0, 155, 0, 64), Size=UDim2.new(1, -155, 1, -64),
+    BorderSizePixel=0, ZIndex=11,
 })
 
 local Notification = Create("TextLabel", {
-    Name = "Notification", Parent = Gui, AnchorPoint = Vector2.new(0.5, 1),
-    Position = UDim2.new(0.5, 0, 1, -20), Size = UDim2.fromOffset(340, 44),
-    BackgroundColor3 = CONFIG.Panel, BackgroundTransparency = 0.05,
-    Text = "", TextColor3 = CONFIG.White, TextSize = 13,
-    Font = Enum.Font.GothamMedium, Visible = false, ZIndex = 500,
+    Name="Notification", Parent=Gui, AnchorPoint=Vector2.new(0.5, 1),
+    Position=UDim2.new(0.5, 0, 1, -20), Size=UDim2.fromOffset(340, 44),
+    BackgroundColor3=CONFIG.Panel, BackgroundTransparency=0.05,
+    Text="", TextColor3=CONFIG.White, TextSize=13,
+    Font=Enum.Font.GothamMedium, Visible=false, ZIndex=500,
 })
 Corner(Notification, 10)
 Stroke(Notification, CONFIG.Purple, 1, 0.35)
@@ -307,10 +295,10 @@ local function Notify(text)
     Notification.Visible = true
     Notification.TextTransparency = 1
     Notification.BackgroundTransparency = 1
-    Tween(Notification, {TextTransparency = 0, BackgroundTransparency = 0.05}, 0.2)
+    Tween(Notification, {TextTransparency=0, BackgroundTransparency=0.05}, 0.2)
     task.delay(2.5, function()
         if tk ~= NotifyToken then return end
-        Tween(Notification, {TextTransparency = 1, BackgroundTransparency = 1}, 0.2)
+        Tween(Notification, {TextTransparency=1, BackgroundTransparency=1}, 0.2)
         task.wait(0.2)
         if tk == NotifyToken then Notification.Visible = false end
     end)
@@ -320,11 +308,12 @@ local Pages, Tabs = {}, {}
 
 local function CreatePage(name)
     local P = Create("ScrollingFrame", {
-        Name = name, Parent = Content, BackgroundTransparency = 1,
-        Position = UDim2.new(0, 10, 0, 10), Size = UDim2.new(1, -20, 1, -20),
-        CanvasSize = UDim2.new(0, 0, 0, 0), AutomaticCanvasSize = Enum.AutomaticSize.Y,
-        ScrollBarThickness = 3, ScrollBarImageColor3 = CONFIG.Purple,
-        BorderSizePixel = 0, Visible = false, ZIndex = 12,
+        Name=name, Parent=Content, BackgroundTransparency=1,
+        Position=UDim2.new(0, 10, 0, 10), Size=UDim2.new(1, -20, 1, -20),
+        CanvasSize=UDim2.new(0, 0, 0, 0),
+        AutomaticCanvasSize=Enum.AutomaticSize.Y,
+        ScrollBarThickness=3, ScrollBarImageColor3=CONFIG.Purple,
+        BorderSizePixel=0, Visible=false, ZIndex=12,
     })
     Padding(P, 8, 8, 8, 8)
     local L = Instance.new("UIListLayout")
@@ -337,43 +326,43 @@ end
 
 local function CreateSection(parent, title, desc)
     local S = Create("Frame", {
-        Parent = parent, BackgroundColor3 = CONFIG.Panel,
-        Size = UDim2.new(1, 0, 0, 72), BorderSizePixel = 0, ZIndex = 13,
+        Parent=parent, BackgroundColor3=CONFIG.Panel,
+        Size=UDim2.new(1, 0, 0, 72), BorderSizePixel=0, ZIndex=13,
     })
     Corner(S, 10)
     Stroke(S, CONFIG.Purple, 1, 0.85)
     Create("TextLabel", {
-        Parent = S, BackgroundTransparency = 1,
-        Position = UDim2.new(0, 14, 0, 10), Size = UDim2.new(1, -28, 0, 23),
-        Text = title, TextColor3 = CONFIG.White, TextSize = 15,
-        Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 14,
+        Parent=S, BackgroundTransparency=1,
+        Position=UDim2.new(0, 14, 0, 10), Size=UDim2.new(1, -28, 0, 23),
+        Text=title, TextColor3=CONFIG.White, TextSize=15,
+        Font=Enum.Font.GothamBold, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=14,
     })
     Create("TextLabel", {
-        Parent = S, BackgroundTransparency = 1,
-        Position = UDim2.new(0, 14, 0, 35), Size = UDim2.new(1, -28, 0, 25),
-        Text = desc or "", TextColor3 = CONFIG.White, TextSize = 11,
-        Font = Enum.Font.Gotham, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 14,
+        Parent=S, BackgroundTransparency=1,
+        Position=UDim2.new(0, 14, 0, 35), Size=UDim2.new(1, -28, 0, 25),
+        Text=desc or "", TextColor3=CONFIG.White, TextSize=11,
+        Font=Enum.Font.Gotham, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=14,
     })
     return S
 end
 
 local function CreateButton(parent, text, cb)
     local B = Create("TextButton", {
-        Parent = parent, BackgroundColor3 = CONFIG.Panel,
-        Size = UDim2.new(1, 0, 0, 48), Text = text,
-        TextColor3 = CONFIG.White, TextSize = 13,
-        Font = Enum.Font.GothamMedium, AutoButtonColor = false,
-        BorderSizePixel = 0, ZIndex = 13,
+        Parent=parent, BackgroundColor3=CONFIG.Panel,
+        Size=UDim2.new(1, 0, 0, 48), Text=text,
+        TextColor3=CONFIG.White, TextSize=13,
+        Font=Enum.Font.GothamMedium, AutoButtonColor=false,
+        BorderSizePixel=0, ZIndex=13,
     })
     Corner(B, 9)
     Stroke(B, CONFIG.Purple, 1, 0.7)
     Gradient(B, CONFIG.Panel, CONFIG.Panel2, 45)
-    B.MouseEnter:Connect(function() Tween(B, {BackgroundColor3 = CONFIG.Panel2}, 0.15) end)
-    B.MouseLeave:Connect(function() Tween(B, {BackgroundColor3 = CONFIG.Panel}, 0.15) end)
+    B.MouseEnter:Connect(function() Tween(B, {BackgroundColor3=CONFIG.Panel2}, 0.15) end)
+    B.MouseLeave:Connect(function() Tween(B, {BackgroundColor3=CONFIG.Panel}, 0.15) end)
     B.Activated:Connect(function()
         if cb then
             local ok, err = pcall(cb)
-            if not ok then warn("[Btn]", err) Notify("Error: " .. tostring(err)) end
+            if not ok then warn("[Btn]", err) Notify("Error: "..tostring(err)) end
         end
     end)
     return B
@@ -382,37 +371,37 @@ end
 local function CreateToggle(parent, text, default, cb)
     local S2 = default or false
     local B = Create("TextButton", {
-        Parent = parent, BackgroundColor3 = CONFIG.Panel,
-        Size = UDim2.new(1, 0, 0, 48), Text = "",
-        AutoButtonColor = false, BorderSizePixel = 0, ZIndex = 13,
+        Parent=parent, BackgroundColor3=CONFIG.Panel,
+        Size=UDim2.new(1, 0, 0, 48), Text="",
+        AutoButtonColor=false, BorderSizePixel=0, ZIndex=13,
     })
     Corner(B, 9)
     Stroke(B, CONFIG.Purple, 1, 0.7)
     Create("TextLabel", {
-        Parent = B, BackgroundTransparency = 1,
-        Position = UDim2.new(0, 14, 0, 0), Size = UDim2.new(1, -75, 1, 0),
-        Text = text, TextColor3 = CONFIG.White, TextSize = 13,
-        Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 14,
+        Parent=B, BackgroundTransparency=1,
+        Position=UDim2.new(0, 14, 0, 0), Size=UDim2.new(1, -75, 1, 0),
+        Text=text, TextColor3=CONFIG.White, TextSize=13,
+        Font=Enum.Font.GothamMedium, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=14,
     })
     local Indicator = Create("Frame", {
-        Parent = B, BackgroundColor3 = Color3.fromRGB(55, 50, 65),
-        Size = UDim2.fromOffset(42, 22), Position = UDim2.new(1, -56, 0.5, -11), ZIndex = 14,
+        Parent=B, BackgroundColor3=Color3.fromRGB(55, 50, 65),
+        Size=UDim2.fromOffset(42, 22), Position=UDim2.new(1, -56, 0.5, -11), ZIndex=14,
     })
     Corner(Indicator, 20)
     local Dot = Create("Frame", {
-        Parent = Indicator, BackgroundColor3 = Color3.fromRGB(190, 185, 200),
-        Size = UDim2.fromOffset(16, 16), Position = UDim2.new(0, 3, 0.5, -8), ZIndex = 15,
+        Parent=Indicator, BackgroundColor3=Color3.fromRGB(190, 185, 200),
+        Size=UDim2.fromOffset(16, 16), Position=UDim2.new(0, 3, 0.5, -8), ZIndex=15,
     })
     Corner(Dot, 20)
     local function Update()
         if S2 then
             Indicator.BackgroundColor3 = CONFIG.Purple
             Dot.BackgroundColor3 = Color3.new(1, 1, 1)
-            Tween(Dot, {Position = UDim2.new(1, -19, 0.5, -8)}, 0.15)
+            Tween(Dot, {Position=UDim2.new(1, -19, 0.5, -8)}, 0.15)
         else
             Indicator.BackgroundColor3 = Color3.fromRGB(55, 50, 65)
             Dot.BackgroundColor3 = Color3.fromRGB(190, 185, 200)
-            Tween(Dot, {Position = UDim2.new(0, 3, 0.5, -8)}, 0.15)
+            Tween(Dot, {Position=UDim2.new(0, 3, 0.5, -8)}, 0.15)
         end
     end
     B.Activated:Connect(function()
@@ -420,7 +409,7 @@ local function CreateToggle(parent, text, default, cb)
         Update()
         if cb then
             local ok, err = pcall(cb, S2)
-            if not ok then warn("[Tg]", err) Notify("Error: " .. tostring(err)) end
+            if not ok then warn("[Tg]", err) Notify("Error: "..tostring(err)) end
         end
     end)
     Update()
@@ -429,30 +418,28 @@ end
 
 local function CreateInput(parent, placeholder, cb)
     local Box = Create("TextBox", {
-        Parent = parent, BackgroundColor3 = CONFIG.Panel2,
-        Size = UDim2.new(1, 0, 0, 40), Text = "",
-        PlaceholderText = placeholder or "Search...",
-        PlaceholderColor3 = CONFIG.White,
-        TextColor3 = CONFIG.White, TextSize = 13,
-        Font = Enum.Font.GothamMedium, AutoButtonColor = false,
-        BorderSizePixel = 0, ZIndex = 13,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        ClearTextOnFocus = false,
+        Parent=parent, BackgroundColor3=CONFIG.Panel2,
+        Size=UDim2.new(1, 0, 0, 40), Text="",
+        PlaceholderText=placeholder or "Input...",
+        PlaceholderColor3=CONFIG.White, TextColor3=CONFIG.White, TextSize=13,
+        Font=Enum.Font.GothamMedium, AutoButtonColor=false,
+        BorderSizePixel=0, ZIndex=13,
+        TextXAlignment=Enum.TextXAlignment.Left, ClearTextOnFocus=false,
     })
     Corner(Box, 9)
     Stroke(Box, CONFIG.Purple, 1, 0.7)
     Padding(Box, 12, 12, 0, 0)
-    Box:GetPropertyChangedSignal("Text"):Connect(function()
-        if cb then pcall(cb, Box.Text) end
-    end)
+    if cb then
+        Box.FocusLost:Connect(function() pcall(cb, Box.Text) end)
+    end
     return Box
 end
 
 local function CreateDropdown(parent, title, options, cb)
     local Holder = Create("Frame", {
-        Parent = parent, BackgroundColor3 = CONFIG.Panel,
-        Size = UDim2.new(1, 0, 0, 48), BorderSizePixel = 0,
-        ZIndex = 13, ClipsDescendants = false,
+        Parent=parent, BackgroundColor3=CONFIG.Panel,
+        Size=UDim2.new(1, 0, 0, 48), BorderSizePixel=0,
+        ZIndex=13, ClipsDescendants=false,
     })
     Corner(Holder, 9)
     Stroke(Holder, CONFIG.Purple, 1, 0.7)
@@ -461,26 +448,26 @@ local function CreateDropdown(parent, title, options, cb)
     local IsOpen = false
 
     local TitleLbl = Create("TextLabel", {
-        Parent = Holder, BackgroundTransparency = 1,
-        Position = UDim2.new(0, 14, 0, 0), Size = UDim2.new(1, -100, 1, 0),
-        Text = title .. ": " .. Selected,
-        TextColor3 = CONFIG.White, TextSize = 13,
-        Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 14,
+        Parent=Holder, BackgroundTransparency=1,
+        Position=UDim2.new(0, 14, 0, 0), Size=UDim2.new(1, -100, 1, 0),
+        Text=title..": "..Selected, TextColor3=CONFIG.White, TextSize=13,
+        Font=Enum.Font.GothamMedium, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=14,
     })
 
-    local Arrow = Create("TextLabel", {
-        Parent = Holder, BackgroundTransparency = 1,
-        Position = UDim2.new(1, -30, 0, 0), Size = UDim2.new(0, 20, 1, 0),
-        Text = "v", TextColor3 = CONFIG.White, TextSize = 12,
-        Font = Enum.Font.GothamBold, ZIndex = 14,
+    Create("TextLabel", {
+        Parent=Holder, BackgroundTransparency=1,
+        Position=UDim2.new(1, -30, 0, 0), Size=UDim2.new(0, 20, 1, 0),
+        Text="v", TextColor3=CONFIG.White, TextSize=12,
+        Font=Enum.Font.GothamBold, ZIndex=14,
     })
 
     local ListHolder = Create("ScrollingFrame", {
-        Parent = Holder, BackgroundColor3 = CONFIG.Panel2,
-        Position = UDim2.new(0, 0, 1, 4), Size = UDim2.new(1, 0, 0, 0),
-        CanvasSize = UDim2.new(0, 0, 0, 0), AutomaticCanvasSize = Enum.AutomaticSize.Y,
-        ScrollBarThickness = 3, ScrollBarImageColor3 = CONFIG.Purple,
-        BorderSizePixel = 0, ZIndex = 200, Visible = false,
+        Parent=Holder, BackgroundColor3=CONFIG.Panel2,
+        Position=UDim2.new(0, 0, 1, 4), Size=UDim2.new(1, 0, 0, 0),
+        CanvasSize=UDim2.new(0, 0, 0, 0),
+        AutomaticCanvasSize=Enum.AutomaticSize.Y,
+        ScrollBarThickness=3, ScrollBarImageColor3=CONFIG.Purple,
+        BorderSizePixel=0, ZIndex=200, Visible=false,
     })
     Corner(ListHolder, 9)
     Stroke(ListHolder, CONFIG.Purple, 1, 0.5)
@@ -496,21 +483,21 @@ local function CreateDropdown(parent, title, options, cb)
         end
         for i, opt in ipairs(options) do
             local OptBtn = Create("TextButton", {
-                Parent = ListHolder, BackgroundColor3 = CONFIG.Panel,
-                Size = UDim2.new(1, -8, 0, 36),
-                Position = UDim2.new(0, 4, 0, 4),
-                Text = opt, TextColor3 = CONFIG.White, TextSize = 12,
-                Font = Enum.Font.GothamMedium, AutoButtonColor = false,
-                BorderSizePixel = 0, LayoutOrder = i, ZIndex = 201,
-                TextXAlignment = Enum.TextXAlignment.Left,
+                Parent=ListHolder, BackgroundColor3=CONFIG.Panel,
+                Size=UDim2.new(1, -8, 0, 36),
+                Position=UDim2.new(0, 4, 0, 4),
+                Text=opt, TextColor3=CONFIG.White, TextSize=12,
+                Font=Enum.Font.GothamMedium, AutoButtonColor=false,
+                BorderSizePixel=0, LayoutOrder=i, ZIndex=201,
+                TextXAlignment=Enum.TextXAlignment.Left,
             })
             Corner(OptBtn, 6)
             Padding(OptBtn, 10, 10, 0, 0)
-            OptBtn.MouseEnter:Connect(function() Tween(OptBtn, {BackgroundColor3 = CONFIG.Purple}, 0.1) end)
-            OptBtn.MouseLeave:Connect(function() Tween(OptBtn, {BackgroundColor3 = CONFIG.Panel}, 0.1) end)
+            OptBtn.MouseEnter:Connect(function() Tween(OptBtn, {BackgroundColor3=CONFIG.Purple}, 0.1) end)
+            OptBtn.MouseLeave:Connect(function() Tween(OptBtn, {BackgroundColor3=CONFIG.Panel}, 0.1) end)
             OptBtn.Activated:Connect(function()
                 Selected = opt
-                TitleLbl.Text = title .. ": " .. opt
+                TitleLbl.Text = title..": "..opt
                 ListHolder.Visible = false
                 ListHolder.Size = UDim2.new(1, 0, 0, 0)
                 IsOpen = false
@@ -542,44 +529,44 @@ end
 local function CreateSlider(parent, title, minVal, maxVal, defaultVal, cb)
     local val = defaultVal or minVal
     local Holder = Create("Frame", {
-        Parent = parent, BackgroundColor3 = CONFIG.Panel,
-        Size = UDim2.new(1, 0, 0, 56), BorderSizePixel = 0, ZIndex = 13,
+        Parent=parent, BackgroundColor3=CONFIG.Panel,
+        Size=UDim2.new(1, 0, 0, 56), BorderSizePixel=0, ZIndex=13,
     })
     Corner(Holder, 9)
     Stroke(Holder, CONFIG.Purple, 1, 0.7)
 
-    local TitleLbl = Create("TextLabel", {
-        Parent = Holder, BackgroundTransparency = 1,
-        Position = UDim2.new(0, 14, 0, 6), Size = UDim2.new(1, -80, 0, 18),
-        Text = title, TextColor3 = CONFIG.White, TextSize = 13,
-        Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 14,
+    Create("TextLabel", {
+        Parent=Holder, BackgroundTransparency=1,
+        Position=UDim2.new(0, 14, 0, 6), Size=UDim2.new(1, -80, 0, 18),
+        Text=title, TextColor3=CONFIG.White, TextSize=13,
+        Font=Enum.Font.GothamMedium, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=14,
     })
 
     local ValueLbl = Create("TextLabel", {
-        Parent = Holder, BackgroundTransparency = 1,
-        Position = UDim2.new(1, -70, 0, 6), Size = UDim2.new(0, 60, 0, 18),
-        Text = tostring(val), TextColor3 = CONFIG.White, TextSize = 13,
-        Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 14,
+        Parent=Holder, BackgroundTransparency=1,
+        Position=UDim2.new(1, -70, 0, 6), Size=UDim2.new(0, 60, 0, 18),
+        Text=tostring(val), TextColor3=CONFIG.White, TextSize=13,
+        Font=Enum.Font.GothamBold, TextXAlignment=Enum.TextXAlignment.Right, ZIndex=14,
     })
 
     local Bar = Create("Frame", {
-        Parent = Holder, BackgroundColor3 = CONFIG.Panel2,
-        Position = UDim2.new(0, 14, 0, 34), Size = UDim2.new(1, -28, 0, 10),
-        BorderSizePixel = 0, ZIndex = 14,
+        Parent=Holder, BackgroundColor3=CONFIG.Panel2,
+        Position=UDim2.new(0, 14, 0, 34), Size=UDim2.new(1, -28, 0, 10),
+        BorderSizePixel=0, ZIndex=14,
     })
     Corner(Bar, 5)
 
     local Fill = Create("Frame", {
-        Parent = Bar, BackgroundColor3 = CONFIG.Purple,
-        Size = UDim2.new((val - minVal) / (maxVal - minVal), 0, 1, 0),
-        BorderSizePixel = 0, ZIndex = 15,
+        Parent=Bar, BackgroundColor3=CONFIG.Purple,
+        Size=UDim2.new((val - minVal) / (maxVal - minVal), 0, 1, 0),
+        BorderSizePixel=0, ZIndex=15,
     })
     Corner(Fill, 5)
 
     local Btn = Create("TextButton", {
-        Parent = Holder, BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 1, 0), Text = "",
-        AutoButtonColor = false, ZIndex = 16,
+        Parent=Holder, BackgroundTransparency=1,
+        Size=UDim2.new(1, 0, 1, 0), Text="",
+        AutoButtonColor=false, ZIndex=16,
     })
 
     local dragging = false
@@ -620,25 +607,27 @@ end
 
 local function CreateTab(name, order)
     local B = Create("TextButton", {
-        Parent = TabList, BackgroundColor3 = CONFIG.Panel,
-        Size = UDim2.new(1, 0, 0, 40), Text = "",
-        AutoButtonColor = false, BorderSizePixel = 0,
-        LayoutOrder = order, ZIndex = 17,
+        Parent=TabList, BackgroundColor3=CONFIG.Panel,
+        Size=UDim2.new(1, 0, 0, 40), Text="",
+        AutoButtonColor=false, BorderSizePixel=0,
+        LayoutOrder=order, ZIndex=17,
     })
     Corner(B, 8)
     local L = Create("TextLabel", {
-        Parent = B, BackgroundTransparency = 1,
-        Position = UDim2.new(0, 10, 0, 0), Size = UDim2.new(1, -20, 1, 0),
-        Text = name, TextColor3 = CONFIG.White,
-        TextSize = 12, Font = Enum.Font.GothamMedium,
-        TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 18,
+        Parent=B, BackgroundTransparency=1,
+        Position=UDim2.new(0, 10, 0, 0), Size=UDim2.new(1, -20, 1, 0),
+        Text=name, TextColor3=CONFIG.White,
+        TextSize=12, Font=Enum.Font.GothamMedium,
+        TextXAlignment=Enum.TextXAlignment.Left, ZIndex=18,
     })
-    Tabs[name] = {Button = B, Label = L}
+    Tabs[name] = {Button=B, Label=L}
     return B
 end
 
 local function ShowTab(name)
-    for pageName, page in pairs(Pages) do page.Visible = pageName == name end
+    for pageName, page in pairs(Pages) do
+        page.Visible = (pageName == name)
+    end
     for tabName, data in pairs(Tabs) do
         if tabName == name then
             data.Button.BackgroundColor3 = CONFIG.Purple
@@ -748,69 +737,74 @@ local BossData = {
 }
 
 local SecretQuests = {
-    Jungle = {
-        {Name = "Find Grappling Hook + repair Zipline", Steps = {"Cari Grappling Hook", "Repair Zipline"}},
-        {Name = "Find Monkey tracks + knock Monkey down + return Hat", Steps = {"Cari jejak Monkey", "Knock Monkey", "Return Hat"}},
-        {Name = "Trigger Gorilla King + knock bananas + defeat Gorilla King", Steps = {"Trigger Gorilla King", "Knock bananas", "Defeat Gorilla King"}},
+    ["Middle Town"] = {
+        {Name = "Early Access", Steps = {"Find Tester house", "Break window", "Enter house", "Talk to Janus"}},
+        {Name = "Lookout Duty", Steps = {"Talk Experienced Captain", "Watch 4 waves", "Answer correctly"}},
+        {Name = "X Marks The Spot", Steps = {"Hit objects", "Find shaking object", "Follow map", "Defeat skeletons"}},
+    },
+    ["Jungle"] = {
+        {Name = "Zipline Repair", Steps = {"Find grappling hook", "Ride zipline", "Talk Adventurer"}},
+        {Name = "The Thieving Monkey", Steps = {"Wait footprints", "Hit marked tree", "Defeat Monkey Thief"}},
+        {Name = "Awakened Gorilla King", Steps = {"Wait event", "Hit trees", "Collect bananas", "Defeat boss"}},
     },
     ["Pirate Village"] = {
-        {Name = "Break all Windmill ropes", Steps = {"Cari windmill", "Putus semua tali"}},
-        {Name = "Wait Tavern enemies + defeat them + talk Bartender", Steps = {"Tunggu musuh", "Kalahkan", "Talk Bartender"}},
-        {Name = "Help Chef + complete his task", Steps = {"Bantu Chef", "Selesaikan task"}},
+        {Name = "Free The Windmill", Steps = {"Go to windmill", "Cut ropes", "Talk Adventurer"}},
+        {Name = "Tavern Brawl", Steps = {"Wait message", "Enter Tavern", "Defeat 3 pirates"}},
+        {Name = "Awakened Chef", Steps = {"Wait event", "Find cauldron", "Add materials", "Defeat boss"}},
     },
-    Desert = {
-        {Name = "Rescue Hasan under the Pyramid", Steps = {"Masuk Pyramid", "Cari Hasan", "Rescue"}},
-        {Name = "Find and interact with 8 stone monuments", Steps = {"Cari 8 monument", "Interact semua"}},
-        {Name = "Collect Cactus fruits", Steps = {"Cari cactus", "Collect fruit"}},
+    ["Desert"] = {
+        {Name = "Saving Hasan", Steps = {"Find Hasan", "Help him", "Return to NPC"}},
+        {Name = "Cleaning The Runes", Steps = {"Find dirty runes", "Clean all", "Return to Adventurer"}},
+        {Name = "Prickly Harvest", Steps = {"Find cacti", "Collect 10 petals", "Return to Merchant"}},
     },
     ["Frozen Village"] = {
-        {Name = "Find Ability Teacher + complete his task", Steps = {"Cari Teacher", "Selesaikan task"}},
-        {Name = "Build 3 Snowmen", Steps = {"Kumpulkan bahan", "Build 3"}},
-        {Name = "Trigger Yeti + defeat Yeti", Steps = {"Trigger Yeti", "Defeat Yeti"}},
+        {Name = "Breaking The Ice", Steps = {"Enter cave", "Free Teacher", "Talk to him"}},
+        {Name = "Build A Snowman", Steps = {"Wait snow", "Push snowballs", "Build snowman"}},
+        {Name = "Awakened Yeti", Steps = {"Wait event", "Find 3 ice blocks", "Destroy them", "Defeat boss"}},
     },
     ["Marine Fortress"] = {
-        {Name = "Find Rope + raise the Flag", Steps = {"Cari Rope", "Naikkan Flag"}},
-        {Name = "Wait for Pirate Raid + defeat invading ships", Steps = {"Tunggu Raid", "Defeat ships"}},
-        {Name = "Trigger Vice Admiral + defeat Vice Admiral", Steps = {"Trigger", "Defeat"}},
+        {Name = "The Flagpole", Steps = {"Find Parlus", "Get rope", "Fix flagpole"}},
+        {Name = "Pirate Raid", Steps = {"Wait raid", "Destroy ships", "Complete event"}},
+        {Name = "Awakened Vice Admiral", Steps = {"Wait event", "Defeat boss"}},
     },
     ["Lower Skylands"] = {
-        {Name = "Find Angel Guard + retrieve the Golden Chest", Steps = {"Cari Angel Guard", "Ambil Chest"}},
-        {Name = "Find Lightning Bolt + return to Mad Scientist", Steps = {"Cari Bolt", "Return"}},
-        {Name = "Find the Crumpled Letter + deliver it", Steps = {"Cari Letter", "Deliver"}},
+        {Name = "Missing Lightning Bolt", Steps = {"Find Scientist", "Hit cloud", "Return bolt"}},
+        {Name = "Return The Treasure", Steps = {"Wait invasion", "Kill invaders", "Enter code"}},
+        {Name = "Unexpected Guest", Steps = {"Wait event", "Hit yellow cloud", "Defeat wave", "Open chest"}},
     },
-    Prison = {
-        {Name = "Stop 3 Escaped Prisoners", Steps = {"Cari 3 prisoner", "Stop"}},
-        {Name = "Find Cell Block Key + retrieve the Coat", Steps = {"Cari Key", "Ambil Coat"}},
-        {Name = "Activate Lever + defeat Prison Boss", Steps = {"Activate Lever", "Defeat Boss"}},
+    ["Prison"] = {
+        {Name = "Prison Break", Steps = {"Find 3 prisoners", "Help each", "Talk Jail Keeper"}},
+        {Name = "Mysterious Key", Steps = {"Find key", "Open room", "Defeat NPC", "Take coat"}},
+        {Name = "Awakened Warden", Steps = {"Wait event", "Pull levers 2-3-4-1", "Defeat boss"}},
     },
-    Colosseum = {
-        {Name = "Defeat the 3 waves in the Colosseum", Steps = {"Wave 1", "Wave 2", "Wave 3"}},
-        {Name = "Interact with Former Champions statues", Steps = {"Cari statues", "Interact"}},
-        {Name = "Complete the Crowd Favorite 1v1", Steps = {"Masuk 1v1", "Menang"}},
+    ["Colosseum"] = {
+        {Name = "Gladiatorial Combat", Steps = {"Talk Emperor", "Defeat 3 waves"}},
+        {Name = "Previous Champions", Steps = {"Hit 4 statues with weapons"}},
+        {Name = "Crowded Colosseum", Steps = {"Hit 18 targets in 90s"}},
     },
     ["Magma Village"] = {
-        {Name = "Defeat the Evil Slimes", Steps = {"Cari Slimes", "Defeat"}},
-        {Name = "Collect Magma Ore + complete extraction", Steps = {"Collect Ore", "Extract"}},
-        {Name = "Trigger Magma General + defeat Magma General", Steps = {"Trigger", "Defeat"}},
+        {Name = "Magma Secret 1", Steps = {"Solve puzzle"}},
+        {Name = "Magma Ore Extraction", Steps = {"Enter mine", "Do drill objective"}},
+        {Name = "Awakened Magma General", Steps = {"Wait event", "Defeat boss"}},
     },
     ["Underwater City"] = {
-        {Name = "Find Bubble Cove + help King Neptune", Steps = {"Cari Cove", "Bantu Neptune"}},
-        {Name = "Activate Crystal Beam + help Water Kung Fu Teacher", Steps = {"Activate", "Bantu Teacher"}},
-        {Name = "Find Black Pearl + defeat Fishman Lord", Steps = {"Cari Pearl", "Defeat Lord"}},
+        {Name = "Bubble Cove", Steps = {"Find Cove", "Complete objective"}},
+        {Name = "Mysterious Lights", Steps = {"Follow light", "Solve puzzle"}},
+        {Name = "Awakened Fishman Lord", Steps = {"Wait event", "Defeat boss"}},
     },
     ["Upper Skylands"] = {
-        {Name = "Find Temple Intel", Steps = {"Cari Intel"}},
-        {Name = "Trigger Sky Warlord + defeat Sky Warlord", Steps = {"Trigger", "Defeat"}},
-        {Name = "Find Yellow Bell + trigger Thunder God", Steps = {"Cari Bell", "Trigger"}},
+        {Name = "The Old Temple", Steps = {"Talk Quest Giver", "Destroy door", "Rotate towers"}},
+        {Name = "Awakened Sky Warlord", Steps = {"Wait event", "Defeat boss"}},
+        {Name = "Secret Skyland Event", Steps = {"Wait event", "Complete objective"}},
     },
     ["Fountain City"] = {
-        {Name = "Repair the broken Pipes", Steps = {"Cari pipes", "Repair"}},
-        {Name = "Enter Sewer + defeat Sewer Gang", Steps = {"Masuk Sewer", "Defeat Gang"}},
-        {Name = "Repair Cyborg's wires + defeat Cyborg", Steps = {"Repair wires", "Defeat Cyborg"}},
+        {Name = "Pipe Repairs", Steps = {"Find broken pipe", "Repair it", "Push ship"}},
+        {Name = "Sewer Gang", Steps = {"Enter sewer", "Defeat boss"}},
+        {Name = "Awakened Cyborg", Steps = {"Fix cables", "Defeat boss"}},
     },
 }
 
---// SCAN
+--// SCAN FUNCTIONS
 local function ScanEnemies()
     local list = {}
     for _, obj in ipairs(workspace:GetChildren()) do
@@ -939,7 +933,7 @@ local function SelectWeapon(weaponName)
             if c:IsA("Tool") and c.Name == weaponName then found = c break end
         end
     end
-    if not found then Notify("Weapon tidak ada: " .. weaponName) return false end
+    if not found then Notify("Weapon not found: " .. weaponName) return false end
     State.SelectedWeapon = found.Name
     State.SelectedCategory = GetWeaponCategory(found.Name)
     pcall(function() found.Parent = char end)
@@ -1103,50 +1097,8 @@ local function IsInRaidArea()
     return false
 end
 
-local function GlobalSearch(query)
-    if not query or query == "" then return {} end
-    local q = string.lower(query)
-    local results = {}
-    for loc, quests in pairs(SecretQuests) do
-        for _, quest in ipairs(quests) do
-            if string.find(string.lower(quest.Name), q) then
-                table.insert(results, {type = "Quest", location = loc, name = quest.Name})
-            end
-        end
-    end
-    for sea, bosses in pairs(BossData) do
-        for _, boss in ipairs(bosses) do
-            if string.find(string.lower(boss.Name), q) then
-                table.insert(results, {type = "Boss", location = boss.Location, name = boss.Name})
-            end
-        end
-    end
-    for sea, islands in pairs(AllIslands) do
-        for _, island in ipairs(islands) do
-            if string.find(string.lower(island.Name), q) then
-                table.insert(results, {type = "Island", location = sea, name = island.Name})
-            end
-        end
-    end
-    local char = Player.Character
-    if char then
-        for _, tool in ipairs(char:GetChildren()) do
-            if tool:IsA("Tool") and string.find(string.lower(tool.Name), q) then
-                table.insert(results, {type = "Weapon", location = "Equipped", name = tool.Name})
-            end
-        end
-    end
-    for _, tool in ipairs(Player.Backpack:GetChildren()) do
-        if tool:IsA("Tool") and string.find(string.lower(tool.Name), q) then
-            table.insert(results, {type = "Weapon", location = "Backpack", name = tool.Name})
-        end
-    end
-    return results
-end
-
 local function AutoAddStats()
-    local CommF = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
-    if not CommF then Notify("Remote CommF_ tidak ditemukan") return false end
+    if not CommF then Notify("CommF_ remote not found") return false end
     local stats = {
         {Name = "Melee", Value = State.StatsMelee},
         {Name = "Defense", Value = State.StatsDefense},
@@ -1157,11 +1109,90 @@ local function AutoAddStats()
     for _, stat in ipairs(stats) do
         if stat.Value > 0 then
             pcall(function() CommF:InvokeServer("AddPoint", stat.Name, stat.Value) end)
-            Notify("Add " .. stat.Name .. ": " .. stat.Value)
+            Notify("Added " .. stat.Name .. ": " .. stat.Value)
             task.wait(0.3)
         end
     end
     return true
+end
+
+--// AUTO SECRET QUEST FUNCTIONS
+local function InteractNPC(npcKeyword)
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if string.find(string.lower(obj.Name), string.lower(npcKeyword)) then
+            local hrp = obj:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                TeleportTo(hrp.Position + Vector3.new(0, 3, 0))
+                task.wait(0.5)
+                local prompt = obj:FindFirstChildOfClass("ProximityPrompt")
+                if prompt then
+                    fireproximityprompt(prompt)
+                end
+                return true
+            end
+        end
+    end
+    return false
+end
+
+local function InteractObject(objKeyword)
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if string.find(string.lower(obj.Name), string.lower(objKeyword)) then
+            local part = obj:IsA("BasePart") and obj or obj.PrimaryPart
+            if part then
+                TeleportTo(part.Position + Vector3.new(0, 3, 0))
+                task.wait(0.5)
+                local prompt = obj:FindFirstChildOfClass("ProximityPrompt")
+                if prompt then
+                    fireproximityprompt(prompt)
+                end
+                return true
+            end
+        end
+    end
+    return false
+end
+
+local function KillNPC(npcKeyword)
+    for _, obj in ipairs(workspace:GetChildren()) do
+        if string.find(string.lower(obj.Name), string.lower(npcKeyword))
+            and obj:FindFirstChildOfClass("Humanoid") and IsAlive(obj) then
+            local hrp = obj:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                TeleportTo(hrp.Position + Vector3.new(0, 3, 0))
+                local tool = EquipWeapon()
+                if tool then
+                    while obj.Parent and obj:FindFirstChildOfClass("Humanoid")
+                        and obj.Humanoid.Health > 0 and State.AutoSecretQuest do
+                        tool:Activate()
+                        task.wait(0.1)
+                    end
+                end
+                return true
+            end
+        end
+    end
+    return false
+end
+
+local function RunSecretQuest()
+    if not State.SelectedSecretQuest then
+        Notify("Please select a quest first")
+        return
+    end
+    State.AutoSecretQuest = true
+    Notify("Starting: " .. State.SelectedSecretQuest.Name)
+    task.spawn(function()
+        for i, step in ipairs(State.SelectedSecretQuest.Steps) do
+            if not State.AutoSecretQuest then break end
+            Notify("Step " .. i .. ": " .. step)
+            task.wait(2)
+        end
+        if State.AutoSecretQuest then
+            Notify("Quest completed: " .. State.SelectedSecretQuest.Name)
+            State.AutoSecretQuest = false
+        end
+    end)
 end
 
 --// PAGES
@@ -1205,13 +1236,13 @@ SL.SortOrder = Enum.SortOrder.LayoutOrder
 SL.Parent = SecretScroll
 
 --// SHOW FUNCTIONS
-function ShowWeaponsInCategory(cat)
+local function ShowWeaponsInCategory(cat)
     for _, c in ipairs(WeaponListScroll:GetChildren()) do
         if c:IsA("TextButton") then c:Destroy() end
     end
     local weapons = GetWeaponsByCategory(cat)
     if #weapons == 0 then
-        Create("TextLabel", {Parent = WeaponListScroll, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 36), Text = "Tidak ada weapon " .. cat, TextColor3 = CONFIG.White, TextSize = 12, ZIndex = 15})
+        Create("TextLabel", {Parent = WeaponListScroll, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 36), Text = "No weapon in " .. cat, TextColor3 = CONFIG.White, TextSize = 12, ZIndex = 15})
         return
     end
     for i, w in ipairs(weapons) do
@@ -1222,7 +1253,7 @@ function ShowWeaponsInCategory(cat)
     end
 end
 
-function ShowBossBySea(sea)
+local function ShowBossBySea(sea)
     for _, c in ipairs(BossListScroll:GetChildren()) do
         if c:IsA("TextButton") then c:Destroy() end
     end
@@ -1238,28 +1269,26 @@ function ShowBossBySea(sea)
     end
 end
 
-function ShowSecretLocations()
-    for _, c in ipairs(SecretScroll:GetChildren()) do
-        if c:IsA("TextButton") then c:Destroy() end
-    end
-    local i = 0
-    for loc, quests in pairs(SecretQuests) do
-        i += 1
-        local Btn = Create("TextButton", {Parent = SecretScroll, BackgroundColor3 = CONFIG.Panel2, Size = UDim2.new(1, 0, 0, 38), Text = loc .. " (" .. #quests .. ")", TextColor3 = CONFIG.White, TextSize = 12, Font = Enum.Font.GothamBold, AutoButtonColor = false, BorderSizePixel = 0, LayoutOrder = i, ZIndex = 15, TextXAlignment = Enum.TextXAlignment.Left})
-        Corner(Btn, 8)
-        Padding(Btn, 12, 12, 0, 0)
-        Btn.Activated:Connect(function() ShowSecretQuests(loc) end)
-    end
-end
-
-function ShowSecretQuests(location)
+local function ShowSecretQuests(location)
     for _, c in ipairs(SecretScroll:GetChildren()) do
         if c:IsA("TextButton") then c:Destroy() end
     end
     local Back = Create("TextButton", {Parent = SecretScroll, BackgroundColor3 = CONFIG.Panel2, Size = UDim2.new(1, 0, 0, 36), Text = "< Back", TextColor3 = CONFIG.White, TextSize = 12, Font = Enum.Font.GothamBold, AutoButtonColor = false, BorderSizePixel = 0, LayoutOrder = 1, ZIndex = 15, TextXAlignment = Enum.TextXAlignment.Left})
     Corner(Back, 8)
     Padding(Back, 12, 12, 0, 0)
-    Back.Activated:Connect(ShowSecretLocations)
+    Back.Activated:Connect(function()
+        for _, c in ipairs(SecretScroll:GetChildren()) do
+            if c:IsA("TextButton") then c:Destroy() end
+        end
+        local i = 0
+        for loc, quests in pairs(SecretQuests) do
+            i += 1
+            local Btn = Create("TextButton", {Parent = SecretScroll, BackgroundColor3 = CONFIG.Panel2, Size = UDim2.new(1, 0, 0, 38), Text = loc .. " (" .. #quests .. ")", TextColor3 = CONFIG.White, TextSize = 12, Font = Enum.Font.GothamBold, AutoButtonColor = false, BorderSizePixel = 0, LayoutOrder = i, ZIndex = 15, TextXAlignment = Enum.TextXAlignment.Left})
+            Corner(Btn, 8)
+            Padding(Btn, 12, 12, 0, 0)
+            Btn.Activated:Connect(function() ShowSecretQuests(loc) end)
+        end
+    end)
     for i, q in ipairs(SecretQuests[location] or {}) do
         local Btn = Create("TextButton", {Parent = SecretScroll, BackgroundColor3 = CONFIG.Panel2, Size = UDim2.new(1, 0, 0, 42), Text = "- " .. q.Name, TextColor3 = CONFIG.White, TextSize = 11, Font = Enum.Font.GothamMedium, AutoButtonColor = false, BorderSizePixel = 0, LayoutOrder = i + 1, ZIndex = 15, TextXAlignment = Enum.TextXAlignment.Left})
         Corner(Btn, 8)
@@ -1272,6 +1301,20 @@ function ShowSecretQuests(location)
     end
 end
 
+-- Init secret locations
+local function ShowSecretLocations()
+    for _, c in ipairs(SecretScroll:GetChildren()) do
+        if c:IsA("TextButton") then c:Destroy() end
+    end
+    local i = 0
+    for loc, quests in pairs(SecretQuests) do
+        i += 1
+        local Btn = Create("TextButton", {Parent = SecretScroll, BackgroundColor3 = CONFIG.Panel2, Size = UDim2.new(1, 0, 0, 38), Text = loc .. " (" .. #quests .. ")", TextColor3 = CONFIG.White, TextSize = 12, Font = Enum.Font.GothamBold, AutoButtonColor = false, BorderSizePixel = 0, LayoutOrder = i, ZIndex = 15, TextXAlignment = Enum.TextXAlignment.Left})
+        Corner(Btn, 8)
+        Padding(Btn, 12, 12, 0, 0)
+        Btn.Activated:Connect(function() ShowSecretQuests(loc) end)
+    end
+end
 ShowSecretLocations()
 
 --// DISCORD
@@ -1286,17 +1329,17 @@ CreateSection(FarmPage, "FARM", "Auto farm level")
 CreateToggle(FarmPage, "Auto Farm Level", false, function(s) State.AutoFarm = s Notify("Auto Farm Level: " .. (s and "ON" or "OFF")) end)
 CreateToggle(FarmPage, "Auto Kill Nearest", false, function(s) State.AutoKillNearest = s Notify("Auto Kill Nearest: " .. (s and "ON" or "OFF")) end)
 
-CreateSection(FarmPage, "WEAPON", "Pilih kategori lalu weapon")
+CreateSection(FarmPage, "WEAPON", "Select category then weapon")
 CreateDropdown(FarmPage, "Select Tool", {"Melee", "Sword", "Gun", "Fruit"}, function(opt)
     State.SelectedCategory = opt
     ShowWeaponsInCategory(opt)
 end)
 
-CreateSection(FarmPage, "BOSS", "Pilih boss")
+CreateSection(FarmPage, "BOSS", "Select boss")
 CreateDropdown(FarmPage, "Select Sea", {"Sea1", "Sea2", "Sea3"}, function(opt) ShowBossBySea(opt) end)
 CreateToggle(FarmPage, "Auto Farm Boss", false, function(s)
     State.AutoBoss = s
-    if s and not State.SelectedBoss then Notify("Pilih boss dulu") State.AutoBoss = false
+    if s and not State.SelectedBoss then Notify("Select boss first") State.AutoBoss = false
     else Notify("Auto Farm Boss: " .. (s and "ON" or "OFF")) end
 end)
 
@@ -1308,56 +1351,56 @@ CreateToggle(FarmPage, "Farm Chest", false, function(s)
 end)
 
 --// SEA
-CreateSection(SeaPage, "SEA", "Pilih mob laut")
+CreateSection(SeaPage, "SEA", "Select sea mobs")
 CreateDropdown(SeaPage, "Select Mobs", {"Piranha", "Shark", "FishCrewMember", "SeaBeast", "Terrorshark"}, function(opt)
     State.SelectedSeaMob = opt
     Notify("Mob: " .. opt)
 end)
 
-CreateSection(SeaPage, "AUTO FARM SEA", "Farm mob laut")
+CreateSection(SeaPage, "AUTO FARM SEA", "Farm sea mobs")
 CreateToggle(SeaPage, "Auto Farm Sea", false, function(s) State.AutoFarmSea = s Notify("Auto Farm Sea: " .. (s and "ON" or "OFF")) end)
 CreateToggle(SeaPage, "Auto Kill Sea Beast", false, function(s) State.AutoKillSeaBeast = s Notify("Auto Kill Sea Beast: " .. (s and "ON" or "OFF")) end)
 
-CreateSection(SeaPage, "BOAT", "Kontrol kapal")
+CreateSection(SeaPage, "BOAT", "Boat control")
 CreateToggle(SeaPage, "Auto Drive", false, function(s) State.AutoDrive = s Notify("Auto Drive: " .. (s and "ON" or "OFF")) end)
 CreateToggle(SeaPage, "Delete Rocks", false, function(s) State.DeleteRocks = s Notify("Delete Rocks: " .. (s and "ON" or "OFF")) end)
 CreateSlider(SeaPage, "Height Boat", 0, 100, 0, function(v) State.HeightBoat = v end)
 CreateSlider(SeaPage, "Speed Boat", 0, 350, 0, function(v) State.SpeedBoat = v end)
 
-CreateSection(SeaPage, "MIRAGE", "Fitur Mirage")
+CreateSection(SeaPage, "MIRAGE", "Mirage features")
 CreateButton(SeaPage, "Find Mirage", function()
     local m = FindObjectByKeyword("mirage")
-    if m and m.PrimaryPart then TeleportTo(m.PrimaryPart.Position + Vector3.new(0, 5, 0)) Notify("Teleport Mirage") else Notify("Mirage tidak ada") end
+    if m and m.PrimaryPart then TeleportTo(m.PrimaryPart.Position + Vector3.new(0, 5, 0)) Notify("Teleported to Mirage") else Notify("Mirage not found") end
 end)
 CreateButton(SeaPage, "Teleport Highest", function()
     local hrp = GetHRP()
-    if hrp then hrp.CFrame = CFrame.new(hrp.Position + Vector3.new(0, 500, 0)) Notify("Teleport Highest") end
+    if hrp then hrp.CFrame = CFrame.new(hrp.Position + Vector3.new(0, 500, 0)) Notify("Teleported Highest") end
 end)
 CreateToggle(SeaPage, "Lock Moon", false, function(s) State.LockMoon = s Notify("Lock Moon: " .. (s and "ON" or "OFF")) end)
 CreateButton(SeaPage, "Teleport Bluegear", function()
     local b = FindObjectByKeyword("bluegear")
-    if b and b.PrimaryPart then TeleportTo(b.PrimaryPart.Position + Vector3.new(0, 5, 0)) Notify("Teleport Bluegear") else Notify("Bluegear tidak ada") end
+    if b and b.PrimaryPart then TeleportTo(b.PrimaryPart.Position + Vector3.new(0, 5, 0)) Notify("Teleported to Bluegear") else Notify("Bluegear not found") end
 end)
 CreateButton(SeaPage, "Teleport Bloxfruit Dealer", function()
     local d = FindObjectByKeyword("dealer")
-    if d and d.PrimaryPart then TeleportTo(d.PrimaryPart.Position + Vector3.new(0, 5, 0)) Notify("Teleport Dealer") else Notify("Dealer tidak ada") end
+    if d and d.PrimaryPart then TeleportTo(d.PrimaryPart.Position + Vector3.new(0, 5, 0)) Notify("Teleported to Dealer") else Notify("Dealer not found") end
 end)
 
-CreateSection(SeaPage, "KITSUNE", "Fitur Kitsune")
+CreateSection(SeaPage, "KITSUNE", "Kitsune features")
 CreateButton(SeaPage, "Find Kitsune Island", function()
     local k = FindObjectByKeyword("kitsune")
-    if k and k.PrimaryPart then TeleportTo(k.PrimaryPart.Position + Vector3.new(0, 5, 0)) Notify("Teleport Kitsune") else Notify("Kitsune tidak ada") end
+    if k and k.PrimaryPart then TeleportTo(k.PrimaryPart.Position + Vector3.new(0, 5, 0)) Notify("Teleported to Kitsune") else Notify("Kitsune not found") end
 end)
 CreateButton(SeaPage, "Teleport Azure Ember", function()
     local a = FindObjectByKeyword("azure ember")
-    if a and a.PrimaryPart then TeleportTo(a.PrimaryPart.Position + Vector3.new(0, 5, 0)) Notify("Teleport Azure Ember") else Notify("Azure Ember tidak ada") end
+    if a and a.PrimaryPart then TeleportTo(a.PrimaryPart.Position + Vector3.new(0, 5, 0)) Notify("Teleported to Azure Ember") else Notify("Azure Ember not found") end
 end)
 CreateSlider(SeaPage, "Azure Ember Count", 0, 35, 0, function(v) State.AzureEmberCount = v end)
 
-CreateSection(SeaPage, "PREHISTORIC", "Fitur Prehistoric")
+CreateSection(SeaPage, "PREHISTORIC", "Prehistoric features")
 CreateButton(SeaPage, "Find Prehistoric", function()
     local p = FindObjectByKeyword("prehistoric")
-    if p and p.PrimaryPart then TeleportTo(p.PrimaryPart.Position + Vector3.new(0, 5, 0)) Notify("Teleport Prehistoric") else Notify("Prehistoric tidak ada") end
+    if p and p.PrimaryPart then TeleportTo(p.PrimaryPart.Position + Vector3.new(0, 5, 0)) Notify("Teleported to Prehistoric") else Notify("Prehistoric not found") end
 end)
 CreateToggle(SeaPage, "Auto Kill Golem", false, function(s) State.AutoKillGolem = s Notify("Auto Kill Golem: " .. (s and "ON" or "OFF")) end)
 CreateToggle(SeaPage, "Auto Collect Bone", false, function(s) State.AutoCollectBone = s Notify("Auto Collect Bone: " .. (s and "ON" or "OFF")) end)
@@ -1366,7 +1409,7 @@ CreateSection(SeaPage, "TRADE", "Auto Trade")
 CreateToggle(SeaPage, "Auto Trade", false, function(s) State.AutoTrade = s Notify("Auto Trade: " .. (s and "ON" or "OFF")) end)
 
 --// QUEST / ITEMS
-CreateSection(QuestItemsPage, "QUEST / ITEMS", "Auto farm item langka")
+CreateSection(QuestItemsPage, "QUEST / ITEMS", "Auto farm rare items")
 CreateToggle(QuestItemsPage, "Auto CDK", false, function(s) State.AutoCDK = s Notify("Auto CDK: " .. (s and "ON" or "OFF")) end)
 CreateToggle(QuestItemsPage, "Auto Dark Dagger", false, function(s) State.AutoDarkDagger = s Notify("Auto Dark Dagger: " .. (s and "ON" or "OFF")) end)
 CreateToggle(QuestItemsPage, "Auto Soul Guitar", false, function(s) State.AutoSoulGuitar = s Notify("Auto Soul Guitar: " .. (s and "ON" or "OFF")) end)
@@ -1376,51 +1419,21 @@ CreateToggle(QuestItemsPage, "Auto Buddy Sword", false, function(s) State.AutoBu
 CreateToggle(QuestItemsPage, "Auto Kill Indra", false, function(s) State.AutoKillIndra = s Notify("Auto Kill Indra: " .. (s and "ON" or "OFF")) end)
 CreateToggle(QuestItemsPage, "Auto Spawn Dough King", false, function(s) State.AutoSpawnDoughKing = s Notify("Auto Spawn Dough King: " .. (s and "ON" or "OFF")) end)
 
-CreateSection(QuestItemsPage, "SEARCH", "Cari quest / boss / island / weapon")
-CreateInput(QuestItemsPage, "Search... (quest, boss, island, weapon)", function(text)
-    State.SearchInput = text
-    if not text or text == "" then
-        for _, c in ipairs(SecretScroll:GetChildren()) do
-            if c:IsA("TextButton") then c:Destroy() end
-        end
-        ShowSecretLocations()
-        return
-    end
-    local results = GlobalSearch(text)
-    for _, c in ipairs(SecretScroll:GetChildren()) do
-        if c:IsA("TextButton") then c:Destroy() end
-    end
-    if #results == 0 then
-        Create("TextLabel", {Parent = SecretScroll, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 36), Text = "Tidak ada hasil", TextColor3 = CONFIG.White, TextSize = 12, ZIndex = 15})
-        return
-    end
-    for i, r in ipairs(results) do
-        local Btn = Create("TextButton", {Parent = SecretScroll, BackgroundColor3 = CONFIG.Panel2, Size = UDim2.new(1, 0, 0, 42), Text = "[" .. r.type .. "] " .. r.name .. "\n  " .. r.location, TextColor3 = CONFIG.White, TextSize = 11, Font = Enum.Font.GothamMedium, AutoButtonColor = false, BorderSizePixel = 0, LayoutOrder = i, ZIndex = 15, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top})
-        Corner(Btn, 8)
-        Padding(Btn, 12, 12, 6, 6)
-        Btn.Activated:Connect(function()
-            Notify("Selected: " .. r.name)
-            if r.type == "Boss" then State.SelectedBoss = r.name
-            elseif r.type == "Quest" then State.SelectedSecretLocation = r.location
-            elseif r.type == "Weapon" then SelectWeapon(r.name) end
-        end)
-    end
-end)
-
-CreateSection(QuestItemsPage, "SECRET QUEST", "Pilih quest")
+CreateSection(QuestItemsPage, "SECRET QUEST", "Select quest then start")
 CreateDropdown(QuestItemsPage, "Select Location", 
-    {"Jungle", "Pirate Village", "Desert", "Frozen Village", "Marine Fortress",
-     "Lower Skylands", "Prison", "Colosseum", "Magma Village", "Underwater City",
-     "Upper Skylands", "Fountain City"}, 
+    {"Middle Town", "Jungle", "Pirate Village", "Desert", "Frozen Village",
+     "Marine Fortress", "Lower Skylands", "Prison", "Colosseum", "Magma Village",
+     "Underwater City", "Upper Skylands", "Fountain City"}, 
 function(opt) ShowSecretQuests(opt) end)
 
 CreateButton(QuestItemsPage, "Start Secret Quest", function()
-    if not State.SelectedSecretQuest then Notify("Pilih quest dulu") return end
-    Notify("Starting: " .. State.SelectedSecretQuest.Name)
+    if not State.SelectedSecretQuest then Notify("Select quest first") return end
+    RunSecretQuest()
 end)
 CreateButton(QuestItemsPage, "Cancel Secret Quest", function()
+    State.AutoSecretQuest = false
     State.SelectedSecretQuest = nil
-    Notify("Quest dibatalkan")
+    Notify("Quest cancelled")
 end)
 
 --// FRUIT / RAID
@@ -1444,7 +1457,7 @@ CreateToggle(FishingPage, "Auto Fishing", false, function(s) State.AutoFishing =
 CreateToggle(FishingPage, "Auto Catch", false, function(s) State.AutoCatch = s Notify("Auto Catch: " .. (s and "ON" or "OFF")) end)
 
 --// STATUS
-CreateSection(StatusPage, "STATUS", "Info player")
+CreateSection(StatusPage, "STATUS", "Player info")
 local StatusLabel = Create("TextLabel", {Parent = StatusPage, BackgroundColor3 = CONFIG.Panel, Size = UDim2.new(1, 0, 0, 100), Text = "Level: -\nIsland: -\nSea: -\nBoss: -", TextColor3 = CONFIG.White, TextSize = 13, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left, BorderSizePixel = 0, ZIndex = 13})
 Corner(StatusLabel, 9)
 Padding(StatusLabel, 14, 14, 7, 7)
@@ -1463,7 +1476,7 @@ task.spawn(function()
 end)
 
 --// PVP
-CreateSection(PvPPage, "PLAYER CONTROL", "Pilih player untuk teleport / spectate")
+CreateSection(PvPPage, "PLAYER CONTROL", "Select player to teleport / spectate")
 CreateDropdown(PvPPage, "Select Player", (function()
     local list = {}
     for _, plr in ipairs(Players:GetPlayers()) do
@@ -1473,27 +1486,27 @@ CreateDropdown(PvPPage, "Select Player", (function()
 end)(), function(opt) State.SelectedPlayer = opt Notify("Player: " .. opt) end)
 
 CreateButton(PvPPage, "Teleport Player", function()
-    if not State.SelectedPlayer then Notify("Pilih player dulu") return end
+    if not State.SelectedPlayer then Notify("Select player first") return end
     local target = nil
     for _, plr in ipairs(Players:GetPlayers()) do
         if plr.Name == State.SelectedPlayer then target = plr break end
     end
-    if not target or not target.Character then Notify("Player tidak ada") return end
+    if not target or not target.Character then Notify("Player not found") return end
     local targetHRP = target.Character:FindFirstChild("HumanoidRootPart")
     if not targetHRP then return end
     local myHRP = GetHRP()
     if not myHRP then return end
     myHRP.CFrame = targetHRP.CFrame * CFrame.new(0, 0, -5)
-    Notify("Teleport ke: " .. State.SelectedPlayer)
+    Notify("Teleported to: " .. State.SelectedPlayer)
 end)
 
 CreateButton(PvPPage, "Spectate Player", function()
-    if not State.SelectedPlayer then Notify("Pilih player dulu") return end
+    if not State.SelectedPlayer then Notify("Select player first") return end
     local target = nil
     for _, plr in ipairs(Players:GetPlayers()) do
         if plr.Name == State.SelectedPlayer then target = plr break end
     end
-    if not target or not target.Character then Notify("Player tidak ada") return end
+    if not target or not target.Character then Notify("Player not found") return end
     local targetHum = target.Character:FindFirstChildOfClass("Humanoid")
     if not targetHum then return end
     Camera.CameraSubject = targetHum
@@ -1514,33 +1527,33 @@ CreateButton(PvPPage, "Stop Spectate", function()
     Notify("Spectate stopped")
 end)
 
-CreateSection(PvPPage, "COMBAT", "Fitur PvP")
+CreateSection(PvPPage, "COMBAT", "PvP features")
 CreateToggle(PvPPage, "Aimbot", false, function(s) State.Aimbot = s Notify("Aimbot: " .. (s and "ON" or "OFF")) end)
 CreateToggle(PvPPage, "Hitbox", false, function(s) State.Hitbox = s Notify("Hitbox: " .. (s and "ON" or "OFF")) end)
 
-local KillAuraLabel = Create("TextLabel", {Parent = PvPPage, BackgroundColor3 = CONFIG.Panel, Size = UDim2.new(1, 0, 0, 40), Text = "Kill Aura: Auto (bawaan)", TextColor3 = CONFIG.White, TextSize = 13, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left, BorderSizePixel = 0, ZIndex = 13})
+local KillAuraLabel = Create("TextLabel", {Parent = PvPPage, BackgroundColor3 = CONFIG.Panel, Size = UDim2.new(1, 0, 0, 40), Text = "Kill Aura: Auto (built-in)", TextColor3 = CONFIG.White, TextSize = 13, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left, BorderSizePixel = 0, ZIndex = 13})
 Corner(KillAuraLabel, 9)
 Padding(KillAuraLabel, 14, 14, 7, 7)
 
 task.spawn(function()
     while task.wait(1) do
-        if IsInRaidArea() then KillAuraLabel.Text = "Kill Aura: Active (di Raid)"
-        else KillAuraLabel.Text = "Kill Aura: Standby (bukan Raid)" end
+        if IsInRaidArea() then KillAuraLabel.Text = "Kill Aura: Active (in Raid)"
+        else KillAuraLabel.Text = "Kill Aura: Standby (not in Raid)" end
     end
 end)
 
 --// STATS
-CreateSection(StatsPage, "AUTO ADD STATS", "Distribute stat point otomatis")
+CreateSection(StatsPage, "AUTO ADD STATS", "Distribute stat points automatically")
 CreateToggle(StatsPage, "Auto Add Stats", false, function(s) State.AutoAddStats = s Notify("Auto Add Stats: " .. (s and "ON" or "OFF")) end)
 CreateSlider(StatsPage, "Melee", 0, 100, 0, function(v) State.StatsMelee = v end)
 CreateSlider(StatsPage, "Defense", 0, 100, 0, function(v) State.StatsDefense = v end)
 CreateSlider(StatsPage, "Sword", 0, 100, 0, function(v) State.StatsSword = v end)
 CreateSlider(StatsPage, "Gun", 0, 100, 0, function(v) State.StatsGun = v end)
 CreateSlider(StatsPage, "BloxFruit", 0, 100, 0, function(v) State.StatsBloxFruit = v end)
-CreateButton(StatsPage, "Apply Stats Sekarang", function() AutoAddStats() end)
+CreateButton(StatsPage, "Apply Stats Now", function() AutoAddStats() end)
 
 --// MISC
-CreateSection(MiscPage, "ANTI AFK", "Cegah kick idle")
+CreateSection(MiscPage, "ANTI AFK", "Prevent kick when idle")
 CreateToggle(MiscPage, "Anti AFK", true, function(s) State.AntiAFK = s Notify("Anti AFK: " .. (s and "ON" or "OFF")) end)
 
 CreateSection(MiscPage, "JOB ID", "Join server by Job ID")
@@ -1549,7 +1562,7 @@ CreateButton(MiscPage, "Copy Job ID", function()
 end)
 CreateInput(MiscPage, "Paste Job ID here...", function(text) State.JobIDInput = text end)
 CreateButton(MiscPage, "Join Job", function()
-    if not State.JobIDInput or State.JobIDInput == "" then Notify("Isi Job ID dulu") return end
+    if not State.JobIDInput or State.JobIDInput == "" then Notify("Enter Job ID first") return end
     pcall(function() TeleportService:TeleportToPlaceInstance(game.PlaceId, State.JobIDInput, Player) end)
 end)
 
@@ -1586,15 +1599,15 @@ end)
 CreateSection(MiscPage, "REDEEM CODE", "Redeem code")
 CreateInput(MiscPage, "Enter code...", function(text) State.CodeInput = text end)
 CreateButton(MiscPage, "Redeem Code", function()
-    if not State.CodeInput or State.CodeInput == "" then Notify("Isi code dulu") return end
+    if not State.CodeInput or State.CodeInput == "" then Notify("Enter code first") return end
     if REMOTE_Redeem then
         pcall(function()
             if REMOTE_Redeem:IsA("RemoteEvent") then REMOTE_Redeem:FireServer(State.CodeInput)
             else REMOTE_Redeem:InvokeServer(State.CodeInput) end
         end)
-        Notify("Redeem: " .. State.CodeInput)
+        Notify("Redeeming: " .. State.CodeInput)
     else
-        Notify("Remote redeem tidak ditemukan")
+        Notify("Redeem remote not found")
     end
 end)
 
@@ -1664,25 +1677,6 @@ task.spawn(function()
                 if boss then
                     local hrp = boss:FindFirstChild("HumanoidRootPart")
                     if hrp then TeleportTo(hrp.Position + Vector3.new(0, 3, 0)) end
-                end
-            end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(1.5) do
-        if State.AutoMaterial then
-            SafeCall(function()
-                local mats = FindMaterials()
-                local hrp = GetHRP()
-                if hrp and #mats > 0 then
-                    local nearest, dist = nil, math.huge
-                    for _, m in ipairs(mats) do
-                        local d = GetDist(m.Position, hrp.Position)
-                        if d < dist then nearest, dist = m, d end
-                    end
-                    if nearest and dist < 300 then TeleportTo(nearest.Position + Vector3.new(0, 3, 0)) end
                 end
             end)
         end
@@ -1870,7 +1864,7 @@ task.spawn(function()
                     if REMOTE_BuyChip:IsA("RemoteEvent") then REMOTE_BuyChip:FireServer()
                     else REMOTE_BuyChip:InvokeServer() end
                 end)
-                Notify("BuyChip")
+                Notify("BuyChip fired")
             end)
         end
     end
@@ -2039,7 +2033,7 @@ end)
 ShowTab("Discord")
 
 print("================================")
-print("        SYSX HUB LOADED v1.0.2")
+print("        SYSX HUB LOADED v1.0.4")
 print("        " .. CONFIG.Build)
 print("================================")
 
