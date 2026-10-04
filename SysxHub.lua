@@ -1,7 +1,8 @@
 --[[
 ================================================================
  SYSX HUB | Freemium v1.0 | Created by Ramanotsugarr
- Logo + Banner + Full 14 Tabs + Fruit System + Fixed Dropdown
+ Logo + Banner + 14 Tabs + Farm Config + Fruit System
+ Fixed Dropdown (Popup Modal) + Mobile Support
 ================================================================
 ]]
 
@@ -27,8 +28,8 @@ local CONFIG = {
     Name = "SysxHub",
     Build = "SysxHub v1.0 | Created by Ramanotsugarr",
     Discord = "https://discord.gg/E5kQJW3hn",
-    TweenMobSpeed = 350,
-    IslandTweenSpeed = 180,
+    TweenMobSpeed = 400,
+    IslandTweenSpeed = 200,
     FruitTweenSpeed = 180,
 }
 
@@ -64,15 +65,8 @@ local State = {
     ESPChest=false, ESPFlower=false, ESPObjects={},
 }
 
-local FruitFolder = workspace:WaitForChild("Fruits", 5)
-local FruitSystem = ReplicatedStorage:FindFirstChild("SysxFruit")
-local StoreFruitRemote = FruitSystem and FruitSystem:FindFirstChild("StoreFruit")
-local StoreResultRemote = FruitSystem and FruitSystem:FindFirstChild("StoreResult")
-
 local old = PlayerGui:FindFirstChild("SysxHub")
 if old then old:Destroy() end
-local old2 = PlayerGui:FindFirstChild("SysxHubVisual")
-if old2 then old2:Destroy() end
 
 --// HELPERS
 local function Create(cls, props)
@@ -131,20 +125,6 @@ end
 local function FindBoss(name)
     for _, obj in ipairs(workspace:GetChildren()) do
         if obj.Name == name and obj:FindFirstChildOfClass("Humanoid") then return obj end
-    end
-    return nil
-end
-
-local function FindMobByName(mobs)
-    if type(mobs) == "string" then mobs = {mobs} end
-    for _, name in ipairs(mobs) do
-        for _, obj in ipairs(workspace:GetChildren()) do
-            if obj.Name == name then
-                local hum = obj:FindFirstChildOfClass("Humanoid")
-                local hrp = obj:FindFirstChild("HumanoidRootPart")
-                if hum and hrp and hum.Health > 0 then return obj end
-            end
-        end
     end
     return nil
 end
@@ -244,7 +224,7 @@ end
 local function TweenToPosition(targetPos, speed)
     local hrp = GetHRP()
     if not hrp then return end
-    speed = speed or 350
+    speed = speed or CONFIG.TweenMobSpeed
     local startCF = hrp.CFrame
     local targetCF = CFrame.new(targetPos)
     local distance = (startCF.Position - targetCF.Position).Magnitude
@@ -261,7 +241,6 @@ local function TweenToPosition(targetPos, speed)
     task.wait(duration + 0.05)
 end
 
---// SMOOTH ISLAND TWEEN
 local function TweenToIslandSmooth(targetPos)
     local hrp = GetHRP()
     if not hrp then return false end
@@ -382,48 +361,154 @@ local function getFruitName(obj)
     return obj.Name
 end
 
---// LEVEL DATA
-local LEVEL_DATA = {
-    {min=1,max=10,quest="BanditQuest1",questNum=1,mobs={"Bandit","Trainee"}},
-    {min=10,max=30,quest="JungleQuest",questNum=1,mobs={"Monkey","Gorilla"}},
-    {min=30,max=60,quest="BuggyQuest1",questNum=1,mobs={"Pirate","Brute"}},
-    {min=60,max=90,quest="DesertQuest",questNum=1,mobs={"Desert Bandit","Desert Officer"}},
-    {min=90,max=120,quest="SnowQuest",questNum=1,mobs={"Snow Bandit","Snowman"}},
-    {min=120,max=150,quest="MarineQuest2",questNum=1,mobs={"Chief Petty Officer"}},
-    {min=150,max=190,quest="SkyQuest",questNum=1,mobs={"Sky Bandit","Dark Master"}},
-    {min=190,max=250,quest="PrisonQuest",questNum=1,mobs={"Prisoner","Dangerous Prisoner"}},
-    {min=250,max=300,quest="ColosseumQuest",questNum=1,mobs={"Toga Warrior","Gladiator"}},
-    {min=300,max=375,quest="MagmaQuest",questNum=1,mobs={"Military Soldier","Military Spy"}},
-    {min=375,max=450,quest="FishmanQuest",questNum=1,mobs={"Fishman Warrior","Fishman Commando"}},
-    {min=450,max=625,quest="SkyExp1Quest",questNum=1,mobs={"God's Guard","Shandia","Royal Squad","Royal Soldier"}},
-    {min=625,max=700,quest="FountainQuest",questNum=1,mobs={"Pirate Millionaire","Pistol Billionaire"}},
-    {min=700,max=875,quest="Area1Quest",questNum=1,mobs={"Raider","Mercenary","Swan Pirate"}},
-    {min=875,max=950,quest="Area2Quest",questNum=1,mobs={"Marine Soldier","Marine Commando"}},
-    {min=950,max=1000,quest="GraveyardQuest",questNum=1,mobs={"Zombie","Vampire"}},
-    {min=1000,max=1100,quest="SnowMountainQuest",questNum=1,mobs={"Snow Trooper","Winter Warrior"}},
-    {min=1100,max=1250,quest="PunkHazardQuest",questNum=1,mobs={"Lab Subordinate","Horned Riot","Magma Ninja","Lava Pirate"}},
-    {min=1250,max=1350,quest="CursedShipQuest",questNum=1,mobs={"Ship Deckhand","Ship Engineer","Ship Steward","Ship Officer"}},
-    {min=1350,max=1425,quest="IceCastleQuest",questNum=1,mobs={"Arctic Warrior","Snow Lurker"}},
-    {min=1425,max=1500,quest="ForgottenQuest",questNum=1,mobs={"Sea Soldier","Water Tiger"}},
-    {min=1500,max=1575,quest="PortQuest",questNum=1,mobs={"Pirate Millionaire","Pistol Billionaire"}},
-    {min=1575,max=1700,quest="HydraQuest",questNum=1,mobs={"Dragon Crew Warrior","Dragon Crew Archer"}},
-    {min=1700,max=1775,quest="GreatTreeQuest",questNum=1,mobs={"Marine Commodore","Marine Rear Admiral"}},
-    {min=1775,max=1975,quest="ForestQuest",questNum=1,mobs={"Fishman Raider","Fishman Captain","Forest Pirate","Mythological Pirate","Jungle Pirate"}},
-    {min=1975,max=2075,quest="HauntedQuest",questNum=1,mobs={"Reborn Skeleton","Living Zombie","Demonic Soul","Possessed Mummy"}},
-    {min=2075,max=2450,quest="CakeQuest",questNum=1,mobs={"Cake Guard","Cake Baking","Cocoa Warrior","Chocolate Bar Battler","Candy Pirate"}},
-    {min=2450,max=2600,quest="TikiQuest",questNum=1,mobs={"Isle Outlaw","Island Boy","Sun-kissed Warrior","Isle Champion","Serpent Hunter"}},
-    {min=2600,max=2800,quest="SubmergedQuest",questNum=1,mobs={"Reef Bandit","Coral Pirate","Sea Chanter","Ocean Prophet"}},
+--// FARM LEVEL CONFIG
+local FarmLevelConfig = {
+    {Min=1, Max=9, Island="Starter Island", Quest="Bandit Quest", NPC="Bandit"},
+    {Min=10, Max=14, Island="Jungle", Quest="Monkey Quest", NPC="Monkey"},
+    {Min=15, Max=29, Island="Jungle", Quest="Gorilla Quest", NPC="Gorilla"},
+    {Min=30, Max=59, Island="Pirate Village", Quest="Pirate Quest", NPC="Pirate"},
+    {Min=60, Max=74, Island="Pirate Village", Quest="Brute Quest", NPC="Brute"},
+    {Min=75, Max=89, Island="Desert", Quest="Desert Bandit Quest", NPC="Desert Bandit"},
+    {Min=90, Max=99, Island="Desert", Quest="Desert Officer Quest", NPC="Desert Officer"},
+    {Min=100, Max=119, Island="Frozen Village", Quest="Snow Bandit Quest", NPC="Snow Bandit"},
+    {Min=120, Max=149, Island="Frozen Village", Quest="Snowman Quest", NPC="Snowman"},
+    {Min=150, Max=174, Island="Marine Fortress", Quest="Chief Petty Officer Quest", NPC="Chief Petty Officer"},
+    {Min=175, Max=199, Island="Skylands", Quest="Sky Bandit Quest", NPC="Sky Bandit"},
+    {Min=200, Max=224, Island="Skylands", Quest="Dark Master Quest", NPC="Dark Master"},
+    {Min=225, Max=274, Island="Prison", Quest="Prisoner Quest", NPC="Prisoner"},
+    {Min=275, Max=299, Island="Colosseum", Quest="Toga Warrior Quest", NPC="Toga Warrior"},
+    {Min=300, Max=374, Island="Magma Village", Quest="Military Soldier Quest", NPC="Military Soldier"},
+    {Min=375, Max=399, Island="Magma Village", Quest="Military Spy Quest", NPC="Military Spy"},
+    {Min=400, Max=449, Island="Underwater City", Quest="Fishman Warrior Quest", NPC="Fishman Warrior"},
+    {Min=450, Max=474, Island="Underwater City", Quest="Fishman Commando Quest", NPC="Fishman Commando"},
+    {Min=475, Max=524, Island="Fountain City", Quest="Galley Pirate Quest", NPC="Galley Pirate"},
+    {Min=525, Max=599, Island="Fountain City", Quest="Galley Captain Quest", NPC="Galley Captain"},
+    {Min=600, Max=699, Island="Upper Skylands", Quest="God's Guard Quest", NPC="God's Guard"},
+    {Min=700, Max=724, Island="Kingdom of Rose", Quest="Raider Quest", NPC="Raider"},
+    {Min=725, Max=774, Island="Kingdom of Rose", Quest="Mercenary Quest", NPC="Mercenary"},
+    {Min=775, Max=874, Island="Kingdom of Rose", Quest="Swan Pirate Quest", NPC="Swan Pirate"},
+    {Min=875, Max=899, Island="Green Zone", Quest="Factory Staff Quest", NPC="Factory Staff"},
+    {Min=900, Max=949, Island="Graveyard", Quest="Graveyard Warrior Quest", NPC="Graveyard Warrior"},
+    {Min=950, Max=974, Island="Graveyard", Quest="Graveyard Assassin Quest", NPC="Graveyard Assassin"},
+    {Min=975, Max=999, Island="Snow Mountain", Quest="Snow Trooper Quest", NPC="Snow Trooper"},
+    {Min=1000, Max=1049, Island="Snow Mountain", Quest="Winter Warrior Quest", NPC="Winter Warrior"},
+    {Min=1050, Max=1099, Island="Hot and Cold", Quest="Lab Subordinate Quest", NPC="Lab Subordinate"},
+    {Min=1100, Max=1124, Island="Hot and Cold", Quest="Horned Warrior Quest", NPC="Horned Warrior"},
+    {Min=1125, Max=1174, Island="Cursed Ship", Quest="Ship Deckhand Quest", NPC="Ship Deckhand"},
+    {Min=1175, Max=1199, Island="Cursed Ship", Quest="Ship Engineer Quest", NPC="Ship Engineer"},
+    {Min=1200, Max=1249, Island="Ice Castle", Quest="Arctic Warrior Quest", NPC="Arctic Warrior"},
+    {Min=1250, Max=1274, Island="Ice Castle", Quest="Snow Lurker Quest", NPC="Snow Lurker"},
+    {Min=1275, Max=1299, Island="Forgotten Island", Quest="Sea Soldier Quest", NPC="Sea Soldier"},
+    {Min=1300, Max=1349, Island="Forgotten Island", Quest="Water Fighter Quest", NPC="Water Fighter"},
+    {Min=1350, Max=1424, Island="Forgotten Island", Quest="Toga Warrior Quest", NPC="Toga Warrior"},
+    {Min=1425, Max=1449, Island="Forgotten Island", Quest="Fishman Raider Quest", NPC="Fishman Raider"},
+    {Min=1450, Max=1499, Island="Forgotten Island", Quest="Fishman Captain Quest", NPC="Fishman Captain"},
+    {Min=1500, Max=1524, Island="Port Town", Quest="Pirate Millionaire Quest", NPC="Pirate Millionaire"},
+    {Min=1525, Max=1574, Island="Port Town", Quest="Pistol Billionaire Quest", NPC="Pistol Billionaire"},
+    {Min=1575, Max=1599, Island="Hydra Island", Quest="Dragon Crew Warrior Quest", NPC="Dragon Crew Warrior"},
+    {Min=1600, Max=1624, Island="Hydra Island", Quest="Dragon Crew Archer Quest", NPC="Dragon Crew Archer"},
+    {Min=1625, Max=1649, Island="Great Tree", Quest="Marine Commodore Quest", NPC="Marine Commodore"},
+    {Min=1650, Max=1699, Island="Great Tree", Quest="Marine Rear Admiral Quest", NPC="Marine Rear Admiral"},
+    {Min=1700, Max=1724, Island="Floating Turtle", Quest="Fishman Raider Quest", NPC="Fishman Raider"},
+    {Min=1725, Max=1774, Island="Floating Turtle", Quest="Fishman Captain Quest", NPC="Fishman Captain"},
+    {Min=1775, Max=1799, Island="Floating Turtle", Quest="Forest Pirate Quest", NPC="Forest Pirate"},
+    {Min=1800, Max=1824, Island="Floating Turtle", Quest="Mythological Pirate Quest", NPC="Mythological Pirate"},
+    {Min=1825, Max=1874, Island="Floating Turtle", Quest="Jungle Pirate Quest", NPC="Jungle Pirate"},
+    {Min=1875, Max=1899, Island="Floating Turtle", Quest="Musketeer Pirate Quest", NPC="Musketeer Pirate"},
+    {Min=1900, Max=1924, Island="Haunted Castle", Quest="Reborn Skeleton Quest", NPC="Reborn Skeleton"},
+    {Min=1925, Max=1974, Island="Haunted Castle", Quest="Living Zombie Quest", NPC="Living Zombie"},
+    {Min=1975, Max=1999, Island="Haunted Castle", Quest="Demonic Soul Quest", NPC="Demonic Soul"},
+    {Min=2000, Max=2024, Island="Haunted Castle", Quest="Posessed Mummy Quest", NPC="Posessed Mummy"},
+    {Min=2025, Max=2049, Island="Sea of Treats", Quest="Peanut Scout Quest", NPC="Peanut Scout"},
+    {Min=2050, Max=2074, Island="Sea of Treats", Quest="Peanut President Quest", NPC="Peanut President"},
+    {Min=2075, Max=2099, Island="Sea of Treats", Quest="Ice Cream Chef Quest", NPC="Ice Cream Chef"},
+    {Min=2100, Max=2124, Island="Sea of Treats", Quest="Ice Cream Commander Quest", NPC="Ice Cream Commander"},
+    {Min=2125, Max=2149, Island="Sea of Treats", Quest="Cookie Crafter Quest", NPC="Cookie Crafter"},
+    {Min=2150, Max=2199, Island="Sea of Treats", Quest="Cake Guard Quest", NPC="Cake Guard"},
+    {Min=2200, Max=2224, Island="Chocolate Land", Quest="Chocolate Bar Battler Quest", NPC="Chocolate Bar Battler"},
+    {Min=2225, Max=2274, Island="Chocolate Land", Quest="Cocoa Warrior Quest", NPC="Cocoa Warrior"},
+    {Min=2275, Max=2299, Island="Cake Land", Quest="Sweet Thief Quest", NPC="Sweet Thief"},
+    {Min=2300, Max=2324, Island="Cake Land", Quest="Candy Rebel Quest", NPC="Candy Rebel"},
+    {Min=2325, Max=2349, Island="Cake Land", Quest="Candy Pirate Quest", NPC="Candy Pirate"},
+    {Min=2350, Max=2374, Island="Cake Land", Quest="Snow Demon Quest", NPC="Snow Demon"},
+    {Min=2375, Max=2399, Island="Cake Land", Quest="Isle Champion Quest", NPC="Isle Champion"},
+    {Min=2400, Max=2424, Island="Tiki Outpost", Quest="Isle Outlaw Quest", NPC="Isle Outlaw"},
+    {Min=2425, Max=2449, Island="Tiki Outpost", Quest="Island Boy Quest", NPC="Island Boy"},
+    {Min=2450, Max=2474, Island="Tiki Outpost", Quest="Isle Champion Quest", NPC="Isle Champion"},
+    {Min=2475, Max=2499, Island="Tiki Outpost", Quest="Forest Pirate Quest", NPC="Forest Pirate"},
+    {Min=2500, Max=2549, Island="Tiki Outpost", Quest="Tiki Warrior Quest", NPC="Tiki Warrior"},
+    {Min=2550, Max=2599, Island="Tiki Outpost", Quest="Tiki Chief Quest", NPC="Tiki Chief"},
+    {Min=2600, Max=2649, Island="Tiki Outpost", Quest="Tiki Warrior Quest", NPC="Tiki Warrior"},
+    {Min=2650, Max=2699, Island="Tiki Outpost", Quest="Tiki Chief Quest", NPC="Tiki Chief"},
+    {Min=2700, Max=2749, Island="Final Island", Quest="Final Warrior Quest", NPC="Final Warrior"},
+    {Min=2750, Max=2799, Island="Final Island", Quest="Final Champion Quest", NPC="Final Champion"},
+    {Min=2800, Max=2800, Island="Final Island", Quest="Max Level Quest", NPC="Final Boss"},
 }
-local function GetLevel()
-    local ls = Player:FindFirstChild("leaderstats")
-    local lv = ls and ls:FindFirstChild("Level")
-    return lv and lv.Value or 1
-end
-local function GetLevelData(level)
-    for _, data in ipairs(LEVEL_DATA) do
-        if level >= data.min and level < data.max then return data end
+
+local IslandCoords = {
+    ["Starter Island"]=Vector3.new(1077,15,1450),["Jungle"]=Vector3.new(-1620,30,200),
+    ["Pirate Village"]=Vector3.new(-1100,15,3800),["Desert"]=Vector3.new(980,15,4200),
+    ["Frozen Village"]=Vector3.new(-70,20,-2500),["Marine Fortress"]=Vector3.new(-5100,20,4050),
+    ["Skylands"]=Vector3.new(-4650,850,-3220),["Prison"]=Vector3.new(4850,15,650),
+    ["Colosseum"]=Vector3.new(-1800,50,-3000),["Magma Village"]=Vector3.new(-5200,20,-300),
+    ["Underwater City"]=Vector3.new(6000,-150,3000),["Fountain City"]=Vector3.new(5600,60,-5000),
+    ["Upper Skylands"]=Vector3.new(-4650,1200,-3220),["Kingdom of Rose"]=Vector3.new(-800,20,1800),
+    ["Green Zone"]=Vector3.new(-2500,30,100),["Graveyard"]=Vector3.new(6500,60,4500),
+    ["Snow Mountain"]=Vector3.new(400,30,-5300),["Hot and Cold"]=Vector3.new(-5500,30,-4000),
+    ["Cursed Ship"]=Vector3.new(923,100,32000),["Ice Castle"]=Vector3.new(5000,60,-6500),
+    ["Forgotten Island"]=Vector3.new(-3050,100,-7500),["Port Town"]=Vector3.new(-290,20,6000),
+    ["Hydra Island"]=Vector3.new(5800,30,-2000),["Great Tree"]=Vector3.new(2700,60,3000),
+    ["Floating Turtle"]=Vector3.new(-1600,60,3500),["Haunted Castle"]=Vector3.new(-9500,100,5800),
+    ["Sea of Treats"]=Vector3.new(-700,100,-11000),["Chocolate Land"]=Vector3.new(-700,100,-11000),
+    ["Cake Land"]=Vector3.new(-700,100,-11000),["Tiki Outpost"]=Vector3.new(-1000,60,6000),
+    ["Final Island"]=Vector3.new(0,100,0),
+}
+
+local QuestMap = {
+    ["Bandit Quest"]={"BanditQuest1",1},["Monkey Quest"]={"JungleQuest",1},
+    ["Gorilla Quest"]={"JungleQuest",2},["Pirate Quest"]={"BuggyQuest1",1},
+    ["Brute Quest"]={"BuggyQuest1",2},["Desert Bandit Quest"]={"DesertQuest",1},
+    ["Desert Officer Quest"]={"DesertQuest",2},["Snow Bandit Quest"]={"SnowQuest",1},
+    ["Snowman Quest"]={"SnowQuest",2},["Chief Petty Officer Quest"]={"MarineQuest2",1},
+    ["Sky Bandit Quest"]={"SkyQuest",1},["Dark Master Quest"]={"SkyQuest",2},
+    ["Prisoner Quest"]={"PrisonQuest",1},["Toga Warrior Quest"]={"ColosseumQuest",1},
+    ["Military Soldier Quest"]={"MagmaQuest",1},["Military Spy Quest"]={"MagmaQuest",2},
+    ["Fishman Warrior Quest"]={"FishmanQuest",1},["Fishman Commando Quest"]={"FishmanQuest",2},
+    ["Galley Pirate Quest"]={"FountainQuest",1},["Galley Captain Quest"]={"FountainQuest",2},
+    ["God's Guard Quest"]={"SkyExp1Quest",1},["Raider Quest"]={"Area1Quest",1},
+    ["Mercenary Quest"]={"Area1Quest",2},["Swan Pirate Quest"]={"Area1Quest",3},
+    ["Factory Staff Quest"]={"Area2Quest",1},["Graveyard Warrior Quest"]={"GraveyardQuest",1},
+    ["Graveyard Assassin Quest"]={"GraveyardQuest",2},["Snow Trooper Quest"]={"SnowMountainQuest",1},
+    ["Winter Warrior Quest"]={"SnowMountainQuest",2},["Lab Subordinate Quest"]={"PunkHazardQuest",1},
+    ["Horned Warrior Quest"]={"PunkHazardQuest",2},["Ship Deckhand Quest"]={"CursedShipQuest",1},
+    ["Ship Engineer Quest"]={"CursedShipQuest",2},["Arctic Warrior Quest"]={"IceCastleQuest",1},
+    ["Snow Lurker Quest"]={"IceCastleQuest",2},["Sea Soldier Quest"]={"ForgottenQuest",1},
+    ["Water Fighter Quest"]={"ForgottenQuest",2},["Pirate Millionaire Quest"]={"PortQuest",1},
+    ["Pistol Billionaire Quest"]={"PortQuest",2},["Dragon Crew Warrior Quest"]={"HydraQuest",1},
+    ["Dragon Crew Archer Quest"]={"HydraQuest",2},["Marine Commodore Quest"]={"GreatTreeQuest",1},
+    ["Marine Rear Admiral Quest"]={"GreatTreeQuest",2},["Fishman Raider Quest"]={"ForestQuest",1},
+    ["Fishman Captain Quest"]={"ForestQuest",2},["Forest Pirate Quest"]={"ForestQuest",3},
+    ["Mythological Pirate Quest"]={"ForestQuest",4},["Jungle Pirate Quest"]={"ForestQuest",5},
+    ["Musketeer Pirate Quest"]={"ForestQuest",6},["Reborn Skeleton Quest"]={"HauntedQuest",1},
+    ["Living Zombie Quest"]={"HauntedQuest",2},["Demonic Soul Quest"]={"HauntedQuest",3},
+    ["Posessed Mummy Quest"]={"HauntedQuest",4},["Peanut Scout Quest"]={"CakeQuest",1},
+    ["Peanut President Quest"]={"CakeQuest",2},["Ice Cream Chef Quest"]={"CakeQuest",3},
+    ["Ice Cream Commander Quest"]={"CakeQuest",4},["Cookie Crafter Quest"]={"CakeQuest",5},
+    ["Cake Guard Quest"]={"CakeQuest",6},["Chocolate Bar Battler Quest"]={"CakeQuest",7},
+    ["Cocoa Warrior Quest"]={"CakeQuest",8},["Sweet Thief Quest"]={"CakeQuest",9},
+    ["Candy Rebel Quest"]={"CakeQuest",10},["Candy Pirate Quest"]={"CakeQuest",11},
+    ["Snow Demon Quest"]={"CakeQuest",12},["Isle Champion Quest"]={"TikiQuest",1},
+    ["Isle Outlaw Quest"]={"TikiQuest",2},["Island Boy Quest"]={"TikiQuest",3},
+    ["Tiki Warrior Quest"]={"TikiQuest",4},["Tiki Chief Quest"]={"TikiQuest",5},
+    ["Final Warrior Quest"]={"SubmergedQuest",1},["Final Champion Quest"]={"SubmergedQuest",2},
+    ["Max Level Quest"]={"SubmergedQuest",3},
+}
+
+local function GetFarmData(level)
+    for _, data in ipairs(FarmLevelConfig) do
+        if level >= data.Min and level <= data.Max then return data end
     end
-    return LEVEL_DATA[#LEVEL_DATA]
+    return nil
 end
 
 --// GUI
@@ -498,7 +583,6 @@ MS.Color = Color3.fromRGB(38,100,190) MS.Thickness = 1.2 MS.Transparency = 0.25 
 
 --// HEADER
 local Header = Create("Frame", {Name="Header", Parent=Main, Size=UDim2.new(1,0,0,82), BackgroundTransparency=1, ZIndex=20})
-
 Create("ImageLabel", {Name="Logo", Parent=Header, Size=UDim2.fromOffset(55,55), Position=UDim2.fromOffset(14,8), BackgroundTransparency=1, Image=LOGO_ID, ScaleType=Enum.ScaleType.Fit})
 Create("TextLabel", {Parent=Header, BackgroundTransparency=1, Position=UDim2.fromOffset(78,12), Size=UDim2.fromOffset(320,30), Text="SysxHub", TextColor3=Color3.fromRGB(235,242,255), TextSize=23, Font=Enum.Font.GothamBold, TextXAlignment=Enum.TextXAlignment.Left})
 Create("TextLabel", {Parent=Header, BackgroundTransparency=1, Position=UDim2.fromOffset(79,39), Size=UDim2.fromOffset(320,20), Text="Play Smarter, Not Harder", TextColor3=Color3.fromRGB(120,150,195), TextSize=12, Font=Enum.Font.Gotham, TextXAlignment=Enum.TextXAlignment.Left})
@@ -582,14 +666,14 @@ local function CreateToggle(parent, text, default, cb)
     local S2 = default or false
     local B = Create("TextButton", {
         Parent=parent, BackgroundColor3=Color3.fromRGB(17,13,29),
-        Size=UDim2.new(1,0,0,38), Text="", AutoButtonColor=false, BorderSizePixel=0, ZIndex=13,
+        Size=UDim2.new(1,0,0,38), Text="", AutoButtonColor=false, BorderSizePixel=0, ZIndex=100,
     })
     Corner(B, 8)
     Stroke(B, Color3.fromRGB(0,150,255), 1.2, 0.4)
-    Create("TextLabel", {Parent=B, BackgroundTransparency=1, Position=UDim2.new(0,10,0,0), Size=UDim2.new(1,-60,1,0), Text=text, TextColor3=Color3.fromRGB(255,255,255), TextSize=12, Font=Enum.Font.GothamMedium, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=14})
-    local Ind = Create("Frame", {Parent=B, BackgroundColor3=Color3.fromRGB(55,50,65), Size=UDim2.fromOffset(34,18), Position=UDim2.new(1,-44,0.5,-9), ZIndex=14})
+    Create("TextLabel", {Parent=B, BackgroundTransparency=1, Position=UDim2.new(0,10,0,0), Size=UDim2.new(1,-60,1,0), Text=text, TextColor3=Color3.fromRGB(255,255,255), TextSize=12, Font=Enum.Font.GothamMedium, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=101})
+    local Ind = Create("Frame", {Parent=B, BackgroundColor3=Color3.fromRGB(55,50,65), Size=UDim2.fromOffset(34,18), Position=UDim2.new(1,-44,0.5,-9), ZIndex=101})
     Corner(Ind, 20)
-    local Dot = Create("Frame", {Parent=Ind, BackgroundColor3=Color3.fromRGB(190,185,200), Size=UDim2.fromOffset(12,12), Position=UDim2.new(0,3,0.5,-6), ZIndex=15})
+    local Dot = Create("Frame", {Parent=Ind, BackgroundColor3=Color3.fromRGB(190,185,200), Size=UDim2.fromOffset(12,12), Position=UDim2.new(0,3,0.5,-6), ZIndex=102})
     Corner(Dot, 20)
     local function Update()
         if S2 then
@@ -611,41 +695,90 @@ local function CreateToggle(parent, text, default, cb)
 end
 
 local function CreateDropdown(parent, title, options, cb)
-    local Holder = Create("Frame", {Parent=parent, BackgroundColor3=Color3.fromRGB(17,13,29), Size=UDim2.new(1,0,0,38), BorderSizePixel=0, ZIndex=45000, ClipsDescendants=false})
+    local Holder = Create("Frame", {
+        Parent=parent, BackgroundColor3=Color3.fromRGB(17,13,29),
+        Size=UDim2.new(1,0,0,38), BorderSizePixel=0, ZIndex=100, ClipsDescendants=false,
+    })
     Corner(Holder, 8)
     Stroke(Holder, Color3.fromRGB(0,150,255), 1.2, 0.4)
     local Selected = options[1] or "Select"
-    local IsOpen = false
-    local TitleLbl = Create("TextLabel", {Parent=Holder, BackgroundTransparency=1, Position=UDim2.new(0,10,0,0), Size=UDim2.new(1,-35,1,0), Text=title..": "..Selected, TextColor3=Color3.fromRGB(255,255,255), TextSize=12, Font=Enum.Font.GothamMedium, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=45001})
-    Create("TextLabel", {Parent=Holder, BackgroundTransparency=1, Position=UDim2.new(1,-22,0,0), Size=UDim2.new(0,18,1,0), Text="v", TextColor3=Color3.fromRGB(255,255,255), TextSize=11, Font=Enum.Font.GothamBold, ZIndex=45001})
-    local ListHolder = Create("ScrollingFrame", {Parent=Holder, BackgroundColor3=Color3.fromRGB(23,18,38), Position=UDim2.new(0,0,1,4), Size=UDim2.new(1,0,0,0), CanvasSize=UDim2.new(0,0,0,0), AutomaticCanvasSize=Enum.AutomaticSize.Y, ScrollBarThickness=3, ScrollBarImageColor3=Color3.fromRGB(0,150,255), BorderSizePixel=0, ZIndex=50000, Visible=false, ClipsDescendants=true})
-    Corner(ListHolder, 8)
-    Stroke(ListHolder, Color3.fromRGB(0,150,255), 1.2, 0.3)
-    local LL = Instance.new("UIListLayout")
-    LL.Padding = UDim.new(0,3) LL.SortOrder = Enum.SortOrder.LayoutOrder LL.Parent = ListHolder
-    local function Refresh()
-        for _, c in ipairs(ListHolder:GetChildren()) do
-            if c:IsA("TextButton") then c:Destroy() end
-        end
+    local TitleLbl = Create("TextLabel", {
+        Parent=Holder, BackgroundTransparency=1,
+        Position=UDim2.new(0,10,0,0), Size=UDim2.new(1,-35,1,0),
+        Text=title..": "..Selected, TextColor3=Color3.fromRGB(255,255,255),
+        TextSize=12, Font=Enum.Font.GothamMedium,
+        TextXAlignment=Enum.TextXAlignment.Left, ZIndex=101,
+    })
+    Create("TextLabel", {
+        Parent=Holder, BackgroundTransparency=1,
+        Position=UDim2.new(1,-22,0,0), Size=UDim2.new(0,18,1,0),
+        Text="v", TextColor3=Color3.fromRGB(255,255,255),
+        TextSize=11, Font=Enum.Font.GothamBold, ZIndex=101,
+    })
+    local clickBtn = Create("TextButton", {
+        Parent=Holder, BackgroundTransparency=1,
+        Size=UDim2.new(1,0,1,0), Text="", AutoButtonColor=false, ZIndex=110,
+    })
+    clickBtn.Activated:Connect(function()
+        local popup = Create("Frame", {
+            Parent=Gui, AnchorPoint=Vector2.new(0.5,0.5),
+            Position=UDim2.new(0.5,0,0.5,0),
+            Size=UDim2.fromOffset(300, math.min(#options*38+80, 400)),
+            BackgroundColor3=Color3.fromRGB(10,18,34),
+            BorderSizePixel=0, ZIndex=999990,
+        })
+        Corner(popup, 12)
+        local pStroke = Instance.new("UIStroke")
+        pStroke.Color = Color3.fromRGB(0,150,255) pStroke.Thickness = 2 pStroke.Parent = popup
+        Create("TextLabel", {
+            Parent=popup, BackgroundTransparency=1,
+            Position=UDim2.fromOffset(15,10), Size=UDim2.new(1,-60,0,25),
+            Text=title, TextColor3=Color3.fromRGB(235,242,255),
+            TextSize=15, Font=Enum.Font.GothamBold,
+            TextXAlignment=Enum.TextXAlignment.Left, ZIndex=999991,
+        })
+        local closeBtn = Create("TextButton", {
+            Parent=popup, Position=UDim2.new(1,-40,0,10),
+            Size=UDim2.fromOffset(30,25), Text="×",
+            TextColor3=Color3.fromRGB(255,255,255), TextSize=22,
+            BackgroundTransparency=1, Font=Enum.Font.GothamBold,
+            AutoButtonColor=false, ZIndex=999992,
+        })
+        closeBtn.Activated:Connect(function() popup:Destroy() end)
+        local listScroll = Create("ScrollingFrame", {
+            Parent=popup, BackgroundTransparency=1,
+            Position=UDim2.fromOffset(10,42), Size=UDim2.new(1,-20,1,-52),
+            CanvasSize=UDim2.new(0,0,0,0), AutomaticCanvasSize=Enum.AutomaticSize.Y,
+            ScrollBarThickness=3, ScrollBarImageColor3=Color3.fromRGB(0,150,255),
+            BorderSizePixel=0, ZIndex=999991,
+        })
+        local LL = Instance.new("UIListLayout")
+        LL.Padding = UDim.new(0,4) LL.SortOrder = Enum.SortOrder.LayoutOrder LL.Parent = listScroll
         for i, opt in ipairs(options) do
-            local OB = Create("TextButton", {Parent=ListHolder, BackgroundColor3=Color3.fromRGB(17,13,29), Size=UDim2.new(1,-8,0,28), Position=UDim2.new(0,4,0,4), Text=opt, TextColor3=Color3.fromRGB(255,255,255), TextSize=11, Font=Enum.Font.GothamMedium, AutoButtonColor=false, BorderSizePixel=0, LayoutOrder=i, ZIndex=50001, TextXAlignment=Enum.TextXAlignment.Left})
+            local OB = Create("TextButton", {
+                Parent=listScroll, BackgroundColor3=Color3.fromRGB(17,13,29),
+                Size=UDim2.new(1,-8,0,34), Position=UDim2.new(0,4,0,0),
+                Text=opt, TextColor3=Color3.fromRGB(255,255,255),
+                TextSize=13, Font=Enum.Font.GothamMedium,
+                AutoButtonColor=false, BorderSizePixel=0,
+                LayoutOrder=i, ZIndex=999992,
+                TextXAlignment=Enum.TextXAlignment.Left,
+            })
             Corner(OB, 6)
-            OB.Activated:Connect(function()
-                Selected = opt TitleLbl.Text = title..": "..opt
-                ListHolder.Visible = false ListHolder.Size = UDim2.new(1,0,0,0) IsOpen = false
-                if cb then pcall(cb, opt) end
+            local pad = Instance.new("UIPadding")
+            pad.PaddingLeft = UDim.new(0, 10) pad.Parent = OB
+            OB.MouseEnter:Connect(function()
+                TweenService:Create(OB, TweenInfo.new(0.1), {BackgroundColor3=Color3.fromRGB(0,150,255)}):Play()
             end)
-        end
-    end
-    Holder.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            if IsOpen then
-                ListHolder.Visible = false ListHolder.Size = UDim2.new(1,0,0,0) IsOpen = false
-            else
-                Refresh()
-                local h = math.min(#options*32+8, 180)
-                ListHolder.Size = UDim2.new(1,0,0,h) ListHolder.Visible = true IsOpen = true
-            end
+            OB.MouseLeave:Connect(function()
+                TweenService:Create(OB, TweenInfo.new(0.1), {BackgroundColor3=Color3.fromRGB(17,13,29)}):Play()
+            end)
+            OB.Activated:Connect(function()
+                Selected = opt
+                TitleLbl.Text = title..": "..opt
+                if cb then pcall(cb, opt) end
+                popup:Destroy()
+            end)
         end
     end)
     return Holder
@@ -653,16 +786,19 @@ end
 
 local function CreateSlider(parent, title, minVal, maxVal, defaultVal, cb)
     local val = defaultVal or minVal
-    local Holder = Create("Frame", {Parent=parent, BackgroundColor3=Color3.fromRGB(17,13,29), Size=UDim2.new(1,0,0,46), BorderSizePixel=0, ZIndex=13})
+    local Holder = Create("Frame", {
+        Parent=parent, BackgroundColor3=Color3.fromRGB(17,13,29),
+        Size=UDim2.new(1,0,0,46), BorderSizePixel=0, ZIndex=100,
+    })
     Corner(Holder, 8)
     Stroke(Holder, Color3.fromRGB(0,150,255), 1.2, 0.4)
-    Create("TextLabel", {Parent=Holder, BackgroundTransparency=1, Position=UDim2.new(0,10,0,5), Size=UDim2.new(1,-70,0,14), Text=title, TextColor3=Color3.fromRGB(255,255,255), TextSize=11, Font=Enum.Font.GothamMedium, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=14})
-    local ValueLbl = Create("TextLabel", {Parent=Holder, BackgroundTransparency=1, Position=UDim2.new(1,-65,0,5), Size=UDim2.new(0,55,0,14), Text=tostring(val), TextColor3=Color3.fromRGB(255,255,255), TextSize=11, Font=Enum.Font.GothamBold, TextXAlignment=Enum.TextXAlignment.Right, ZIndex=14})
-    local Bar = Create("Frame", {Parent=Holder, BackgroundColor3=Color3.fromRGB(23,18,38), Position=UDim2.new(0,10,0,26), Size=UDim2.new(1,-20,0,7), BorderSizePixel=0, ZIndex=14})
+    Create("TextLabel", {Parent=Holder, BackgroundTransparency=1, Position=UDim2.new(0,10,0,5), Size=UDim2.new(1,-70,0,14), Text=title, TextColor3=Color3.fromRGB(255,255,255), TextSize=11, Font=Enum.Font.GothamMedium, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=101})
+    local ValueLbl = Create("TextLabel", {Parent=Holder, BackgroundTransparency=1, Position=UDim2.new(1,-65,0,5), Size=UDim2.new(0,55,0,14), Text=tostring(val), TextColor3=Color3.fromRGB(255,255,255), TextSize=11, Font=Enum.Font.GothamBold, TextXAlignment=Enum.TextXAlignment.Right, ZIndex=101})
+    local Bar = Create("Frame", {Parent=Holder, BackgroundColor3=Color3.fromRGB(23,18,38), Position=UDim2.new(0,10,0,26), Size=UDim2.new(1,-20,0,7), BorderSizePixel=0, ZIndex=101})
     Corner(Bar, 4)
-    local Fill = Create("Frame", {Parent=Bar, BackgroundColor3=Color3.fromRGB(0,150,255), Size=UDim2.new((val-minVal)/(maxVal-minVal),0,1,0), BorderSizePixel=0, ZIndex=15})
+    local Fill = Create("Frame", {Parent=Bar, BackgroundColor3=Color3.fromRGB(0,150,255), Size=UDim2.new((val-minVal)/(maxVal-minVal),0,1,0), BorderSizePixel=0, ZIndex=102})
     Corner(Fill, 4)
-    local Btn = Create("TextButton", {Parent=Holder, BackgroundTransparency=1, Size=UDim2.new(1,0,1,0), Text="", AutoButtonColor=false, ZIndex=16})
+    local Btn = Create("TextButton", {Parent=Holder, BackgroundTransparency=1, Size=UDim2.new(1,0,1,0), Text="", AutoButtonColor=false, ZIndex=110})
     local dragging = false
     local function Update(mouseX)
         local abs = Bar.AbsolutePosition
@@ -691,7 +827,7 @@ local function CreateSlider(parent, title, minVal, maxVal, defaultVal, cb)
 end
 
 local function CreateLabel(parent, text, size)
-    local L = Create("TextLabel", {Parent=parent, BackgroundColor3=Color3.fromRGB(17,13,29), Size=UDim2.new(1,0,0,size or 34), Text=text, TextColor3=Color3.fromRGB(255,255,255), TextSize=11, Font=Enum.Font.GothamMedium, TextXAlignment=Enum.TextXAlignment.Left, BorderSizePixel=0, ZIndex=13})
+    local L = Create("TextLabel", {Parent=parent, BackgroundColor3=Color3.fromRGB(17,13,29), Size=UDim2.new(1,0,0,size or 34), Text=text, TextColor3=Color3.fromRGB(255,255,255), TextSize=11, Font=Enum.Font.GothamMedium, TextXAlignment=Enum.TextXAlignment.Left, BorderSizePixel=0, ZIndex=100})
     Corner(L, 8)
     Stroke(L, Color3.fromRGB(0,150,255), 1.2, 0.4)
     local pad = Instance.new("UIPadding") pad.PaddingLeft = UDim.new(0, 10) pad.Parent = L
@@ -864,7 +1000,7 @@ CreateToggle(QuestItemsPage, "Auto Blackbeard Reward", false, function(s) if s t
 CreateToggle(QuestItemsPage, "Auto Horned Man Bet", false, function(s) if s then Invoke("HornedMan", "Bet") Notify("Horned Man") end end)
 CreateToggle(QuestItemsPage, "Auto Talk Trevor", false, function(s) if s then Invoke("TalkTrevor", "1") Notify("Trevor") end end)
 
---// FRUIT / RAID (Fixed: hapus Select Fruit, Speed, Store Held, Cousin, Bones)
+--// FRUIT / RAID
 CreateToggle(FruitRaidPage, "Tween Fruit", false, function(s) State.FruitTweenEnabled = s Notify("Tween Fruit: "..(s and "ON" or "OFF")) end)
 CreateToggle(FruitRaidPage, "Auto Store Fruit", false, function(s) State.FruitStoreEnabled = s Notify("Auto Store: "..(s and "ON" or "OFF")) end)
 CreateToggle(FruitRaidPage, "Random Fruit (Gacha)", false, function(s) State.AutoGacha = s Notify("Random Fruit: "..(s and "ON" or "OFF")) end)
@@ -971,24 +1107,6 @@ CreateToggle(SetingPage, "ESP Chest", false, function(s) State.ESPChest = s Noti
 CreateToggle(SetingPage, "ESP Flower", false, function(s) State.ESPFlower = s Notify("ESP Flower: "..(s and "ON" or "OFF")) end)
 
 --// TELEPORT
-CreateToggle(TeleportPage, "Check Bones", false, function(s)
-    if s then local res = Invoke("Bones", "Check") Notify("Bones: "..tostring(res)) end
-end)
-local IslandCoords = {
-    ["Starter Island"]=Vector3.new(1077,15,1450),["Jungle"]=Vector3.new(-1620,30,200),
-    ["Pirate Village"]=Vector3.new(-1100,15,3800),["Desert"]=Vector3.new(980,15,4200),
-    ["Frozen Village"]=Vector3.new(-70,20,-2500),["Marine Fortress"]=Vector3.new(-5100,20,4050),
-    ["Skylands"]=Vector3.new(-4650,850,-3220),["Prison"]=Vector3.new(4850,15,650),
-    ["Colosseum"]=Vector3.new(-1800,50,-3000),["Magma Village"]=Vector3.new(-5200,20,-300),
-    ["Underwater City"]=Vector3.new(6000,-150,3000),["Fountain City"]=Vector3.new(5600,60,-5000),
-    ["Kingdom of Rose"]=Vector3.new(-800,20,1800),["Green Zone"]=Vector3.new(-2500,30,100),
-    ["Graveyard"]=Vector3.new(6500,60,4500),["Snow Mountain"]=Vector3.new(400,30,-5300),
-    ["Hot and Cold"]=Vector3.new(-5500,30,-4000),["Cursed Ship"]=Vector3.new(923,100,32000),
-    ["Ice Castle"]=Vector3.new(5000,60,-6500),["Forgotten Island"]=Vector3.new(-3050,100,-7500),
-    ["Port Town"]=Vector3.new(-290,20,6000),["Hydra Island"]=Vector3.new(5800,30,-2000),
-    ["Great Tree"]=Vector3.new(2700,60,3000),["Floating Turtle"]=Vector3.new(-1600,60,3500),
-    ["Castle on the Sea"]=Vector3.new(-5000,60,-3000),["Haunted Castle"]=Vector3.new(-9500,100,5800),
-}
 local SeaIslands = {
     Sea1={"Starter Island","Jungle","Pirate Village","Desert","Frozen Village","Marine Fortress","Skylands","Prison","Colosseum","Magma Village","Underwater City","Fountain City"},
     Sea2={"Kingdom of Rose","Green Zone","Graveyard","Snow Mountain","Hot and Cold","Cursed Ship","Ice Castle","Forgotten Island"},
@@ -1086,30 +1204,71 @@ CreateToggle(MiscPage, "Join Pirate", false, function(s) if s then Invoke("SetTe
 
 --// ============== LOOPS ==============
 
+-- AUTO FARM LEVEL (pakai FarmLevelConfig)
 task.spawn(function()
-    while task.wait(0.15) do
+    while task.wait(0.3) do
         if State.AutoFarm then
             pcall(function()
-                local level = GetLevel()
-                local data = GetLevelData(level)
+                local ls = Player:FindFirstChild("leaderstats")
+                local lv = ls and ls:FindFirstChild("Level")
+                local level = lv and lv.Value or 1
+                local data = GetFarmData(level)
                 if not data then return end
-                if CommF then pcall(function() CommF:InvokeServer("StartQuest", data.quest, data.questNum) end) end
-                local target = FindMobByName(data.mobs)
-                if target then
-                    local trp = target:FindFirstChild("HumanoidRootPart")
-                    local hum = target:FindFirstChildOfClass("Humanoid")
+
+                local islandPos = IslandCoords[data.Island]
+                if islandPos then
+                    local hrp = GetHRP()
+                    if hrp then
+                        local dist = (hrp.Position - islandPos).Magnitude
+                        if dist > 400 then
+                            TweenToPosition(islandPos + Vector3.new(0,3,0), 500)
+                        end
+                    end
+                end
+
+                local questMap = QuestMap[data.Quest]
+                if questMap and CommF then
+                    pcall(function()
+                        CommF:InvokeServer("StartQuest", questMap[1], questMap[2])
+                    end)
+                end
+
+                local hrp = GetHRP()
+                if not hrp then return end
+                local nearest, nd = nil, math.huge
+                for _, obj in ipairs(workspace:GetChildren()) do
+                    if obj.Name == data.NPC then
+                        local hum = obj:FindFirstChildOfClass("Humanoid")
+                        local trp = obj:FindFirstChild("HumanoidRootPart")
+                        if hum and trp and hum.Health > 0 then
+                            local d = GetDist(trp.Position, hrp.Position)
+                            if d < 800 and d < nd then nearest, nd = obj, d end
+                        end
+                    end
+                end
+
+                if nearest then
+                    local trp = nearest:FindFirstChild("HumanoidRootPart")
+                    local hum = nearest:FindFirstChildOfClass("Humanoid")
                     if trp and hum and hum.Health > 0 then
-                        local hrp = GetHRP()
-                        if not hrp then return end
-                        if GetDist(hrp.Position, trp.Position) > 15 then TweenToPosition(trp.Position + Vector3.new(0,3,0), CONFIG.TweenMobSpeed) end
+                        if GetDist(hrp.Position, trp.Position) > 15 then
+                            TweenToPosition(trp.Position + Vector3.new(0,3,0), CONFIG.TweenMobSpeed)
+                        end
+                        
                         if not State.HitboxPart or not State.HitboxPart.Parent then
                             local hb = Instance.new("Part")
-                            hb.Name = "SysxHitbox" hb.Size = Vector3.new(30,30,30)
-                            hb.Transparency = 1 hb.CanCollide = false hb.CanTouch = true
-                            hb.Anchored = true hb.Massless = true hb.Parent = workspace
+                            hb.Name = "SysxHitbox"
+                            hb.Size = Vector3.new(30,30,30)
+                            hb.Transparency = 1
+                            hb.CanCollide = false
+                            hb.CanTouch = true
+                            hb.Anchored = true
+                            hb.Massless = true
+                            hb.Parent = workspace
                             State.HitboxPart = hb
                         end
                         State.HitboxPart.CFrame = CFrame.new(trp.Position)
+                        
                         local tool = EquipWeapon()
                         if tool then pcall(function() tool:Activate() end) end
                     end
@@ -1121,6 +1280,7 @@ task.spawn(function()
     end
 end)
 
+-- AUTO KILL NEAREST
 task.spawn(function()
     while task.wait(0.15) do
         if State.AutoKillNearest then
@@ -1148,6 +1308,7 @@ task.spawn(function()
     end
 end)
 
+-- FARM CHEST
 task.spawn(function()
     while task.wait(0.3) do
         if State.AutoChest then
@@ -1160,6 +1321,7 @@ task.spawn(function()
     end
 end)
 
+-- AUTO BOSS
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoBoss and State.SelectedBoss then
@@ -1186,6 +1348,7 @@ task.spawn(function()
     end
 end)
 
+-- CASTLE RAID
 task.spawn(function()
     while task.wait(0.3) do
         if State.AutoCastleRaid then
@@ -1226,6 +1389,7 @@ task.spawn(function()
     end
 end)
 
+-- FACTORY RAID
 task.spawn(function()
     while task.wait(0.3) do
         if State.AutoFactoryRaid then
@@ -1266,6 +1430,7 @@ task.spawn(function()
     end
 end)
 
+-- AUTO ELITE HUNTER
 task.spawn(function()
     while task.wait(0.3) do
         if State.AutoEliteHunter then
@@ -1316,6 +1481,7 @@ task.spawn(function()
     end
 end)
 
+-- SEA LOOP
 task.spawn(function()
     while task.wait(0.3) do
         if State.AutoFarmSea and State.SelectedSeaMob then
@@ -1468,32 +1634,31 @@ task.spawn(function()
     end
 end)
 
---// FRUIT SYSTEM LOOP (pakai FruitFolder + StoreFruitRemote)
+-- FRUIT TWEEN
 task.spawn(function()
     while task.wait(0.3) do
-        if State.FruitTweenEnabled and FruitFolder then
+        if State.FruitTweenEnabled then
             local hrp = GetHRP()
             if hrp then
                 local closest, cd = nil, math.huge
-                for _, fruit in ipairs(FruitFolder:GetChildren()) do
-                    local part = getFruitPart(fruit)
-                    if part then
-                        local d = GetDist(part.Position, hrp.Position)
-                        if d < 500 and d < cd then closest, cd = fruit, d end
+                for _, obj in ipairs(workspace:GetDescendants()) do
+                    if obj:IsA("BasePart") and string.find(string.lower(obj.Name), "fruit") then
+                        if obj.Parent == workspace or (obj.Parent and obj.Parent.Name == "Map") then
+                            local d = GetDist(obj.Position, hrp.Position)
+                            if d < 500 and d < cd then closest, cd = obj, d end
+                        end
                     end
                 end
                 if closest then
-                    local part = getFruitPart(closest)
-                    if part then
-                        local dist = GetDist(part.Position, hrp.Position)
-                        local dur = math.max(dist / CONFIG.FruitTweenSpeed, 0.1)
-                        local tw = TweenService:Create(hrp, TweenInfo.new(dur, Enum.EasingStyle.Linear), { CFrame = CFrame.new(part.Position + Vector3.new(0,3,0)) })
-                        tw:Play()
-                        tw.Completed:Wait()
-                        if State.FruitStoreEnabled and StoreFruitRemote and closest:IsDescendantOf(FruitFolder) then
-                            StoreFruitRemote:FireServer(closest)
-                            task.wait(0.35)
-                        end
+                    Notify("Fruit Spawn: "..closest.Name)
+                    local dist = GetDist(closest.Position, hrp.Position)
+                    local dur = math.max(dist / CONFIG.FruitTweenSpeed, 0.1)
+                    local tw = TweenService:Create(hrp, TweenInfo.new(dur, Enum.EasingStyle.Linear), { CFrame = closest.CFrame + Vector3.new(0,3,0) })
+                    tw:Play()
+                    tw.Completed:Wait()
+                    if State.FruitStoreEnabled then
+                        local held = GetHeldFruit()
+                        if held then Invoke("StoreFruit", held.Name, held) end
                     end
                 end
             end
@@ -1501,28 +1666,14 @@ task.spawn(function()
     end
 end)
 
-if StoreResultRemote then
-    StoreResultRemote.OnClientEvent:Connect(function(success, data)
-        if success then Notify("Stored: "..tostring(data))
-        elseif data == "TooFar" then Notify("Fruit terlalu jauh") end
-    end)
-end
-
-if FruitFolder then
-    FruitFolder.ChildAdded:Connect(function(fruit)
-        task.wait(0.05)
-        if fruit:IsDescendantOf(FruitFolder) then
-            Notify("Fruit Spawn: "..getFruitName(fruit))
-        end
-    end)
-end
-
+-- AUTO GACHA
 task.spawn(function()
     while task.wait(60) do
         if State.AutoGacha then pcall(function() if not GetHeldFruit() then Invoke("BuyFruit", "Random") end end) end
     end
 end)
 
+-- AUTO RAID
 task.spawn(function()
     while task.wait(10) do
         if State.AutoRaid and State.SelectedRaid then
@@ -1536,6 +1687,7 @@ task.spawn(function()
     end
 end)
 
+-- AUTO STATS
 task.spawn(function()
     while task.wait(3) do
         if State.AutoAddStats then
@@ -1547,6 +1699,7 @@ task.spawn(function()
     end
 end)
 
+-- INFINITE JUMP
 task.spawn(function()
     while task.wait(0.1) do
         if State.InfiniteJump then
@@ -1559,6 +1712,7 @@ task.spawn(function()
     end
 end)
 
+-- BRING MOB
 task.spawn(function()
     while task.wait(0.1) do
         if State.BringMob or State.AutoFarm then
@@ -1582,13 +1736,14 @@ task.spawn(function()
     end
 end)
 
+-- ELITE LABEL
 task.spawn(function()
     while task.wait(1) do
         if EliteLabel then EliteLabel.Text = "Elite Progress: "..(State.EliteProgress or 0).."/3" end
     end
 end)
 
---// ESP LOOP
+-- ESP LOOP
 task.spawn(function()
     while task.wait(0.3) do
         local hrp = GetHRP()
@@ -1717,7 +1872,6 @@ local function CloseGUI()
     tw.Completed:Once(function() Main.Visible = false end)
 end
 
---// DRAG LOGO
 local IsDragging, DragStart, StartPosition, HasMoved = false, nil, nil, false
 OpenButton.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -1746,7 +1900,7 @@ OpenButton.Activated:Connect(function()
 end)
 CloseButton.Activated:Connect(function() CloseGUI() end)
 
---// DRAG MAIN (via Header)
+-- DRAG MAIN
 local MDragging, MDragStart, MStartPos = false, nil, nil
 Header.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -1778,8 +1932,6 @@ end)
 _G.SysxHubVisual = {
     Open = OpenGUI, Close = CloseGUI,
     Toggle = function() if Main.Visible then CloseGUI() else OpenGUI() end end,
-    GetMain = function() return Main end,
-    GetBanner = function() return BannerHolder end,
 }
 
 ShowTab("Farm")
@@ -1789,3 +1941,4 @@ print("        "..CONFIG.Build)
 print("================================")
 
 Notify("SysxHub v1.0 loaded")
+return true
