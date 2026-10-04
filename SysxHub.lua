@@ -1,8 +1,7 @@
 --[[
 ================================================================
  SYSX HUB | Freemium v1.0 | Created by Ramanotsugarr
- Logo + Banner + 14 Tabs + Farm Config + Fruit System
- Fixed Dropdown (Popup Modal) + Mobile Support
+ Logo + Banner + 14 Tabs + Full Feature + Fixed Dropdown
 ================================================================
 ]]
 
@@ -21,7 +20,11 @@ local Player = Players.LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")
 local Camera = Workspace.CurrentCamera
 
-local LOGO_ID = "rbxassetid://78048732002829"
+--==================================================
+-- CONFIG (DEKLARASI DULU DI ATAS)
+--==================================================
+
+local LOGO_ID = "rbxassetid://136425814447688"
 local BANNER_ID = "rbxassetid://78771184763605"
 
 local CONFIG = {
@@ -32,6 +35,10 @@ local CONFIG = {
     IslandTweenSpeed = 200,
     FruitTweenSpeed = 180,
 }
+
+--==================================================
+-- STATE
+--==================================================
 
 local State = {
     AutoFarm=false, AutoChest=false, AutoBoss=false,
@@ -68,7 +75,10 @@ local State = {
 local old = PlayerGui:FindFirstChild("SysxHub")
 if old then old:Destroy() end
 
---// HELPERS
+--==================================================
+-- HELPERS
+--==================================================
+
 local function Create(cls, props)
     local o = Instance.new(cls)
     for k,v in pairs(props or {}) do pcall(function() o[k]=v end) end
@@ -87,7 +97,10 @@ local function Tween(o, props, time)
     TweenService:Create(o, TweenInfo.new(time or 0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), props):Play()
 end
 
---// REMOTE
+--==================================================
+-- REMOTE
+--==================================================
+
 local CommF = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
 local function Invoke(...)
     if not CommF then return nil end
@@ -96,7 +109,10 @@ local function Invoke(...)
     return res
 end
 
---// NPC FILTER
+--==================================================
+-- NPC FILTER
+--==================================================
+
 local PASSIVE = {"dealer","shop","vendor","merchant","quest","giver","bartender","chef","captain","scientist","teacher","guide","trainer","banker","blacksmith","smith","farmer","villager","elder"}
 
 local function IsNPC(m)
@@ -152,7 +168,10 @@ local function GetHeldFruit()
     return nil
 end
 
---// FARM CHEST
+--==================================================
+-- FARM CHEST
+--==================================================
+
 local MaxSpeed = 300
 local function getCharacter()
     if not Player.Character then Player.CharacterAdded:Wait() end
@@ -201,7 +220,10 @@ local function TeleportNoclip(goal, speed)
     toggleNoclip(false)
 end
 
---// WEAPON
+--==================================================
+-- WEAPON
+--==================================================
+
 local function EquipWeapon()
     local char = Player.Character
     if not char then return nil end
@@ -220,7 +242,10 @@ local function EquipWeapon()
     return nil
 end
 
---// TWEEN
+--==================================================
+-- TWEEN
+--==================================================
+
 local function TweenToPosition(targetPos, speed)
     local hrp = GetHRP()
     if not hrp then return end
@@ -271,7 +296,10 @@ local function TweenToIslandSmooth(targetPos)
     return true
 end
 
---// ESP
+--==================================================
+-- ESP
+--==================================================
+
 local function CreateESP(target, text, color)
     if not target or not target:IsA("BasePart") then return end
     if State.ESPObjects[target] then return end
@@ -291,7 +319,10 @@ local function ClearAllESP()
     State.ESPObjects = {}
 end
 
---// SMOOTH AIMBOT
+--==================================================
+-- SMOOTH AIMBOT
+--==================================================
+
 local AimbotConnection = nil
 local function GetClosestPlayerHead()
     local closest, dist = nil, math.huge
@@ -322,7 +353,10 @@ local function StopAimbot()
     if AimbotConnection then AimbotConnection:Disconnect() AimbotConnection = nil end
 end
 
---// WALK ON WATER
+--==================================================
+-- WALK ON WATER
+--==================================================
+
 local WalkWaterConnection = nil
 local function getWaterHeight(root)
     local params = RaycastParams.new()
@@ -349,19 +383,10 @@ local function DisableWalkWater()
     if WalkWaterConnection then WalkWaterConnection:Disconnect() WalkWaterConnection = nil end
 end
 
---// FRUIT SYSTEM HELPERS
-local function getFruitPart(obj)
-    if obj:IsA("BasePart") then return obj end
-    if obj:IsA("Model") then return obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true) end
-    return nil
-end
-local function getFruitName(obj)
-    local attr = obj:GetAttribute("FruitName")
-    if typeof(attr) == "string" and attr ~= "" then return attr end
-    return obj.Name
-end
+--==================================================
+-- FARM LEVEL CONFIG
+--==================================================
 
---// FARM LEVEL CONFIG
 local FarmLevelConfig = {
     {Min=1, Max=9, Island="Starter Island", Quest="Bandit Quest", NPC="Bandit"},
     {Min=10, Max=14, Island="Jungle", Quest="Monkey Quest", NPC="Monkey"},
@@ -511,7 +536,10 @@ local function GetFarmData(level)
     return nil
 end
 
---// GUI
+--==================================================
+-- GUI
+--==================================================
+
 local Gui = Create("ScreenGui", {
     Name="SysxHub", Parent=PlayerGui, ResetOnSpawn=false,
     IgnoreGuiInset=true, DisplayOrder=999999,
@@ -558,7 +586,10 @@ end
 UpdateScale()
 if Camera then Camera:GetPropertyChangedSignal("ViewportSize"):Connect(UpdateScale) end
 
---// OPEN BUTTON
+--==================================================
+-- OPEN BUTTON
+--==================================================
+
 local OpenButton = Create("ImageButton", {
     Name="SysxLogo", Parent=Gui,
     Size=UDim2.fromOffset(62,62), Position=UDim2.new(0,18,0.5,-31),
@@ -570,7 +601,10 @@ Corner(OpenButton, 18)
 local OS = Instance.new("UIStroke")
 OS.Color = Color3.fromRGB(35,125,255) OS.Thickness = 1.5 OS.Transparency = 0.1 OS.Parent = OpenButton
 
---// MAIN
+--==================================================
+-- MAIN
+--==================================================
+
 local Main = Create("Frame", {
     Name="Main", Parent=Gui,
     Size=UDim2.fromOffset(780,600), Position=UDim2.new(0.5,-390,0.5,-300),
@@ -581,41 +615,86 @@ Corner(Main, 18)
 local MS = Instance.new("UIStroke")
 MS.Color = Color3.fromRGB(38,100,190) MS.Thickness = 1.2 MS.Transparency = 0.25 MS.Parent = Main
 
---// HEADER
-local Header = Create("Frame", {Name="Header", Parent=Main, Size=UDim2.new(1,0,0,82), BackgroundTransparency=1, ZIndex=20})
-Create("ImageLabel", {Name="Logo", Parent=Header, Size=UDim2.fromOffset(55,55), Position=UDim2.fromOffset(14,8), BackgroundTransparency=1, Image=LOGO_ID, ScaleType=Enum.ScaleType.Fit})
-Create("TextLabel", {Parent=Header, BackgroundTransparency=1, Position=UDim2.fromOffset(78,12), Size=UDim2.fromOffset(320,30), Text="SysxHub", TextColor3=Color3.fromRGB(235,242,255), TextSize=23, Font=Enum.Font.GothamBold, TextXAlignment=Enum.TextXAlignment.Left})
-Create("TextLabel", {Parent=Header, BackgroundTransparency=1, Position=UDim2.fromOffset(79,39), Size=UDim2.fromOffset(320,20), Text="Play Smarter, Not Harder", TextColor3=Color3.fromRGB(120,150,195), TextSize=12, Font=Enum.Font.Gotham, TextXAlignment=Enum.TextXAlignment.Left})
+--==================================================
+-- HEADER
+--==================================================
 
-local StatusDot = Create("Frame", {Parent=Header, Size=UDim2.fromOffset(10,10), Position=UDim2.new(1,-280,0,26), BackgroundColor3=Color3.fromRGB(0,220,150), BorderSizePixel=0})
+local Header = Create("Frame", {
+    Name="Header", Parent=Main,
+    Size=UDim2.new(1,0,0,82),
+    BackgroundTransparency=1, ZIndex=20,
+})
+
+local Logo = Create("ImageLabel", {
+    Name="Logo", Parent=Header,
+    Size=UDim2.fromOffset(55,55), Position=UDim2.fromOffset(14,8),
+    BackgroundTransparency=1, Image=LOGO_ID,
+    ScaleType=Enum.ScaleType.Fit, ZIndex=22,
+})
+
+Create("TextLabel", {
+    Parent=Header, BackgroundTransparency=1,
+    Position=UDim2.fromOffset(78,12), Size=UDim2.fromOffset(320,30),
+    Text="SysxHub", TextColor3=Color3.fromRGB(235,242,255),
+    TextSize=23, Font=Enum.Font.GothamBold,
+    TextXAlignment=Enum.TextXAlignment.Left, ZIndex=22,
+})
+
+Create("TextLabel", {
+    Parent=Header, BackgroundTransparency=1,
+    Position=UDim2.fromOffset(79,39), Size=UDim2.fromOffset(320,20),
+    Text="Play Smarter, Not Harder", TextColor3=Color3.fromRGB(120,150,195),
+    TextSize=12, Font=Enum.Font.Gotham,
+    TextXAlignment=Enum.TextXAlignment.Left, ZIndex=22,
+})
+
+local StatusDot = Create("Frame", {Parent=Header, Size=UDim2.fromOffset(10,10), Position=UDim2.new(1,-280,0,26), BackgroundColor3=Color3.fromRGB(0,220,150), BorderSizePixel=0, ZIndex=22})
 Corner(StatusDot, 10)
-Create("TextLabel", {Parent=Header, BackgroundTransparency=1, Position=UDim2.new(1,-265,0,19), Size=UDim2.fromOffset(90,25), Text="Game Loaded", TextColor3=Color3.fromRGB(210,220,235), TextSize=11, Font=Enum.Font.GothamMedium, TextXAlignment=Enum.TextXAlignment.Left})
-Create("TextLabel", {Parent=Header, BackgroundTransparency=1, Position=UDim2.new(1,-165,0,19), Size=UDim2.fromOffset(60,25), Text="v1.0.0", TextColor3=Color3.fromRGB(130,145,175), TextSize=11, Font=Enum.Font.Gotham, TextXAlignment=Enum.TextXAlignment.Center})
+Create("TextLabel", {Parent=Header, BackgroundTransparency=1, Position=UDim2.new(1,-265,0,19), Size=UDim2.fromOffset(90,25), Text="Game Loaded", TextColor3=Color3.fromRGB(210,220,235), TextSize=11, Font=Enum.Font.GothamMedium, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=22})
+Create("TextLabel", {Parent=Header, BackgroundTransparency=1, Position=UDim2.new(1,-165,0,19), Size=UDim2.fromOffset(60,25), Text="v1.0.0", TextColor3=Color3.fromRGB(130,145,175), TextSize=11, Font=Enum.Font.Gotham, TextXAlignment=Enum.TextXAlignment.Center, ZIndex=22})
 
 local CloseButton = Create("ImageButton", {
-    Parent=Header, Size=UDim2.fromOffset(38,38),
-    Position=UDim2.new(1,-54,0,16),
-    BackgroundColor3=Color3.fromRGB(23,18,38),
+    Name="CloseButton", Parent=Header,
+    Size=UDim2.fromOffset(42,42), Position=UDim2.new(1,-58,0,14),
+    BackgroundColor3=Color3.fromRGB(23,18,38), BackgroundTransparency=0.05,
     Image=LOGO_ID, ImageColor3=Color3.fromRGB(255,255,255),
     ScaleType=Enum.ScaleType.Fit, AutoButtonColor=false, ZIndex=25,
 })
 Corner(CloseButton, 10)
-Stroke(CloseButton, Color3.fromRGB(0,150,255), 1.5, 0.3)
+Stroke(CloseButton, Color3.fromRGB(0,150,255), 1.5, 0.25)
 
-Create("Frame", {Parent=Header, Size=UDim2.new(1,0,0,1), Position=UDim2.new(0,0,1,-1), BackgroundColor3=Color3.fromRGB(35,55,85), BackgroundTransparency=0.35, BorderSizePixel=0})
+Create("Frame", {Parent=Header, Size=UDim2.new(1,0,0,1), Position=UDim2.new(0,0,1,-1), BackgroundColor3=Color3.fromRGB(35,55,85), BackgroundTransparency=0.35, BorderSizePixel=0, ZIndex=22})
 
---// BANNER
+--==================================================
+-- BANNER
+--==================================================
+
 local BannerHolder = Create("Frame", {
     Name="BannerHolder", Parent=Main,
-    Size=UDim2.fromOffset(748,150), Position=UDim2.fromOffset(16,98),
-    BackgroundColor3=Color3.fromRGB(10,18,34), BorderSizePixel=0, ClipsDescendants=true, ZIndex=12,
+    Size=UDim2.new(1,-32,0,150), Position=UDim2.fromOffset(16,98),
+    BackgroundColor3=Color3.fromRGB(10,18,34),
+    BorderSizePixel=0, ClipsDescendants=true, ZIndex=12,
 })
 Corner(BannerHolder, 14)
-Stroke(BannerHolder, Color3.fromRGB(35,95,175), 1, 0.3)
-Create("ImageLabel", {Name="Banner", Parent=BannerHolder, Size=UDim2.fromScale(1,1), Position=UDim2.fromScale(0,0), BackgroundTransparency=1, Image=BANNER_ID, ScaleType=Enum.ScaleType.Crop})
-Create("Frame", {Parent=BannerHolder, Size=UDim2.fromScale(1,1), BackgroundColor3=Color3.fromRGB(0,10,25), BackgroundTransparency=0.72, BorderSizePixel=0})
+Stroke(BannerHolder, Color3.fromRGB(35,95,175), 1, 0.25)
 
---// CONTENT
+local Banner = Create("ImageLabel", {
+    Name="Banner", Parent=BannerHolder,
+    Size=UDim2.fromScale(1,1), Position=UDim2.fromScale(0,0),
+    BackgroundTransparency=1, Image=BANNER_ID,
+    ScaleType=Enum.ScaleType.Crop, ZIndex=12,
+})
+
+Create("Frame", {
+    Name="BannerOverlay", Parent=BannerHolder,
+    Size=UDim2.fromScale(1,1), BackgroundColor3=Color3.fromRGB(0,10,25),
+    BackgroundTransparency=0.72, BorderSizePixel=0, ZIndex=13,
+})
+
+--==================================================
+-- CONTENT
+--==================================================
+
 local Content = Create("Frame", {
     Name="Content", Parent=Main,
     Size=UDim2.new(1,-32,1,-264), Position=UDim2.fromOffset(16,256),
@@ -851,7 +930,10 @@ local function ShowTab(name)
     end
 end
 
---// PAGES
+--==================================================
+-- PAGES
+--==================================================
+
 local DiscordPage = CreatePage("Discord")
 local FarmPage = CreatePage("Farm")
 local SeaPage = CreatePage("Sea")
@@ -890,14 +972,6 @@ end)
 CreateToggle(FarmPage, "Auto Kill Nearest", false, function(s)
     State.AutoKillNearest = s
     Notify("Auto Kill Nearest: "..(s and "ON" or "OFF"))
-    if s then
-        task.spawn(function()
-            while State.AutoKillNearest do
-                pcall(function() Invoke("Buso") end)
-                task.wait(2)
-            end
-        end)
-    end
 end)
 CreateToggle(FarmPage, "Farm Chest", false, function(s)
     State.AutoChest = s
@@ -1202,9 +1276,11 @@ CreateToggle(MiscPage, "Rejoin Server", false, function(s) if s then TeleportSer
 CreateToggle(MiscPage, "Join Marine", false, function(s) if s then Invoke("SetTeam", "Marines") Notify("Joined Marines") end end)
 CreateToggle(MiscPage, "Join Pirate", false, function(s) if s then Invoke("SetTeam", "Pirates") Notify("Joined Pirates") end end)
 
---// ============== LOOPS ==============
+--==================================================
+-- LOOPS
+--==================================================
 
--- AUTO FARM LEVEL (pakai FarmLevelConfig)
+-- AUTO FARM LEVEL (Config-based)
 task.spawn(function()
     while task.wait(0.3) do
         if State.AutoFarm then
@@ -1220,17 +1296,13 @@ task.spawn(function()
                     local hrp = GetHRP()
                     if hrp then
                         local dist = (hrp.Position - islandPos).Magnitude
-                        if dist > 400 then
-                            TweenToPosition(islandPos + Vector3.new(0,3,0), 500)
-                        end
+                        if dist > 400 then TweenToPosition(islandPos + Vector3.new(0,3,0), 500) end
                     end
                 end
 
                 local questMap = QuestMap[data.Quest]
                 if questMap and CommF then
-                    pcall(function()
-                        CommF:InvokeServer("StartQuest", questMap[1], questMap[2])
-                    end)
+                    pcall(function() CommF:InvokeServer("StartQuest", questMap[1], questMap[2]) end)
                 end
 
                 local hrp = GetHRP()
@@ -1280,7 +1352,6 @@ task.spawn(function()
     end
 end)
 
--- AUTO KILL NEAREST
 task.spawn(function()
     while task.wait(0.15) do
         if State.AutoKillNearest then
@@ -1308,7 +1379,6 @@ task.spawn(function()
     end
 end)
 
--- FARM CHEST
 task.spawn(function()
     while task.wait(0.3) do
         if State.AutoChest then
@@ -1321,7 +1391,6 @@ task.spawn(function()
     end
 end)
 
--- AUTO BOSS
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoBoss and State.SelectedBoss then
@@ -1348,7 +1417,6 @@ task.spawn(function()
     end
 end)
 
--- CASTLE RAID
 task.spawn(function()
     while task.wait(0.3) do
         if State.AutoCastleRaid then
@@ -1389,7 +1457,6 @@ task.spawn(function()
     end
 end)
 
--- FACTORY RAID
 task.spawn(function()
     while task.wait(0.3) do
         if State.AutoFactoryRaid then
@@ -1430,7 +1497,6 @@ task.spawn(function()
     end
 end)
 
--- AUTO ELITE HUNTER
 task.spawn(function()
     while task.wait(0.3) do
         if State.AutoEliteHunter then
@@ -1481,7 +1547,6 @@ task.spawn(function()
     end
 end)
 
--- SEA LOOP
 task.spawn(function()
     while task.wait(0.3) do
         if State.AutoFarmSea and State.SelectedSeaMob then
@@ -1666,14 +1731,12 @@ task.spawn(function()
     end
 end)
 
--- AUTO GACHA
 task.spawn(function()
     while task.wait(60) do
         if State.AutoGacha then pcall(function() if not GetHeldFruit() then Invoke("BuyFruit", "Random") end end) end
     end
 end)
 
--- AUTO RAID
 task.spawn(function()
     while task.wait(10) do
         if State.AutoRaid and State.SelectedRaid then
@@ -1687,7 +1750,6 @@ task.spawn(function()
     end
 end)
 
--- AUTO STATS
 task.spawn(function()
     while task.wait(3) do
         if State.AutoAddStats then
@@ -1699,7 +1761,6 @@ task.spawn(function()
     end
 end)
 
--- INFINITE JUMP
 task.spawn(function()
     while task.wait(0.1) do
         if State.InfiniteJump then
@@ -1712,7 +1773,6 @@ task.spawn(function()
     end
 end)
 
--- BRING MOB
 task.spawn(function()
     while task.wait(0.1) do
         if State.BringMob or State.AutoFarm then
@@ -1736,7 +1796,6 @@ task.spawn(function()
     end
 end)
 
--- ELITE LABEL
 task.spawn(function()
     while task.wait(1) do
         if EliteLabel then EliteLabel.Text = "Elite Progress: "..(State.EliteProgress or 0).."/3" end
@@ -1842,7 +1901,10 @@ task.spawn(function()
     end
 end)
 
---// TABS
+--==================================================
+-- TABS
+--==================================================
+
 local TabDefs = {
     {"Discord"}, {"Farm"}, {"Sea"}, {"Quest / Items"}, {"Fruit / Raid"},
     {"Fishing"}, {"Status"}, {"PvP"}, {"Trials"}, {"Seting"},
@@ -1853,7 +1915,10 @@ for i, d in ipairs(TabDefs) do
     btn.Activated:Connect(function() ShowTab(d[1]) end)
 end
 
---// OPEN/CLOSE
+--==================================================
+-- OPEN/CLOSE
+--==================================================
+
 local function OpenGUI()
     Main.Visible = true
     Main.Size = UDim2.fromOffset(750, 570)
@@ -1872,6 +1937,7 @@ local function CloseGUI()
     tw.Completed:Once(function() Main.Visible = false end)
 end
 
+-- DRAG LOGO
 local IsDragging, DragStart, StartPosition, HasMoved = false, nil, nil, false
 OpenButton.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -1900,7 +1966,7 @@ OpenButton.Activated:Connect(function()
 end)
 CloseButton.Activated:Connect(function() CloseGUI() end)
 
--- DRAG MAIN
+-- DRAG MAIN via Header
 local MDragging, MDragStart, MStartPos = false, nil, nil
 Header.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
