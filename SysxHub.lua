@@ -1,14 +1,10 @@
 --[[
 ================================================================
- SYSX HUB | Freemium v0.1 (FINAL BUILD)
- + Game Lock (Blox Fruits Only)
- + Farm DB (Level 1-2800)
- + Factory Raid + Castle Raid
- + Material Config (Sea 1/2/3)
- + Farm Factory / Raid Castle / Bone / Material (Auto Sea)
- + Auto Sea Detection
- + Kitsune -> Azure
- + Emoji -> Text Icon
+ SYSX HUB | Freemium v0.1 — MASTER BUILD
+ 14 Tab + All Features + Game Lock
+================================================================
+ Tab: Discord | Farm | Sea | Quest/Items | Fruit/Raid | Fishing
+      Status | PvP | Trials | Seting | Teleport | Stats | Shop | Misc
 ================================================================
 ]]
 
@@ -22,6 +18,7 @@ local PlayersLock = game:GetService("Players")
 local function IsBloxFruits()
     if game.PlaceId == 2753915549 then return true end
     if game.PlaceId == 4442272183 then return true end
+    if game.PlaceId == 7449423635 then return true end
     local remotes = RS:FindFirstChild("Remotes")
     if remotes and remotes:FindFirstChild("CommF_") then return true end
     local ok, info = pcall(function() return MPS:GetProductInfo(game.PlaceId) end)
@@ -73,6 +70,9 @@ local CONFIG = {
     DangerTarget     = 6,
 }
 
+--============================================================
+-- STATE
+--============================================================
 local State = {
     AutoFarm=false, AutoFarmNearest=false, AutoChest=false,
     AutoFarmFactory=false, AutoFarmRaidCastle=false,
@@ -90,7 +90,7 @@ local State = {
     MirageTweenEnabled=false, AutoDriveTiki=false,
     SeaEventAutoSail=false, _dangerLevel=0,
     FruitTweenEnabled=false, FruitStoreEnabled=true,
-    AutoGacha=false, _fruitActive=nil,
+    AutoGacha=false, _fruitActive=nil, GachaMinMoney=100000,
     AutoRaid=false, SelectedRaid=nil,
     AutoRaceV2=false, AutoRaceV3=false,
     AutoTrialV4=false, AutoTrialOnly=false, AutoTrainV4=false,
@@ -136,7 +136,6 @@ end
 -- REMOTE
 --============================================================
 local CommF = RS:FindFirstChild("Remotes") and RS.Remotes:FindFirstChild("CommF_")
-
 local function Invoke(...)
     if not CommF then return nil end
     local ok, res = pcall(function(...) return CommF:InvokeServer(...) end, ...)
@@ -180,9 +179,7 @@ local function IsNPC(m)
 end
 local function FindBoss(name)
     for _, obj in ipairs(workspace:GetChildren()) do
-        if obj.Name == name and obj:FindFirstChildOfClass("Humanoid") then
-            return obj
-        end
+        if obj.Name == name and obj:FindFirstChildOfClass("Humanoid") then return obj end
     end
     return nil
 end
@@ -225,9 +222,7 @@ local function TweenToPosition(targetPos, speed)
     conn = RunService.Heartbeat:Connect(function(dt)
         elapsed += dt
         local alpha = math.clamp(elapsed / duration, 0, 1)
-        if hrp and hrp.Parent then
-            hrp.CFrame = startCF:Lerp(targetCF, alpha)
-        end
+        if hrp and hrp.Parent then hrp.CFrame = startCF:Lerp(targetCF, alpha) end
         if alpha >= 1 then conn:Disconnect() end
     end)
     task.wait(duration + 0.05)
@@ -266,7 +261,7 @@ local function TweenToIslandSmooth(targetPos)
 end
 
 --============================================================
--- WEAPON & HITBOX
+-- WEAPON / HITBOX
 --============================================================
 local function EquipWeapon()
     local char = Player.Character
@@ -498,136 +493,128 @@ task.spawn(function()
 end)
 
 --============================================================
--- FARM DB
+-- QUEST DATA (accurate Blox Fruits)
 --============================================================
-local FarmConfig = {
-    {Min=1,   Max=9,   Sea=1, Island="Starter Island", Quest="Bandit Quest", Mob="Bandit"},
-    {Min=10,  Max=14,  Sea=1, Island="Jungle", Quest="Monkey Quest", Mob="Monkey"},
-    {Min=15,  Max=29,  Sea=1, Island="Jungle", Quest="Gorilla Quest", Mob="Gorilla"},
-    {Min=30,  Max=39,  Sea=1, Island="Pirate Village", Quest="Pirate Quest", Mob="Pirate"},
-    {Min=40,  Max=59,  Sea=1, Island="Pirate Village", Quest="Brute Quest", Mob="Brute"},
-    {Min=60,  Max=74,  Sea=1, Island="Desert", Quest="Desert Bandit Quest", Mob="Desert Bandit"},
-    {Min=75,  Max=89,  Sea=1, Island="Desert", Quest="Desert Officer Quest", Mob="Desert Officer"},
-    {Min=90,  Max=99,  Sea=1, Island="Frozen Village", Quest="Snow Bandit Quest", Mob="Snow Bandit"},
-    {Min=100, Max=104, Sea=1, Island="Frozen Village", Quest="Snowman Quest", Mob="Snowman"},
-    {Min=105, Max=119, Sea=1, Island="Frozen Village", Quest="Yeti Quest", Mob="Yeti"},
-    {Min=120, Max=129, Sea=1, Island="Marine Fortress", Quest="Chief Petty Officer Quest", Mob="Chief Petty Officer"},
-    {Min=130, Max=149, Sea=1, Island="Marine Fortress", Quest="Vice Admiral Quest", Mob="Vice Admiral"},
-    {Min=150, Max=174, Sea=1, Island="Skylands", Quest="Sky Bandit Quest", Mob="Sky Bandit"},
-    {Min=175, Max=189, Sea=1, Island="Skylands", Quest="Dark Master Quest", Mob="Dark Master"},
-    {Min=190, Max=209, Sea=1, Island="Prison", Quest="Prisoner Quest", Mob="Prisoner"},
-    {Min=210, Max=224, Sea=1, Island="Prison", Quest="Dangerous Prisoner Quest", Mob="Dangerous Prisoner"},
-    {Min=225, Max=249, Sea=1, Island="Prison", Quest="Chief Warden Quest", Mob="Chief Warden"},
-    {Min=250, Max=274, Sea=1, Island="Colosseum", Quest="Toga Warrior Quest", Mob="Toga Warrior"},
-    {Min=275, Max=299, Sea=1, Island="Colosseum", Quest="Gladiator Quest", Mob="Gladiator"},
-    {Min=300, Max=324, Sea=1, Island="Magma Village", Quest="Military Soldier Quest", Mob="Military Soldier"},
-    {Min=325, Max=374, Sea=1, Island="Magma Village", Quest="Military Spy Quest", Mob="Military Spy"},
-    {Min=375, Max=399, Sea=1, Island="Magma Village", Quest="Military Spy Quest", Mob="Military Spy"},
-    {Min=400, Max=449, Sea=1, Island="Underwater City", Quest="Fishman Warrior Quest", Mob="Fishman Warrior"},
-    {Min=450, Max=474, Sea=1, Island="Underwater City", Quest="Fishman Commando Quest", Mob="Fishman Commando"},
-    {Min=475, Max=524, Sea=1, Island="Fountain City", Quest="Galley Pirate Quest", Mob="Galley Pirate"},
-    {Min=525, Max=599, Sea=1, Island="Fountain City", Quest="Galley Captain Quest", Mob="Galley Captain"},
-    {Min=700, Max=724, Sea=2, Island="Kingdom of Rose", Quest="Raider Quest", Mob="Raider"},
-    {Min=725, Max=774, Sea=2, Island="Kingdom of Rose", Quest="Mercenary Quest", Mob="Mercenary"},
-    {Min=775, Max=799, Sea=2, Island="Kingdom of Rose", Quest="Swan Pirate Quest", Mob="Swan Pirate"},
-    {Min=800, Max=874, Sea=2, Island="Kingdom of Rose", Quest="Factory Staff Quest", Mob="Factory Staff"},
-    {Min=875, Max=899, Sea=2, Island="Green Zone", Quest="Marine Lieutenant Quest", Mob="Marine Lieutenant"},
-    {Min=900, Max=949, Sea=2, Island="Green Zone", Quest="Marine Captain Quest", Mob="Marine Captain"},
-    {Min=950, Max=974, Sea=2, Island="Graveyard", Quest="Zombie Quest", Mob="Zombie"},
-    {Min=975, Max=999, Sea=2, Island="Graveyard", Quest="Vampire Quest", Mob="Vampire"},
-    {Min=1000, Max=1049, Sea=2, Island="Snow Mountain", Quest="Snow Trooper Quest", Mob="Snow Trooper"},
-    {Min=1050, Max=1099, Sea=2, Island="Snow Mountain", Quest="Winter Warrior Quest", Mob="Winter Warrior"},
-    {Min=1100, Max=1124, Sea=2, Island="Hot and Cold", Quest="Lab Subordinate Quest", Mob="Lab Subordinate"},
-    {Min=1125, Max=1174, Sea=2, Island="Hot and Cold", Quest="Horned Warrior Quest", Mob="Horned Warrior"},
-    {Min=1175, Max=1199, Sea=2, Island="Hot and Cold", Quest="Magma Ninja Quest", Mob="Magma Ninja"},
-    {Min=1200, Max=1249, Sea=2, Island="Hot and Cold", Quest="Lava Pirate Quest", Mob="Lava Pirate"},
-    {Min=1250, Max=1274, Sea=2, Island="Cursed Ship", Quest="Ship Deckhand Quest", Mob="Ship Deckhand"},
-    {Min=1275, Max=1299, Sea=2, Island="Cursed Ship", Quest="Ship Engineer Quest", Mob="Ship Engineer"},
-    {Min=1300, Max=1324, Sea=2, Island="Cursed Ship", Quest="Ship Steward Quest", Mob="Ship Steward"},
-    {Min=1325, Max=1349, Sea=2, Island="Cursed Ship", Quest="Ship Officer Quest", Mob="Ship Officer"},
-    {Min=1350, Max=1374, Sea=2, Island="Ice Castle", Quest="Arctic Warrior Quest", Mob="Arctic Warrior"},
-    {Min=1375, Max=1424, Sea=2, Island="Ice Castle", Quest="Snow Lurker Quest", Mob="Snow Lurker"},
-    {Min=1425, Max=1474, Sea=2, Island="Forgotten Island", Quest="Sea Soldier Quest", Mob="Sea Soldier"},
-    {Min=1475, Max=1499, Sea=2, Island="Forgotten Island", Quest="Water Fighter Quest", Mob="Water Fighter"},
-    {Min=1500, Max=1524, Sea=3, Island="Port Town", Quest="Pirate Millionaire Quest", Mob="Pirate Millionaire"},
-    {Min=1525, Max=1574, Sea=3, Island="Port Town", Quest="Pistol Billionaire Quest", Mob="Pistol Billionaire"},
-    {Min=1575, Max=1599, Sea=3, Island="Hydra Island", Quest="Dragon Crew Warrior Quest", Mob="Dragon Crew Warrior"},
-    {Min=1600, Max=1624, Sea=3, Island="Hydra Island", Quest="Dragon Crew Archer Quest", Mob="Dragon Crew Archer"},
-    {Min=1625, Max=1649, Sea=3, Island="Great Tree", Quest="Marine Commodore Quest", Mob="Marine Commodore"},
-    {Min=1650, Max=1699, Sea=3, Island="Great Tree", Quest="Marine Rear Admiral Quest", Mob="Marine Rear Admiral"},
-    {Min=1700, Max=1724, Sea=3, Island="Floating Turtle", Quest="Fishman Raider Quest", Mob="Fishman Raider"},
-    {Min=1725, Max=1774, Sea=3, Island="Floating Turtle", Quest="Fishman Captain Quest", Mob="Fishman Captain"},
-    {Min=1775, Max=1799, Sea=3, Island="Floating Turtle", Quest="Forest Pirate Quest", Mob="Forest Pirate"},
-    {Min=1800, Max=1824, Sea=3, Island="Floating Turtle", Quest="Mythological Pirate Quest", Mob="Mythological Pirate"},
-    {Min=1825, Max=1849, Sea=3, Island="Haunted Castle", Quest="Reborn Skeleton Quest", Mob="Reborn Skeleton"},
-    {Min=1850, Max=1899, Sea=3, Island="Haunted Castle", Quest="Living Zombie Quest", Mob="Living Zombie"},
-    {Min=1900, Max=1924, Sea=3, Island="Haunted Castle", Quest="Demonic Soul Quest", Mob="Demonic Soul"},
-    {Min=1925, Max=1974, Sea=3, Island="Haunted Castle", Quest="Soul Reaper Quest", Mob="Soul Reaper"},
-    {Min=1975, Max=1999, Sea=3, Island="Sea of Treats", Quest="Candy Rebel Quest", Mob="Candy Rebel"},
-    {Min=2000, Max=2024, Sea=3, Island="Sea of Treats", Quest="Sweet Thief Quest", Mob="Sweet Thief"},
-    {Min=2025, Max=2049, Sea=3, Island="Sea of Treats", Quest="Sweet Thief Quest", Mob="Sweet Thief"},
-    {Min=2050, Max=2074, Sea=3, Island="Sea of Treats", Quest="Candy Pirate Quest", Mob="Candy Pirate"},
-    {Min=2075, Max=2099, Sea=3, Island="Sea of Treats", Quest="Snow Demon Quest", Mob="Snow Demon"},
-    {Min=2100, Max=2124, Sea=3, Island="Chocolate Island", Quest="Cocoa Warrior Quest", Mob="Cocoa Warrior"},
-    {Min=2125, Max=2149, Sea=3, Island="Chocolate Island", Quest="Chocolate Bar Battler Quest", Mob="Chocolate Bar Battler"},
-    {Min=2150, Max=2174, Sea=3, Island="Chocolate Island", Quest="Sweet Thief Quest", Mob="Sweet Thief"},
-    {Min=2175, Max=2200, Sea=3, Island="Cake Land", Quest="Cake Guard Quest", Mob="Cake Guard"},
-    {Min=2200, Max=2224, Sea=3, Island="Cake Land", Quest="Baking Staff Quest", Mob="Baking Staff"},
-    {Min=2225, Max=2250, Sea=3, Island="Cake Land", Quest="Head Baker Quest", Mob="Head Baker"},
-    {Min=2250, Max=2274, Sea=3, Island="Cake Land", Quest="Cake Queen Quest", Mob="Cake Queen"},
-    {Min=2275, Max=2299, Sea=3, Island="Ice Cream Island", Quest="Ice Cream Chef Quest", Mob="Ice Cream Chef"},
-    {Min=2300, Max=2324, Sea=3, Island="Ice Cream Island", Quest="Ice Cream Commander Quest", Mob="Ice Cream Commander"},
-    {Min=2325, Max=2349, Sea=3, Island="Peanut Island", Quest="Peanut Scout Quest", Mob="Peanut Scout"},
-    {Min=2350, Max=2374, Sea=3, Island="Peanut Island", Quest="Peanut President Quest", Mob="Peanut President"},
-    {Min=2375, Max=2399, Sea=3, Island="Cake Island", Quest="Cookie Crafter Quest", Mob="Cookie Crafter"},
-    {Min=2400, Max=2424, Sea=3, Island="Cake Island", Quest="Cake Guard Quest", Mob="Cake Guard"},
-    {Min=2425, Max=2449, Sea=3, Island="Cake Island", Quest="Baking Staff Quest", Mob="Baking Staff"},
-    {Min=2450, Max=2474, Sea=3, Island="Cake Island", Quest="Head Baker Quest", Mob="Head Baker"},
-    {Min=2475, Max=2499, Sea=3, Island="Tiki Outpost", Quest="Isle Champion Quest", Mob="Isle Champion"},
-    {Min=2500, Max=2524, Sea=3, Island="Tiki Outpost", Quest="Kitsune Guard Quest", Mob="Kitsune Guard"},
-    {Min=2525, Max=2549, Sea=3, Island="Tiki Outpost", Quest="Isle Outlaw Quest", Mob="Isle Outlaw"},
-    {Min=2550, Max=2574, Sea=3, Island="Tiki Outpost", Quest="Island Empress Quest", Mob="Island Empress"},
-    {Min=2575, Max=2599, Sea=3, Island="Tiki Outpost", Quest="Sun-kissed Warrior Quest", Mob="Sun-kissed Warrior"},
-    {Min=2600, Max=2624, Sea=3, Island="Tiki Outpost", Quest="Sun-kissed Warrior Quest", Mob="Sun-kissed Warrior"},
-    {Min=2625, Max=2649, Sea=3, Island="Tiki Outpost", Quest="Isle Champion Quest", Mob="Isle Champion"},
-    {Min=2650, Max=2674, Sea=3, Island="Tiki Outpost", Quest="Isle Outlaw Quest", Mob="Isle Outlaw"},
-    {Min=2675, Max=2699, Sea=3, Island="Tiki Outpost", Quest="Island Empress Quest", Mob="Island Empress"},
-    {Min=2700, Max=2724, Sea=3, Island="Tiki Outpost", Quest="Kitsune Guard Quest", Mob="Kitsune Guard"},
-    {Min=2725, Max=2749, Sea=3, Island="Tiki Outpost", Quest="Isle Champion Quest", Mob="Isle Champion"},
-    {Min=2750, Max=2774, Sea=3, Island="Tiki Outpost", Quest="Isle Outlaw Quest", Mob="Isle Outlaw"},
-    {Min=2775, Max=2800, Sea=3, Island="Tiki Outpost", Quest="Island Empress Quest", Mob="Island Empress"},
+local QuestData = {
+    {min=1,   max=9,   sea=1, island="Starter Island",  quest="BanditQuest1",     mob="Bandit"},
+    {min=10,  max=14,  sea=1, island="Jungle",          quest="JungleQuest",      mob="Monkey"},
+    {min=15,  max=29,  sea=1, island="Jungle",          quest="JungleQuest",      mob="Gorilla"},
+    {min=30,  max=59,  sea=1, island="Pirate Village",  quest="BuggyQuest1",      mob="Pirate"},
+    {min=60,  max=74,  sea=1, island="Pirate Village",  quest="BuggyQuest1",      mob="Brute"},
+    {min=75,  max=89,  sea=1, island="Desert",          quest="DesertQuest",      mob="Desert Bandit"},
+    {min=90,  max=99,  sea=1, island="Desert",          quest="DesertQuest",      mob="Desert Officer"},
+    {min=100, max=104, sea=1, island="Frozen Village",  quest="SnowQuest",        mob="Snow Bandit"},
+    {min=105, max=119, sea=1, island="Frozen Village",  quest="SnowQuest",        mob="Snowman"},
+    {min=120, max=129, sea=1, island="Frozen Village",  quest="SnowQuest",        mob="Yeti"},
+    {min=130, max=149, sea=1, island="Marine Fortress", quest="MarineQuest2",     mob="Chief Petty Officer"},
+    {min=150, max=174, sea=1, island="Marine Fortress", quest="MarineQuest2",     mob="Vice Admiral"},
+    {min=175, max=189, sea=1, island="Skylands",        quest="SkyQuest",         mob="Sky Bandit"},
+    {min=190, max=209, sea=1, island="Skylands",        quest="SkyQuest",         mob="Dark Master"},
+    {min=210, max=224, sea=1, island="Prison",          quest="PrisonerQuest",    mob="Prisoner"},
+    {min=225, max=249, sea=1, island="Prison",          quest="PrisonerQuest",    mob="Dangerous Prisoner"},
+    {min=250, max=274, sea=1, island="Prison",          quest="PrisonerQuest",    mob="Chief Warden"},
+    {min=275, max=299, sea=1, island="Colosseum",       quest="ColosseumQuest",   mob="Toga Warrior"},
+    {min=300, max=324, sea=1, island="Colosseum",       quest="ColosseumQuest",   mob="Gladiator"},
+    {min=325, max=374, sea=1, island="Magma Village",   quest="MagmaQuest",       mob="Military Soldier"},
+    {min=375, max=399, sea=1, island="Magma Village",   quest="MagmaQuest",       mob="Military Spy"},
+    {min=400, max=449, sea=1, island="Underwater City", quest="FishmanQuest",     mob="Fishman Warrior"},
+    {min=450, max=474, sea=1, island="Underwater City", quest="FishmanQuest",     mob="Fishman Commando"},
+    {min=475, max=524, sea=1, island="Fountain City",   quest="FountainQuest",    mob="Galley Pirate"},
+    {min=525, max=599, sea=1, island="Fountain City",   quest="FountainQuest",    mob="Galley Captain"},
+    {min=700, max=724, sea=2, island="Kingdom of Rose", quest="Area1Quest",       mob="Raider"},
+    {min=725, max=774, sea=2, island="Kingdom of Rose", quest="Area1Quest",       mob="Mercenary"},
+    {min=775, max=799, sea=2, island="Kingdom of Rose", quest="Area1Quest",       mob="Swan Pirate"},
+    {min=800, max=874, sea=2, island="Kingdom of Rose", quest="Area1Quest",       mob="Factory Staff"},
+    {min=875, max=899, sea=2, island="Green Zone",      quest="Area2Quest",       mob="Marine Lieutenant"},
+    {min=900, max=949, sea=2, island="Green Zone",      quest="Area2Quest",       mob="Marine Captain"},
+    {min=950, max=974, sea=2, island="Graveyard",       quest="GraveyardQuest",   mob="Zombie"},
+    {min=975, max=999, sea=2, island="Graveyard",       quest="GraveyardQuest",   mob="Vampire"},
+    {min=1000,max=1049,sea=2, island="Snow Mountain",   quest="SnowMountainQuest",mob="Snow Trooper"},
+    {min=1050,max=1099,sea=2, island="Snow Mountain",   quest="SnowMountainQuest",mob="Winter Warrior"},
+    {min=1100,max=1124,sea=2, island="Hot and Cold",    quest="PunkHazardQuest",  mob="Lab Subordinate"},
+    {min=1125,max=1174,sea=2, island="Hot and Cold",    quest="PunkHazardQuest",  mob="Horned Warrior"},
+    {min=1175,max=1199,sea=2, island="Hot and Cold",    quest="PunkHazardQuest",  mob="Magma Ninja"},
+    {min=1200,max=1249,sea=2, island="Hot and Cold",    quest="PunkHazardQuest",  mob="Lava Pirate"},
+    {min=1250,max=1274,sea=2, island="Cursed Ship",     quest="CursedShipQuest",  mob="Ship Deckhand"},
+    {min=1275,max=1299,sea=2, island="Cursed Ship",     quest="CursedShipQuest",  mob="Ship Engineer"},
+    {min=1300,max=1324,sea=2, island="Cursed Ship",     quest="CursedShipQuest",  mob="Ship Steward"},
+    {min=1325,max=1349,sea=2, island="Cursed Ship",     quest="CursedShipQuest",  mob="Ship Officer"},
+    {min=1350,max=1374,sea=2, island="Ice Castle",      quest="IceCastleQuest",   mob="Arctic Warrior"},
+    {min=1375,max=1424,sea=2, island="Ice Castle",      quest="IceCastleQuest",   mob="Snow Lurker"},
+    {min=1425,max=1474,sea=2, island="Forgotten Island",quest="ForgottenQuest",   mob="Sea Soldier"},
+    {min=1475,max=1499,sea=2, island="Forgotten Island",quest="ForgottenQuest",   mob="Water Fighter"},
+    {min=1500,max=1524,sea=3, island="Port Town",       quest="PortQuest",        mob="Pirate Millionaire"},
+    {min=1525,max=1574,sea=3, island="Port Town",       quest="PortQuest",        mob="Pistol Billionaire"},
+    {min=1575,max=1599,sea=3, island="Hydra Island",    quest="HydraQuest",       mob="Dragon Crew Warrior"},
+    {min=1600,max=1624,sea=3, island="Hydra Island",    quest="HydraQuest",       mob="Dragon Crew Archer"},
+    {min=1625,max=1649,sea=3, island="Great Tree",      quest="GreatTreeQuest",   mob="Marine Commodore"},
+    {min=1650,max=1699,sea=3, island="Great Tree",      quest="GreatTreeQuest",   mob="Marine Rear Admiral"},
+    {min=1700,max=1724,sea=3, island="Floating Turtle", quest="ForestQuest",      mob="Fishman Raider"},
+    {min=1725,max=1774,sea=3, island="Floating Turtle", quest="ForestQuest",      mob="Fishman Captain"},
+    {min=1775,max=1799,sea=3, island="Floating Turtle", quest="ForestQuest",      mob="Forest Pirate"},
+    {min=1800,max=1824,sea=3, island="Floating Turtle", quest="ForestQuest",      mob="Mythological Pirate"},
+    {min=1825,max=1849,sea=3, island="Haunted Castle",  quest="HauntedQuest",     mob="Reborn Skeleton"},
+    {min=1850,max=1899,sea=3, island="Haunted Castle",  quest="HauntedQuest",     mob="Living Zombie"},
+    {min=1900,max=1924,sea=3, island="Haunted Castle",  quest="HauntedQuest",     mob="Demonic Soul"},
+    {min=1925,max=1974,sea=3, island="Haunted Castle",  quest="HauntedQuest",     mob="Soul Reaper"},
+    {min=1975,max=1999,sea=3, island="Sea of Treats",   quest="CakeQuest",        mob="Candy Rebel"},
+    {min=2000,max=2024,sea=3, island="Sea of Treats",   quest="CakeQuest",        mob="Sweet Thief"},
+    {min=2025,max=2049,sea=3, island="Sea of Treats",   quest="CakeQuest",        mob="Sweet Thief"},
+    {min=2050,max=2074,sea=3, island="Sea of Treats",   quest="CakeQuest",        mob="Candy Pirate"},
+    {min=2075,max=2099,sea=3, island="Sea of Treats",   quest="CakeQuest",        mob="Snow Demon"},
+    {min=2100,max=2124,sea=3, island="Chocolate Island",quest="CakeQuest",        mob="Cocoa Warrior"},
+    {min=2125,max=2149,sea=3, island="Chocolate Island",quest="CakeQuest",        mob="Chocolate Bar Battler"},
+    {min=2150,max=2174,sea=3, island="Chocolate Island",quest="CakeQuest",        mob="Sweet Thief"},
+    {min=2175,max=2200,sea=3, island="Cake Land",       quest="CakeQuest",        mob="Cake Guard"},
+    {min=2200,max=2224,sea=3, island="Cake Land",       quest="CakeQuest",        mob="Baking Staff"},
+    {min=2225,max=2250,sea=3, island="Cake Land",       quest="CakeQuest",        mob="Head Baker"},
+    {min=2250,max=2274,sea=3, island="Cake Land",       quest="CakeQuest",        mob="Cake Queen"},
+    {min=2275,max=2299,sea=3, island="Ice Cream Island",quest="CakeQuest",        mob="Ice Cream Chef"},
+    {min=2300,max=2324,sea=3, island="Ice Cream Island",quest="CakeQuest",        mob="Ice Cream Commander"},
+    {min=2325,max=2349,sea=3, island="Peanut Island",   quest="CakeQuest",        mob="Peanut Scout"},
+    {min=2350,max=2374,sea=3, island="Peanut Island",   quest="CakeQuest",        mob="Peanut President"},
+    {min=2375,max=2399,sea=3, island="Cake Island",     quest="CakeQuest",        mob="Cookie Crafter"},
+    {min=2400,max=2424,sea=3, island="Cake Island",     quest="CakeQuest",        mob="Cake Guard"},
+    {min=2425,max=2449,sea=3, island="Cake Island",     quest="CakeQuest",        mob="Baking Staff"},
+    {min=2450,max=2474,sea=3, island="Cake Island",     quest="CakeQuest",        mob="Head Baker"},
+    {min=2475,max=2499,sea=3, island="Tiki Outpost",    quest="TikiQuest",        mob="Isle Champion"},
+    {min=2500,max=2524,sea=3, island="Tiki Outpost",    quest="TikiQuest",        mob="Kitsune Guard"},
+    {min=2525,max=2549,sea=3, island="Tiki Outpost",    quest="TikiQuest",        mob="Isle Outlaw"},
+    {min=2550,max=2574,sea=3, island="Tiki Outpost",    quest="TikiQuest",        mob="Island Empress"},
+    {min=2575,max=2599,sea=3, island="Tiki Outpost",    quest="TikiQuest",        mob="Sun-kissed Warrior"},
+    {min=2600,max=2624,sea=3, island="Tiki Outpost",    quest="TikiQuest",        mob="Sun-kissed Warrior"},
+    {min=2625,max=2649,sea=3, island="Tiki Outpost",    quest="TikiQuest",        mob="Isle Champion"},
+    {min=2650,max=2674,sea=3, island="Tiki Outpost",    quest="TikiQuest",        mob="Isle Outlaw"},
+    {min=2675,max=2699,sea=3, island="Tiki Outpost",    quest="TikiQuest",        mob="Island Empress"},
+    {min=2700,max=2724,sea=3, island="Tiki Outpost",    quest="TikiQuest",        mob="Kitsune Guard"},
+    {min=2725,max=2749,sea=3, island="Tiki Outpost",    quest="TikiQuest",        mob="Isle Champion"},
+    {min=2750,max=2774,sea=3, island="Tiki Outpost",    quest="TikiQuest",        mob="Isle Outlaw"},
+    {min=2775,max=2800,sea=3, island="Tiki Outpost",    quest="TikiQuest",        mob="Island Empress"},
 }
 
 --============================================================
--- CASTLE RAID
+-- RAID DATA
 --============================================================
 local CastleRaid = {
-    Name = "Castle Raid", Sea = 3, Island = "Castle on the Sea",
-    Mobs = {
-        "Galley Pirate","Galley Captain","Raider","Mercenary","Vampire",
+    Name="Castle Raid", Sea=3, Island="Castle on the Sea",
+    Mobs={"Galley Pirate","Galley Captain","Raider","Mercenary","Vampire",
         "Zombie","Snow Trooper","Winter Warrior","Lab Subordinate",
         "Horned Warrior","Magma Ninja","Lava Pirate","Ship Deckhand",
         "Ship Engineer","Ship Steward","Ship Officer","Arctic Warrior",
-        "Snow Lurker","Sea Soldier",
-    },
-    MobLookup = {},
+        "Snow Lurker","Sea Soldier"},
+    MobLookup={},
 }
-for _, mobName in ipairs(CastleRaid.Mobs) do CastleRaid.MobLookup[mobName] = true end
+for _, n in ipairs(CastleRaid.Mobs) do CastleRaid.MobLookup[n] = true end
 function CastleRaid:IsRaidMob(npc)
     if not npc then return false end
     return self.MobLookup[npc.Name] == true
 end
 
---============================================================
--- FACTORY RAID
---============================================================
 local FactoryRaid = {
-    Name = "Factory Raid", Sea = 2, Island = "Kingdom of Rose",
-    Target = "Factory",
-    Mobs = { "Factory Staff" },
-    MobLookup = {},
+    Name="Factory Raid", Sea=2, Island="Kingdom of Rose",
+    Mobs={"Factory Staff"}, MobLookup={},
 }
-for _, mobName in ipairs(FactoryRaid.Mobs) do FactoryRaid.MobLookup[mobName] = true end
+for _, n in ipairs(FactoryRaid.Mobs) do FactoryRaid.MobLookup[n] = true end
 function FactoryRaid:IsRaidMob(npc)
     if not npc then return false end
     return self.MobLookup[npc.Name] == true
@@ -653,27 +640,23 @@ local MaterialConfig = {
     {Name="Dragon Scale", Sea=3, Location="Hydra Island", NPC={"Dragon Crew Warrior","Dragon Crew Archer"}},
 }
 local MaterialByName = {}
-for _, data in ipairs(MaterialConfig) do MaterialByName[data.Name] = data end
+for _, d in ipairs(MaterialConfig) do MaterialByName[d.Name] = d end
 local function GetMaterialsBySea(sea)
-    local result = {}
-    for _, data in ipairs(MaterialConfig) do
-        if data.Sea == sea then table.insert(result, data) end
-    end
-    table.sort(result, function(a,b) return a.Name < b.Name end)
-    return result
+    local r={}
+    for _, d in ipairs(MaterialConfig) do if d.Sea==sea then table.insert(r,d) end end
+    table.sort(r, function(a,b) return a.Name<b.Name end)
+    return r
 end
 local function GetMaterialNamesBySea(sea)
-    local result = {}
-    for _, data in ipairs(GetMaterialsBySea(sea)) do
-        table.insert(result, data.Name)
-    end
-    return result
+    local r={}
+    for _, d in ipairs(GetMaterialsBySea(sea)) do table.insert(r,d.Name) end
+    return r
 end
 local function GetMaterialData(name, sea)
-    local data = MaterialByName[name]
-    if not data then return nil end
-    if sea and data.Sea ~= sea then return nil end
-    return data
+    local d = MaterialByName[name]
+    if not d then return nil end
+    if sea and d.Sea ~= sea then return nil end
+    return d
 end
 
 --============================================================
@@ -739,7 +722,7 @@ local GunList = {"Slingshot","Flintlock","Refined Flintlock","Musket","Refined M
 local AbilityList = {"Ken","Buso","Geppo","Soru"}
 
 --============================================================
--- LEVEL / SEA
+-- LEVEL/SEA HELPERS
 --============================================================
 local function GetLevel()
     local ls = Player:FindFirstChild("leaderstats")
@@ -748,18 +731,18 @@ local function GetLevel()
 end
 local function GetFarmData(level)
     level = tonumber(level) or 1
-    for _, data in ipairs(FarmConfig) do
-        if level >= data.Min and level <= data.Max then return data end
+    for _, d in ipairs(QuestData) do
+        if level >= d.min and level <= d.max then return d end
     end
-    if level < 1 then return FarmConfig[1] end
-    return FarmConfig[#FarmConfig]
+    if level < 1 then return QuestData[1] end
+    return QuestData[#QuestData]
 end
 local function GetSeaNumber()
-    local data = GetFarmData(GetLevel())
-    if data and data.Sea then return data.Sea end
-    local level = GetLevel()
-    if level >= 1500 then return 3
-    elseif level >= 700 then return 2
+    local d = GetFarmData(GetLevel())
+    if d and d.sea then return d.sea end
+    local lv = GetLevel()
+    if lv >= 1500 then return 3
+    elseif lv >= 700 then return 2
     else return 1 end
 end
 local function GetCurrentSea()
@@ -841,7 +824,7 @@ local function GetBossListForSea(sea)
 end
 
 --============================================================
--- FRAGMENTS / CHEST
+-- FRAGMENTS/CHEST
 --============================================================
 local function GetFragments()
     local ls = Player:FindFirstChild("leaderstats")
@@ -884,7 +867,7 @@ local function GetChestsSorted()
 end
 
 --============================================================
--- SEA EVENT SCANNER
+-- SEA EVENT
 --============================================================
 local function ScanSeaEventBroad(keywords, attributeNames)
     for _, obj in ipairs(workspace:GetChildren()) do
@@ -1124,7 +1107,6 @@ Gui = Create("ScreenGui", {
     IgnoreGuiInset = true, DisplayOrder = 999999,
     ZIndexBehavior = Enum.ZIndexBehavior.Global,
 })
-
 local UIScale = Instance.new("UIScale")
 UIScale.Scale = 1 UIScale.Parent = Gui
 local function UpdateScale()
@@ -1194,9 +1176,7 @@ task.spawn(function()
     while task.wait(1) do
         if not HeaderLevel.Parent then break end
         pcall(function()
-            local lvl = GetLevel()
-            local s = GetSeaNumber()
-            HeaderLevel.Text = "Lv: "..lvl.." | Sea "..s
+            HeaderLevel.Text = "Lv: "..GetLevel().." | Sea "..GetSeaNumber()
         end)
     end
 end)
@@ -1265,6 +1245,7 @@ local ContentScroll = Create("ScrollingFrame", {
     BorderSizePixel = 0, ZIndex = 14, ClipsDescendants = false,
 })
 local Pages, Tabs = {}, {}
+
 local function CreatePage(name)
     local P = Create("ScrollingFrame", {
         Name = name, Parent = ContentScroll, BackgroundTransparency = 1,
@@ -1664,13 +1645,12 @@ local StatsPage       = CreatePage("Stats")
 local ShopPage        = CreatePage("Shop")
 local MiscPage        = CreatePage("Misc")
 
+-- 1. DISCORD
 CreateButton(DiscordPage, "[CP] Copy Discord Link", function()
     if setclipboard then setclipboard(CONFIG.Discord) Notify("[OK] Discord Copied") end
 end)
 
---============================================================
--- FARM PAGE
---============================================================
+-- 2. FARM
 CreateDropdown(FarmPage, "Select Weapon Category",
     {"Melee","Sword","Gun","Fruit"},
     function(opt) State.SelectedCategory = opt end)
@@ -1694,16 +1674,13 @@ CreateToggle(FarmPage, "Farm Raid Castle (Sea 3)", false, function(s)
     State.AutoFarmRaidCastle = s
     if not s and not State.AutoFarmFactory then DestroyHitbox() end
 end)
-
 CreateCustomDropdown(FarmPage, "Select Boss (Auto Sea)", function()
     local sea = GetCurrentSea()
     local list, live = GetBossListForSea(sea)
     local label = sea
     if live and live > 0 then label = sea.." | LIVE: "..live end
     return label, list
-end, function(opt)
-    State.SelectedBoss = (opt:gsub(" %[LIVE%]$", ""))
-end)
+end, function(opt) State.SelectedBoss = (opt:gsub(" %[LIVE%]$", "")) end)
 CreateButton(FarmPage, "[LIVE] Teleport to Spawned Boss", function()
     local sea = GetCurrentSea()
     local list = GetBossListForSea(sea)
@@ -1724,29 +1701,22 @@ CreateButton(FarmPage, "[LIVE] Teleport to Spawned Boss", function()
     Notify("[X] No LIVE boss in "..sea)
 end)
 CreateToggle(FarmPage, "Auto Farm Boss", false, function(s) State.AutoBoss = s end)
-
 CreateLabel(FarmPage, "Bones System", 34)
 CreateToggle(FarmPage, "Farm Bone", false, function(s) State.AutoFarmBone = s end)
 CreateButton(FarmPage, "[BONE] Random Bone", function()
     Invoke("Bones", "Buy", 1, 1) Notify("[OK] Bone Bought")
 end)
-
 CreateLabel(FarmPage, "Materials", 34)
 CreateCustomDropdown(FarmPage, "Select Material (Auto Sea)", function()
-    local sea = GetSeaNumber()
-    local list = GetMaterialNamesBySea(sea)
-    return "Sea "..sea, list
-end, function(opt)
-    State.SelectedMaterial = opt
-end)
+    local s = GetSeaNumber()
+    return "Sea "..s, GetMaterialNamesBySea(s)
+end, function(opt) State.SelectedMaterial = opt end)
 CreateToggle(FarmPage, "Farm Material", false, function(s)
     State.AutoFarmMaterial = s
     if not s and not State.AutoFarmBone then DestroyHitbox() end
 end)
 
---============================================================
--- SEA PAGE
---============================================================
+-- 3. SEA
 CreateDropdown(SeaPage, "Select Sea Mob",
     {"Sea Beast","Terrorshark","Shark","Piranha","Fish Crew Member","Fish Crew Warrior"},
     function(opt) State.SelectedSeaMob = opt end)
@@ -1806,9 +1776,7 @@ CreateToggle(SeaPage, "Auto Collect Bone", false, function(s) State.AutoCollectB
 CreateToggle(SeaPage, "Auto Collect Dino Egg", false, function(s) State.AutoCollectDinoEgg = s end)
 CreateToggle(SeaPage, "Auto Kill Golem", false, function(s) State.AutoKillGolem = s end)
 
---============================================================
--- QUEST / ITEMS
---============================================================
+-- 4. QUEST / ITEMS
 CreateLabel(QuestItemsPage, "Sea Travel", 34)
 CreateButton(QuestItemsPage, "[SEA] Travel Sea 2", function()
     Invoke("TravelDressrosa") Notify("[OK] Sea 2")
@@ -1967,30 +1935,29 @@ CreateButton(QuestItemsPage, "[X] Abandon Quest", function()
     Invoke("AbandonQuest") Notify("[OK] Abandoned")
 end)
 
---============================================================
--- FRUIT / RAID
---============================================================
+-- 5. FRUIT / RAID
 CreateToggle(FruitRaidPage, "Tween Fruit (Server-Fly-Store)", false, function(s)
     State.FruitTweenEnabled = s
     if not s then State._fruitActive = nil end
 end)
 CreateToggle(FruitRaidPage, "Auto Store Fruit", false, function(s) State.FruitStoreEnabled = s end)
-CreateToggle(FruitRaidPage, "Random Fruit (Gacha)", false, function(s) State.AutoGacha = s end)
+CreateToggle(FruitRaidPage, "Auto Gacha (Full Auto)", false, function(s)
+    State.AutoGacha = s
+    if s then Notify("[GACHA] ON") else Notify("[GACHA] OFF") end
+end)
+CreateSlider(FruitRaidPage, "Gacha Min Money", 0, 1000000, 100000, function(v) State.GachaMinMoney = v end)
 CreateCustomDropdown(FruitRaidPage, "Select Raid", function()
     local sea = GetCurrentSea()
     return sea, RaidDataBySea[sea] or {"Flame"}
 end, function(opt) State.SelectedRaid = opt end)
 CreateToggle(FruitRaidPage, "Auto Raid", false, function(s) State.AutoRaid = s end)
 
--- FISHING
+-- 6. FISHING
 CreateToggle(FishingPage, "Auto Fishing", false, function(s) State.AutoFish = s end)
 
---============================================================
--- STATUS
---============================================================
+-- 7. STATUS
 local StatusLabel = CreateLabel(StatusPage, "Loading...", 320)
 StatusLabel.TextSize = 12
-
 local function GetRace()
     return tostring(Player:GetAttribute("Race") or "Unknown")
 end
@@ -2043,14 +2010,19 @@ local function GetBackpackFruitCount()
     end
     return c
 end
-
+local function GetMoney()
+    local d = Player:FindFirstChild("Data")
+    if not d then return 0 end
+    local b = d:FindFirstChild("Beli") or d:FindFirstChild("BeliValue")
+    return b and b.Value or 0
+end
 task.spawn(function()
     while task.wait(1) do
         if not StatusLabel.Parent then break end
         pcall(function()
             local s = GetSeaNumber()
-            local farmData = GetFarmData(GetLevel())
-            local farmStr = farmData and (farmData.Mob.." @ "..farmData.Island.." [Lv "..farmData.Min.."-"..farmData.Max.."]") or "MAX"
+            local fd = GetFarmData(GetLevel())
+            local farmStr = fd and (fd.mob.." @ "..fd.island.." [Lv "..fd.min.."-"..fd.max.."]") or "MAX"
             local boss = State.SelectedBoss or "-"
             local mat = State.SelectedMaterial or "-"
             StatusLabel.Text = string.format(
@@ -2058,6 +2030,7 @@ task.spawn(function()
                 "Race      : %s\n"..
                 "Level     : %d / %d\n"..
                 "Melee     : %s\n"..
+                "Money     : %d\n"..
                 "Fragments : %d\n"..
                 "Elite Yama: %d/30\n"..
                 "Danger    : %d\n"..
@@ -2075,6 +2048,7 @@ task.spawn(function()
                 "Prehis : %s\n"..
                 "Frozen : %s",
                 GetRace(), GetLevel(), MAX_LEVEL, GetMelee(),
+                GetMoney(),
                 GetFragments(), State.EliteProgress or 0,
                 State._dangerLevel or GetDangerLevel(),
                 GetBackpackFruitCount(),
@@ -2090,9 +2064,7 @@ task.spawn(function()
     end
 end)
 
---============================================================
--- PVP
---============================================================
+-- 8. PVP
 local PvPPlayerOptions = (function()
     local list = {}
     for _, plr in ipairs(Players:GetPlayers()) do
@@ -2107,9 +2079,7 @@ CreateToggle(PvPPage, "Aimbot", false, function(s)
     if s then StartAimbot() else StopAimbot() end
 end)
 
---============================================================
--- TRIALS
---============================================================
+-- 9. TRIALS
 CreateLabel(TrialsPage, "Race V4 Trial System", 34)
 local TrialStatusLabel = CreateLabel(TrialsPage, "RaceV4Progress: -", 34)
 task.spawn(function()
@@ -2250,9 +2220,7 @@ CreateToggle(TrialsPage, "Auto Fragment Collect", false, function(s)
     end
 end)
 
---============================================================
--- SETING (ESP)
---============================================================
+-- 10. SETING (ESP)
 CreateToggle(SetingPage, "ESP Player", false, function(s) State.ESPPlayer = s end)
 CreateToggle(SetingPage, "ESP Fruit", false, function(s) State.ESPFruit = s end)
 CreateToggle(SetingPage, "ESP Chest", false, function(s) State.ESPChest = s end)
@@ -2260,9 +2228,7 @@ CreateToggle(SetingPage, "ESP Island", false, function(s) State.ESPIsland = s en
 CreateToggle(SetingPage, "ESP Blue Gear", false, function(s) State.ESPBlueGear = s end)
 CreateToggle(SetingPage, "ESP Flower", false, function(s) State.ESPFlower = s end)
 
---============================================================
--- TELEPORT
---============================================================
+-- 11. TELEPORT
 CreateCustomDropdown(TeleportPage, "Select Island (Auto Sea)", function()
     local sea = GetCurrentSea()
     return sea, SeaIslands[sea] or {"Starter Island"}
@@ -2280,9 +2246,7 @@ CreateButton(TeleportPage, "[SEA] Travel Sea 1", function() Invoke("TravelMain")
 CreateButton(TeleportPage, "[SEA] Travel Sea 2", function() Invoke("TravelDressrosa") Notify("[OK] Sea 2") end)
 CreateButton(TeleportPage, "[SEA] Travel Sea 3", function() Invoke("TravelZou") Notify("[OK] Sea 3") end)
 
---============================================================
--- STATS
---============================================================
+-- 12. STATS
 CreateToggle(StatsPage, "Auto Add Stats", false, function(s) State.AutoAddStats = s end)
 CreateSlider(StatsPage, "Melee", 0, 100, 0, function(v) State.StatsMelee = v end)
 CreateSlider(StatsPage, "Sword", 0, 100, 0, function(v) State.StatsSword = v end)
@@ -2301,9 +2265,7 @@ CreateButton(StatsPage, "[OK] Apply Stats Now", function()
     Notify("[OK] Stats applied")
 end)
 
---============================================================
--- SHOP
---============================================================
+-- 13. SHOP
 CreateDropdown(ShopPage, "Select Melee", MeleeList, function(opt) State.SelectedMelee = opt end)
 CreateButton(ShopPage, "[BUY] Buy Selected Melee", function()
     if not State.SelectedMelee then Notify("[!] Select melee first") return end
@@ -2350,9 +2312,7 @@ CreateButton(ShopPage, "[BUY] Buy Race Reroll", function()
     Invoke("Bones", "Buy", 1, 3) Notify("[BUY] Race Reroll")
 end)
 
---============================================================
--- MISC
---============================================================
+-- 14. MISC
 CreateToggle(MiscPage, "Anti AFK", true, function(s) State.AntiAFK = s end)
 CreateToggle(MiscPage, "Bring Mob", false, function(s) State.BringMob = s end)
 CreateSlider(MiscPage, "Bring Mob Range", 0, 100, 50, function(v) State.BringMobRange = v end)
@@ -2418,8 +2378,6 @@ end)
 --============================================================
 -- MAIN LOOPS
 --============================================================
-
--- FARM LEVEL
 task.spawn(function()
     while task.wait(0.2) do
         if State.AutoFarm then
@@ -2430,7 +2388,7 @@ task.spawn(function()
             else
                 local data = GetFarmData(level)
                 if data then
-                    Invoke("StartQuest", data.Quest)
+                    Invoke("StartQuest", data.quest)
                     ActivateHakiOnce()
                     local hrp = GetHRP()
                     if hrp then
@@ -2444,7 +2402,7 @@ task.spawn(function()
                         for _, folder in ipairs(folders) do
                             if nearest then break end
                             for _, obj in ipairs(folder:GetChildren()) do
-                                if obj.Name == data.Mob
+                                if obj.Name == data.mob
                                     and obj:FindFirstChildOfClass("Humanoid") then
                                     local hum = obj:FindFirstChildOfClass("Humanoid")
                                     local trp = obj:FindFirstChild("HumanoidRootPart")
@@ -2465,7 +2423,7 @@ task.spawn(function()
                                 AutoAttackNPC(nearest, 5)
                             end
                         else
-                            local islandPos = IslandCoords[data.Island]
+                            local islandPos = IslandCoords[data.island]
                             if islandPos and (hrp.Position - islandPos).Magnitude > 500 then
                                 TweenToPosition(islandPos + Vector3.new(0,3,0), 500)
                             else
@@ -2479,7 +2437,6 @@ task.spawn(function()
     end
 end)
 
--- FARM NEAREST
 task.spawn(function()
     while task.wait(0.15) do
         if State.AutoFarmNearest then
@@ -2504,7 +2461,6 @@ task.spawn(function()
     end
 end)
 
--- CHEST
 task.spawn(function()
     while task.wait(0.3) do
         if State.AutoChest then
@@ -2521,7 +2477,6 @@ task.spawn(function()
     end
 end)
 
--- FARM FACTORY
 task.spawn(function()
     while task.wait(0.3) do
         if State.AutoFarmFactory then
@@ -2565,7 +2520,6 @@ task.spawn(function()
     end
 end)
 
--- FARM RAID CASTLE
 task.spawn(function()
     while task.wait(0.3) do
         if State.AutoFarmRaidCastle then
@@ -2609,7 +2563,6 @@ task.spawn(function()
     end
 end)
 
--- FARM BONE
 task.spawn(function()
     while task.wait(0.3) do
         if State.AutoFarmBone then
@@ -2666,18 +2619,14 @@ task.spawn(function()
     end
 end)
 
--- FARM MATERIAL (sesuai material & sea yang dipilih)
 task.spawn(function()
     while task.wait(0.3) do
         if State.AutoFarmMaterial then
             pcall(function()
                 local hrp = GetHRP()
                 if not hrp then return end
-
                 local matName = State.SelectedMaterial
                 local matData = matName and GetMaterialData(matName) or nil
-
-                -- 1) coba pickup material drop di sekitar
                 local picked = false
                 if matData then
                     local kw = string.lower(matData.Name)
@@ -2687,13 +2636,13 @@ task.spawn(function()
                             local match = string.find(n, kw)
                             if not match then
                                 if matData.Name == "Scrap Metal" then match = string.find(n, "scrap") end
-                                if matData.Name == "Magma Ore"   then match = match or string.find(n, "magma") end
-                                if matData.Name == "Fish Tail"   then match = match or string.find(n, "fishtail") end
+                                if matData.Name == "Magma Ore" then match = match or string.find(n, "magma") end
+                                if matData.Name == "Fish Tail" then match = match or string.find(n, "fishtail") end
                                 if matData.Name == "Angel Wings" then match = match or string.find(n, "wing") end
                                 if matData.Name == "Radioactive Material" then match = match or string.find(n, "radioactive") end
                                 if matData.Name == "Conjured Cocoa" then match = match or string.find(n, "cocoa") end
                                 if matData.Name == "Dragon Scale" then match = match or string.find(n, "scale") end
-                                if matData.Name == "Mini Tusk"    then match = match or string.find(n, "tusk") end
+                                if matData.Name == "Mini Tusk" then match = match or string.find(n, "tusk") end
                             end
                             if match then
                                 TweenToPosition(obj.Position + Vector3.new(0,3,0), 400)
@@ -2703,8 +2652,6 @@ task.spawn(function()
                         end
                     end
                 end
-
-                -- 2) kalau tidak ada drop, kill NPC target
                 if not picked and matData then
                     ActivateHakiOnce()
                     local folder = workspace:FindFirstChild("Enemies")
@@ -2741,7 +2688,6 @@ task.spawn(function()
                         end
                     end
                 elseif not matData then
-                    -- fallback: kill mob biasa
                     ActivateHakiOnce()
                     local target = GetNearestEnemy(500)
                     if target then
@@ -2760,7 +2706,6 @@ task.spawn(function()
     end
 end)
 
--- AUTO BOSS
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoBoss and State.SelectedBoss then
@@ -2770,7 +2715,6 @@ task.spawn(function()
     end
 end)
 
--- SEA LOOP
 task.spawn(function()
     while task.wait(0.3) do
         if State.AutoFarmSea then
@@ -2839,7 +2783,6 @@ task.spawn(function()
     end
 end)
 
--- SEA EVENT SCANNER
 task.spawn(function()
     local lastSeen = { mirage=0, azure=0, pre=0, frozen=0 }
     while task.wait(2) do
@@ -2912,7 +2855,6 @@ task.spawn(function()
     end
 end)
 
--- AUTO DRIVE TIKI
 task.spawn(function()
     while task.wait(2) do
         if State.AutoDriveTiki then
@@ -2942,7 +2884,6 @@ task.spawn(function()
     end
 end)
 
--- FRUIT TWEEN
 task.spawn(function()
     while task.wait(0.3) do
         if State.FruitTweenEnabled then
@@ -3004,7 +2945,6 @@ task.spawn(function()
     end
 end)
 
--- AUTO STORE FRUIT
 task.spawn(function()
     while task.wait(3) do
         if State.FruitStoreEnabled and CommF then
@@ -3030,16 +2970,50 @@ task.spawn(function()
     end
 end)
 
+task.spawn(function()
+    while task.wait(1) do
+        if State.AutoGacha then
+            pcall(function()
+                local s = GetSeaNumber()
+                local islandKey = "Home"
+                if s == 2 then islandKey = "Kingdom"
+                elseif s == 3 then islandKey = "Mansion" end
+                local money = GetMoney()
+                if money < (State.GachaMinMoney or 100000) then
+                    Notify("[X] Money habis — Gacha OFF")
+                    State.AutoGacha = false
+                    return
+                end
+                Invoke("Teleport", islandKey)
+                task.wait(1.2)
+                Notify("[GACHA] Random Fruit — Money: "..money)
+                Invoke("Fruit", "Random")
+                task.wait(0.8)
+                local char = Player.Character
+                if char then
+                    for _, tool in ipairs(char:GetChildren()) do
+                        if tool:IsA("Tool") and tool.Name:find("Fruit") then
+                            Invoke("Fruit", "Store", tool)
+                            task.wait(0.5)
+                        end
+                    end
+                end
+                for _, tool in ipairs(Player.Backpack:GetChildren()) do
+                    if tool:IsA("Tool") and tool.Name:find("Fruit") then
+                        Invoke("Fruit", "Store", tool)
+                        task.wait(0.5)
+                    end
+                end
+                task.wait(2)
+            end)
+        end
+    end
+end)
+
 workspace.DescendantAdded:Connect(function(obj)
     if (obj:IsA("Tool") or obj:IsA("Model")) and string.find(obj.Name, "Fruit") then
         task.wait(0.1)
         if obj.Parent == workspace then Notify("[FRUIT] Spawn: "..obj.Name) end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(60) do
-        if State.AutoGacha and not GetHeldFruit() then Invoke("BuyFruit", "Random") end
     end
 end)
 
@@ -3255,7 +3229,7 @@ for i, d in ipairs(TabDefs) do
 end
 
 --============================================================
--- UI OPEN/CLOSE + LOGO DRAG
+-- UI OPEN/CLOSE
 --============================================================
 local function OpenUI()
     Main.Visible = true
