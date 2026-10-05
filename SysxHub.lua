@@ -1,6 +1,6 @@
 --[[
 ================================================================
- SYSX HUB | Freemium v0.1 — MASTER BUILD
+ SYSX HUB | Freemium v0.1 — MASTER BUILD (FIXED)
  14 Tab + All Features + Game Lock
 ================================================================
  Tab: Discord | Farm | Sea | Quest/Items | Fruit/Raid | Fishing
@@ -21,6 +21,7 @@ local function IsBloxFruits()
     if game.PlaceId == 7449423635 then return true end
     local remotes = RS:FindFirstChild("Remotes")
     if remotes and remotes:FindFirstChild("CommF_") then return true end
+    -- [FIX] Product info check optional (butuh HttpService)
     local ok, info = pcall(function() return MPS:GetProductInfo(game.PlaceId) end)
     if ok and info and info.Name
         and string.find(string.lower(info.Name), "blox fruit") then
@@ -493,7 +494,7 @@ task.spawn(function()
 end)
 
 --============================================================
--- QUEST DATA (accurate Blox Fruits)
+-- QUEST DATA
 --============================================================
 local QuestData = {
     {min=1,   max=9,   sea=1, island="Starter Island",  quest="BanditQuest1",     mob="Bandit"},
