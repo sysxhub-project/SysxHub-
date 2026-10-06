@@ -1546,202 +1546,265 @@ task.spawn(function()
     end
 end)
 
--- Auto Farm Level
--- Alur: ON -> cari quest sesuai level -> ambil quest -> cari mob ->
--- player di atas mob -> Bring Mob -> Auto Attack -> ulang.
-task.spawn(function()
-    while task.wait(0.25) do
-        if State.AutoFarm then
-            pcall(function()
-                local hrp = GetHRP()
-                if not hrp then return end
+--================================================================
+-- AUTO FARM LEVEL
+-- ONE FUNCTION: LEVEL -> QUEST -> QUEST NPC -> MOB -> BRING -> ATTACK
+-- Player stays above the mob at CFrame.new(7, 20, 0)
+--================================================================
+local function AutoFarmLevel()
+    if not State.AutoFarm then return end
 
-                local char = player.Character
-                local hum = char and char:FindFirstChildOfClass("Humanoid")
-                if not hum or hum.Health <= 0 then return end
+    local hrp = GetHRP()
+    if not hrp then return end
 
-                --========================================================
-                -- QUEST LEVEL
-                -- Diambil dari sistem quest level pada source referensi.
-                --========================================================
-                local questFrame = playerGui:FindFirstChild("TrackedQuestFrame")
-                local hasQuest = false
-                local questMob = nil
+    local char = player.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if not hum or hum.Health <= 0 then return end
 
-                if questFrame then
-                    local frame = questFrame:FindFirstChild("Frame")
-                    if frame and frame:FindFirstChild("header")
-                        and frame:FindFirstChild("progress")
-                        and frame:FindFirstChild("description") then
-                        hasQuest = true
-                        questMob = frame.description.Text
-                    end
+    --==============================================================
+    -- STEP 1: READ CURRENT QUEST
+    --==============================================================
+    local questMob = nil
+    local questFrame = nil
+
+    local tracked = playerGui:FindFirstChild("TrackedQuestFrame")
+    if tracked then
+        questFrame = tracked:FindFirstChild("Frame")
+    end
+
+    if questFrame and questFrame.Visible then
+        -- Blox Fruits normal quest UI: header / progress / description
+        local desc = questFrame:FindFirstChild("description")
+        if desc and desc:IsA("TextLabel") and desc.Text ~= "" then
+            local text = desc.Text
+
+            questMob = text:match("Defeat%s+%d+%s+(.+)")
+                or text:match("Defeat%s+(.+)")
+                or text:match("^(.+)%s*%(%s*%d+%s*/%s*%d+%s*%)")
+                or text
+
+            if questMob then
+                questMob = questMob
+                    :gsub("%(%s*%d+%s*/%s*%d+%s*%)", "")
+                    :gsub("%[%s*%d+%s*/%s*%d+%s*%]", "")
+                    :gsub("%s+$", "")
+                    :gsub("^%s+", "")
+                    :gsub("%(.*%)", "")
+                    :gsub("%s+$", "")
+
+                -- Remove a possible quest counter at the end.
+                questMob = questMob:gsub("%s*%d+%s*$", "")
+                questMob = questMob:gsub("%s+$", "")
+            end
+        end
+
+        -- Fallback for the older UI names used by this SysxHub source.
+        if not questMob then
+            local lbl = questFrame:FindFirstChild("QuestTitle")
+                or questFrame:FindFirstChild("Title")
+                or questFrame:FindFirstChild("TaskTitle")
+
+            if lbl and lbl:IsA("TextLabel") and lbl.Text ~= "" then
+                questMob = lbl.Text:match("Defeat%s+%d+%s+(.+)")
+                    or lbl.Text:match("Defeat%s+(.+)")
+                    or lbl.Text:match("^([^%[]+)")
+
+                if questMob then
+                    questMob = questMob
+                        :gsub("%(%s*%d+%s*/%s*%d+%s*%)", "")
+                        :gsub("%[%s*%d+%s*/%s*%d+%s*%]", "")
+                        :gsub("%s+$", "")
+                        :gsub("^%s+", "")
+                        :gsub("%(.*%)", "")
+                        :gsub("%s+$", "")
                 end
+            end
+        end
+    end
 
-                -- Kalau belum punya quest, cari quest yang sesuai level.
-                if not hasQuest then
-                    local data = player:FindFirstChild("Data")
-                    local levelValue = data and data:FindFirstChild("Level")
-                    if not levelValue then return end
+    --==============================================================
+    -- STEP 2: NO QUEST -> FIND BEST QUEST FOR CURRENT LEVEL
+    -- This follows the quest-selection structure from vxeze.txt:
+    -- choose the highest LevelReq <= player's current level.
+    --==============================================================
+    if not questMob then
+        local levelObj = player:FindFirstChild("Data")
+            and player.Data:FindFirstChild("Level")
+        local level = levelObj and levelObj.Value or 1
 
-                    local okQ, Quests = pcall(function()
-                        return require(RS:WaitForChild("Quests"))
-                    end)
-                    local okG, GuideModule = pcall(function()
-                        return require(RS:WaitForChild("GuideModule"))
-                    end)
+        local best = nil
 
-                    if not okQ or not okG or not Quests or not GuideModule then
-                        return
-                    end
+        pcall(function()
+            local Quests = require(RS:WaitForChild("Quests"))
+            local GuideModule = require(RS:WaitForChild("GuideModule"))
 
-                    local currentLevel = levelValue.Value
-                    local best = nil
-                    local lastLevel = 0
+            local excluded = {
+                BartiloQuest = true,
+                Trainees = true,
+                MarineQuest = true,
+                CitizenQuest = true,
+            }
 
-                    -- Quest yang memang tidak dipakai sebagai quest farm level.
-                    local ignoredQuest = {
-                        BartiloQuest = true,
-                        Trainees = true,
-                        MarineQuest = true,
-                        CitizenQuest = true,
-                    }
+            local npcList = GuideModule
+                and GuideModule.Data
+                and GuideModule.Data.NPCList
 
-                    for _, npcData in pairs(GuideModule.Data.NPCList or {}) do
-                        local internalName = npcData.InternalQuestName
+            if not npcList then return end
 
-                        if internalName and not ignoredQuest[internalName] then
-                            local questList = Quests[internalName]
+            for _, npcData in pairs(npcList) do
+                local questName = npcData.InternalQuestName
+                local levels = npcData.Levels
+                local questSet = questName and Quests[questName]
 
-                            if questList and npcData.Levels then
-                                for id, requiredLevel in pairs(npcData.Levels) do
-                                    local questData = questList[id]
+                if questSet and levels and not excluded[questName] then
+                    for questId, reqLevel in pairs(levels) do
+                        local q = questSet[questId]
 
-                                    if questData and questData.Task then
-                                        local mobName, amount = next(questData.Task)
+                        if q and q.Task and type(reqLevel) == "number"
+                            and reqLevel <= level then
 
-                                        if amount and amount > 1
-                                            and requiredLevel <= currentLevel
-                                            and requiredLevel >= lastLevel then
+                            local mobName, amount = next(q.Task)
 
-                                            best = {
-                                                Level = requiredLevel,
-                                                QuestName = internalName,
-                                                Pos = npcData.Position,
-                                                Id = id,
-                                                Mob = mobName,
-                                            }
-
-                                            lastLevel = requiredLevel
-                                        end
-                                    end
+                            if mobName and type(amount) == "number" and amount > 1 then
+                                if not best or reqLevel > best.Level then
+                                    best = {
+                                        Level = reqLevel,
+                                        QuestName = questName,
+                                        Id = questId,
+                                        Mob = mobName,
+                                        Pos = npcData.Position,
+                                    }
                                 end
                             end
                         end
                     end
-
-                    if not best or not best.Pos then
-                        return
-                    end
-
-                    local questPos = typeof(best.Pos) == "CFrame"
-                        and best.Pos.Position
-                        or best.Pos
-
-                    -- Pergi ke NPC quest.
-                    local distance = (questPos - hrp.Position).Magnitude
-
-                    if distance > 8 then
-                        FarmTeleport(
-                            CFrame.new(questPos) * CFrame.new(0, 4, 2),
-                            getgenv().FarmSpeed,
-                            25
-                        )
-                        return
-                    end
-
-                    -- Ambil quest.
-                    if hum.Health > 0 then
-                        pcall(function()
-                            CommF_:InvokeServer(
-                                "StartQuest",
-                                tostring(best.QuestName),
-                                best.Id
-                            )
-                        end)
-                    end
-
-                    return
                 end
+            end
+        end)
 
-                --========================================================
-                -- FIND MOB
-                --========================================================
-                if type(questMob) ~= "string" or questMob == "" then
-                    return
-                end
+        if not best or not best.Pos then
+            return
+        end
 
-                -- Bersihkan teks quest kalau ada tambahan format.
-                questMob = questMob:gsub("^%s+", ""):gsub("%s+$", "")
-                questMob = questMob:gsub("%s*%(%d+/%d+%)%s*$", "")
-                questMob = questMob:gsub("%s+$", "")
+        --==========================================================
+        -- STEP 3: GO TO QUEST NPC, THEN TAKE QUEST
+        --==========================================================
+        local questPos = typeof(best.Pos) == "CFrame"
+            and best.Pos.Position
+            or best.Pos
 
-                local enemy = FindEnemy({questMob}, 99999)
+        local currentHRP = GetHRP()
+        if not currentHRP then return end
 
-                if not enemy then
-                    -- Mob belum spawn -> pergi ke spawn mob.
-                    local spawnPart = FindSpawnPart(questMob, true)
-                    if spawnPart then
-                        FarmTeleport(
-                            spawnPart.CFrame * CFrame.new(0, 60, 0),
-                            getgenv().FarmSpeed,
-                            25
-                        )
-                    end
-                    return
-                end
+        local distQuest = (questPos - currentHRP.Position).Magnitude
 
-                local trp = enemy:FindFirstChild("HumanoidRootPart")
-                local enemyHum = enemy:FindFirstChildOfClass("Humanoid")
-                if not trp or not enemyHum or enemyHum.Health <= 0 then
-                    return
-                end
+        if distQuest > 8 then
+            FarmTeleport(
+                CFrame.new(questPos) * CFrame.new(0, 4, 2),
+                getgenv().FarmSpeed,
+                30
+            )
+            return
+        end
 
-                --========================================================
-                -- PLAYER DI ATAS -> BRING MOB -> ATTACK
-                --========================================================
-                AutoHaki()
-                EquipWeapon(State.SelectedWeapon)
-
-                -- Datang ke atas mob terlebih dahulu.
-                local farmCFrame = trp.CFrame * CFrame.new(7, 20, 0)
-                local distanceToFarm = (hrp.Position - farmCFrame.Position).Magnitude
-
-                if distanceToFarm > 25 then
-                    FarmTeleport(
-                        farmCFrame,
-                        getgenv().FarmSpeed,
-                        20
-                    )
-                    return
-                end
-
-                -- Bring mob aktif saat sudah berada di area farm.
-                if State.BringMob then
-                    BringMob(enemy)
-                end
-
-                trp.CanCollide = false
-
-                if trp.Size.X < 30 then
-                    trp.Size = Vector3.new(60, 60, 60)
-                end
-
-                enemyHum.WalkSpeed = 0
-
-                -- Auto attack.
-                AttackNoCoolDown()
+        if hum.Health > 0 then
+            pcall(function()
+                task.wait(0.2)
+                CommF_:InvokeServer(
+                    "StartQuest",
+                    tostring(best.QuestName),
+                    best.Id
+                )
             end)
+        end
+
+        return
+    end
+
+    --==============================================================
+    -- STEP 4: QUEST EXISTS -> FIND TARGET MOB
+    --==============================================================
+    local enemy = FindEnemy({questMob}, 99999)
+
+    if not enemy then
+        local spawnPart = FindSpawnPart(questMob, true)
+
+        if spawnPart then
+            FarmTeleport(
+                spawnPart.CFrame * CFrame.new(0, 60, 0),
+                getgenv().FarmSpeed,
+                25
+            )
+        else
+            if not _G.__LastSpawnWarn
+                or tick() - _G.__LastSpawnWarn > 5 then
+
+                _G.__LastSpawnWarn = tick()
+                Notify("Spawn not found: " .. tostring(questMob))
+            end
+        end
+
+        return
+    end
+
+    --==============================================================
+    -- STEP 5: TARGET MOB FOUND -> ABOVE MOB -> BRING -> ATTACK
+    --==============================================================
+    local enemyHum = enemy:FindFirstChildOfClass("Humanoid")
+    local trp = enemy:FindFirstChild("HumanoidRootPart")
+
+    if not enemyHum or enemyHum.Health <= 0 or not trp then
+        return
+    end
+
+    AutoHaki()
+    EquipWeapon(State.SelectedWeapon)
+
+    -- Bring Mob dulu supaya target berkumpul.
+    if State.BringMob then
+        BringMob(enemy)
+    end
+
+    trp = enemy:FindFirstChild("HumanoidRootPart")
+    if not trp then return end
+
+    -- Player berada DI ATAS mob, bukan di samping/bawah.
+    -- Sama seperti pola farm dari vxeze.txt: X=7, Y=20, Z=0.
+    local farmCFrame = trp.CFrame * CFrame.new(7, 20, 0)
+    local distance = (farmCFrame.Position - hrp.Position).Magnitude
+
+    if distance > 6 then
+        FarmTeleport(
+            farmCFrame,
+            getgenv().FarmSpeed,
+            20
+        )
+    end
+
+    -- Lock mob agar Bring Mob + attack stabil.
+    trp.CanCollide = false
+
+    if trp.Size.X < 30 then
+        trp.Size = Vector3.new(60, 60, 60)
+    end
+
+    enemyHum.WalkSpeed = 0
+    enemyHum.AutoRotate = false
+
+    -- Re-apply Bring Mob after player is positioned above target.
+    if State.BringMob then
+        BringMob(enemy)
+    end
+
+    -- Attack.
+    AttackNoCoolDown()
+end
+
+-- ONE MAIN LOOP FOR THE WHOLE AUTO FARM LEVEL SYSTEM.
+task.spawn(function()
+    while task.wait(0.25) do
+        if State.AutoFarm then
+            pcall(AutoFarmLevel)
         end
     end
 end)
