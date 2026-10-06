@@ -1,8 +1,8 @@
 --[[
 ================================================================
- SYSX HUB v2.1 FINAL
+ SYSX HUB v2.2 FINAL
  Logo: 114593995135483 | Banner: 71457853614279
- Fix: Farm Level (robust), Tween anti-overshoot, Boss detect, dsb
+ Fix: Farm Level robust, CFrameMon fallback, Quest features added
 ================================================================
 ]]
 
@@ -172,6 +172,35 @@ function topos(Tween_Pos)
     end)
 end
 
+function toposFull(cf)
+    pcall(function()
+        if not Player.Character or not Player.Character:FindFirstChild("HumanoidRootPart") then return end
+        if Player.Character.Humanoid.Health <= 0 then return end
+        local hrp = Player.Character.HumanoidRootPart
+        local dist = (cf.Position - hrp.Position).Magnitude
+        if dist <= 5 then
+            hrp.CFrame = cf
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
+            return
+        end
+        if dist > 500 then
+            hrp.CFrame = cf
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
+            return
+        end
+        local speed = TweenSpeed
+        if dist < 30 then speed = TweenSpeed * 0.5 end
+        local duration = math.max(dist / speed, 0.15)
+        local tw = TweenService:Create(hrp, TweenInfo.new(duration, Enum.EasingStyle.Linear), {CFrame = cf})
+        tw:Play()
+        tw.Completed:Wait()
+        hrp.AssemblyLinearVelocity = Vector3.zero
+        hrp.AssemblyAngularVelocity = Vector3.zero
+    end)
+end
+
 function AttackNoCoolDown()
     local char = Player.Character
     if not char then return end
@@ -221,20 +250,22 @@ local GuideModule  = SafeRequire(RS:WaitForChild("GuideModule", 10))
 function GetQuestInfo()
     local lvl = Player.Data.Level.Value
     local team = tostring(Player.Team)
-    local questName, questLvl, mobName, npcCFrame, lvlReq
+    local questName, questLvl, mobName, npcCFrame, lvlReq, CFrameMon
 
     if lvl >= 1 and lvl <= 9 then
         if team == "Marines" then
             questName, questLvl, mobName, lvlReq = "MarineQuest", 1, "Trainee", 1
             npcCFrame = CFrame.new(-2709.67944, 24.5206585, 2104.24585)
+            CFrameMon = CFrame.new(-2709, 24, 2104)
         else
             questName, questLvl, mobName, lvlReq = "BanditQuest1", 1, "Bandit", 1
             npcCFrame = CFrame.new(1059.99731, 16.9222069, 1549.28162)
+            CFrameMon = CFrame.new(1045, 27, 1560)
         end
-        return {lvlReq, npcCFrame, mobName, questName, questLvl}
+        return {lvlReq, npcCFrame, mobName, questName, questLvl, CFrameMon}
     end
     if lvl >= 210 and lvl <= 249 then
-        return {210, CFrame.new(5308.93115, 1.65517521, 475.120514), "Dangerous Prisoner", "PrisonerQuest", 2}
+        return {210, CFrame.new(5308.93115, 1.65517521, 475.120514), "Dangerous Prisoner", "PrisonerQuest", 2, CFrame.new(5654, 15, 866)}
     end
     lvlReq = 0
     if GuideModule and GuideModule.Data and GuideModule.Data.NPCList then
@@ -282,7 +313,20 @@ function GetQuestInfo()
         questLvl, mobName, lvlReq = 1, "Swan Pirate", 775
     end
     if lvl >= 2500 and lvl <= 2524 then mobName = "Sun-kissed Warrior" end
-    return {lvlReq, npcCFrame, mobName, questName, questLvl}
+    
+    -- CFrameMon fallback dari Locations
+    if not CFrameMon and mobName then
+        local loc = Workspace:FindFirstChild("_WorldOrigin") and Workspace._WorldOrigin:FindFirstChild("Locations")
+        if loc then
+            for _, c in ipairs(loc:GetChildren()) do
+                if string.find(string.lower(c.Name), string.lower(mobName)) then
+                    CFrameMon = c.CFrame
+                    break
+                end
+            end
+        end
+    end
+    return {lvlReq, npcCFrame, mobName, questName, questLvl, CFrameMon}
 end
 
 local NameCache = {}
@@ -445,7 +489,6 @@ function HopServer()
     for i=1, 3 do pcall(TPReturner) task.wait(1) end
 end
 
---============= UI =============
 local function Create(cls, props)
     local o = Instance.new(cls)
     for k, v in pairs(props or {}) do pcall(function() o[k]=v end) end
@@ -683,7 +726,7 @@ end
 CreateButton(DiscordPage, "[CP] Copy Discord Link", function()
     if setclipboard then setclipboard("https://discord.gg/E5kQJW3hn") Notify("[OK] Discord copied") end
 end)
-CreateLabel(DiscordPage, "SysxHub v2.1 FINAL", 34)
+CreateLabel(DiscordPage, "SysxHub v2.2 FINAL", 34)
 
 --============= TAB: FARM =============
 CreateLabel(FarmPage, "=== Farm Settings ===", 24)
@@ -747,6 +790,200 @@ CreateToggle(QuestItemsPage, "Auto Third Sea (Sea 3)", false, function(s) State.
 CreateLabel(QuestItemsPage, "=== Race Upgrade ===", 24)
 CreateToggle(QuestItemsPage, "Auto V2", false, function(s) State.AutoV2 = s end)
 CreateToggle(QuestItemsPage, "Auto V3", false, function(s) State.AutoV3 = s end)
+
+CreateLabel(QuestItemsPage, "=== Auto Get Sword ===", 24)
+CreateDropdown(QuestItemsPage, "Select Sword", 
+    {"Saber","Tushita","Yama","Buddy Sword","Shark Anchor","Dark Dagger","Twin Hooks","Canvander","Spikey Trident"},
+    function(opt) getgenv().SelectSwordQuest = opt end)
+getgenv().SelectSwordQuest = "Saber"
+CreateToggle(QuestItemsPage, "Auto Get Selected Sword", false, function(s)
+    getgenv().AutoGetSword = s
+    if s then
+        task.spawn(function()
+            while getgenv().AutoGetSword do
+                pcall(function()
+                    local sw = getgenv().SelectSwordQuest
+                    local targets = {}
+                    if sw == "Twin Hooks" then targets = {"Captain Elephant"}
+                    elseif sw == "Buddy Sword" then targets = {"Cake Queen"}
+                    elseif sw == "Canvander" then targets = {"Beautiful Pirate"}
+                    elseif sw == "Dark Dagger" then targets = {"rip_indra True Form","rip_indra"}
+                    elseif sw == "Shark Anchor" then targets = {"Terrorshark"}
+                    elseif sw == "Yama" then targets = {"Diablo","Deandre","Urban"}
+                    elseif sw == "Tushita" then targets = {"Longma"}
+                    elseif sw == "Saber" then targets = {"Saber Expert","Mob Leader"}
+                    elseif sw == "Spikey Trident" then targets = {"Dough King"}
+                    end
+                    if #targets > 0 then
+                        AutoHaki()
+                        local enemy = FindEnemy(targets, 99999)
+                        if enemy then
+                            local trp = enemy:FindFirstChild("HumanoidRootPart")
+                            if trp then
+                                EquipWeapon(State.SelectedWeapon)
+                                topos(trp.CFrame * CFrame.new(0, getgenv().FarmDistance, 0))
+                                trp.CanCollide = false
+                                trp.Size = Vector3.new(80,80,80)
+                                enemy.Humanoid.WalkSpeed = 0
+                                AttackNoCoolDown()
+                            end
+                        else
+                            local rsBoss = RS:FindFirstChild(targets[1])
+                            if rsBoss and rsBoss:FindFirstChild("HumanoidRootPart") then
+                                topos(rsBoss.HumanoidRootPart.CFrame * CFrame.new(5, 10, 5))
+                            end
+                        end
+                    end
+                end)
+                task.wait(0.4)
+            end
+        end)
+    end
+end)
+
+CreateLabel(QuestItemsPage, "=== Auto Get Race ===", 24)
+CreateToggle(QuestItemsPage, "Auto Get Cyborg Race", false, function(s)
+    getgenv().AutoCyborg = s
+    if s then
+        task.spawn(function()
+            while getgenv().AutoCyborg do
+                pcall(function()
+                    local hasChip = Player.Backpack:FindFirstChild("Microchip") or (Player.Character and Player.Character:FindFirstChild("Microchip"))
+                    if not hasChip then
+                        CommF_:InvokeServer("BlackbeardReward", "Microchip", "1") task.wait(0.3)
+                        CommF_:InvokeServer("BlackbeardReward", "Microchip", "2")
+                    end
+                    local orderEnemy = FindEnemy({"Order"}, 99999)
+                    if orderEnemy and orderEnemy:FindFirstChild("HumanoidRootPart") then
+                        AutoHaki() EquipWeapon(State.SelectedWeapon)
+                        topos(orderEnemy.HumanoidRootPart.CFrame * CFrame.new(0, 15, 0))
+                        orderEnemy.HumanoidRootPart.CanCollide = false
+                        orderEnemy.HumanoidRootPart.Size = Vector3.new(120,120,120)
+                        orderEnemy.Humanoid.WalkSpeed = 0
+                        AttackNoCoolDown()
+                    elseif hasChip then
+                        local cd = Workspace.Map.CircleIsland.RaidSummon.Button.Main.ClickDetector
+                        fireclickdetector(cd)
+                    end
+                end)
+                task.wait(0.5)
+            end
+        end)
+    end
+end)
+
+CreateToggle(QuestItemsPage, "Auto Get Ghoul Race", false, function(s)
+    getgenv().AutoGhoul = s
+    if s then
+        task.spawn(function()
+            while getgenv().AutoGhoul do
+                pcall(function()
+                    local captain = FindEnemy({"Cursed Captain"}, 99999)
+                    if captain and captain:FindFirstChild("HumanoidRootPart") then
+                        AutoHaki() EquipWeapon(State.SelectedWeapon)
+                        topos(captain.HumanoidRootPart.CFrame * CFrame.new(0, 15, 0))
+                        captain.HumanoidRootPart.CanCollide = false
+                        captain.HumanoidRootPart.Size = Vector3.new(50,50,50)
+                        captain.Humanoid.WalkSpeed = 0
+                        AttackNoCoolDown()
+                    else
+                        local rsCap = RS:FindFirstChild("Cursed Captain")
+                        if rsCap and rsCap:FindFirstChild("HumanoidRootPart") then
+                            topos(rsCap.HumanoidRootPart.CFrame * CFrame.new(5, 10, 5))
+                        end
+                    end
+                end)
+                task.wait(0.4)
+            end
+        end)
+    end
+end)
+
+CreateLabel(QuestItemsPage, "=== Auto Rainbow Haki ===", 24)
+CreateToggle(QuestItemsPage, "Auto Rainbow Haki", false, function(s)
+    getgenv().AutoRainbowHaki = s
+    if s then
+        task.spawn(function()
+            while getgenv().AutoRainbowHaki do
+                pcall(function()
+                    local questGui = PlayerGui.Main.Quest
+                    local targets = {
+                        {name = "Stone", pos = CFrame.new(-1049, 40, 6791)},
+                        {name = "Island Empress", pos = CFrame.new(5730, 602, 199)},
+                        {name = "Kilo Admiral", pos = CFrame.new(2889, 424, -7233)},
+                        {name = "Captain Elephant", pos = CFrame.new(-13393, 319, -8423)},
+                        {name = "Beautiful Pirate", pos = CFrame.new(5241, 23, 129)},
+                    }
+                    if not questGui.Visible then
+                        local horned = Vector3.new(-11892, 930, -8760)
+                        if (horned - HRP.Position).Magnitude > 30 then
+                            topos(CFrame.new(horned))
+                        else
+                            CommF_:InvokeServer("HornedMan", "Bet")
+                        end
+                    else
+                        local found = false
+                        for _, t in ipairs(targets) do
+                            local e = FindEnemy({t.name}, 99999)
+                            if e and e:FindFirstChild("HumanoidRootPart") then
+                                AutoHaki() EquipWeapon(State.SelectedWeapon)
+                                topos(e.HumanoidRootPart.CFrame * CFrame.new(0, 15, 0))
+                                e.HumanoidRootPart.CanCollide = false
+                                e.HumanoidRootPart.Size = Vector3.new(50,50,50)
+                                e.Humanoid.WalkSpeed = 0
+                                AttackNoCoolDown()
+                                found = true
+                                break
+                            end
+                        end
+                        if not found then
+                            for _, t in ipairs(targets) do
+                                if not FindEnemy({t.name}, 99999) then
+                                    topos(t.pos)
+                                    break
+                                end
+                            end
+                        end
+                    end
+                end)
+                task.wait(0.5)
+            end
+        end)
+    end
+end)
+
+CreateLabel(QuestItemsPage, "=== Auto Get CDK ===", 24)
+CreateToggle(QuestItemsPage, "Auto Get CDK", false, function(s)
+    getgenv().AutoGetCDK = s
+    if s then
+        task.spawn(function()
+            while getgenv().AutoGetCDK do
+                pcall(function()
+                    CommF_:InvokeServer("CDKQuest", "Progress", "Good") task.wait(0.2)
+                    CommF_:InvokeServer("CDKQuest", "Progress", "Evil") task.wait(0.2)
+                    CommF_:InvokeServer("CDKQuest", "StartTrial", "Boss") task.wait(0.2)
+                    local enemies = Workspace:FindFirstChild("Enemies")
+                    if enemies and enemies:FindFirstChild("Cursed Skeleton Boss") then
+                        for _, v in pairs(enemies:GetChildren()) do
+                            if v.Name == "Cursed Skeleton Boss" and v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") and v.Humanoid.Health > 0 then
+                                AutoHaki()
+                                if Player.Character:FindFirstChild("Yama") or Player.Backpack:FindFirstChild("Yama") then EquipWeapon("Yama")
+                                elseif Player.Character:FindFirstChild("Tushita") or Player.Backpack:FindFirstChild("Tushita") then EquipWeapon("Tushita") end
+                                v.HumanoidRootPart.CanCollide = false
+                                v.Humanoid.WalkSpeed = 0
+                                topos(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                AttackNoCoolDown()
+                            end
+                        end
+                    else
+                        topos(CFrame.new(-12318, 601, -6538))
+                    end
+                end)
+                task.wait(0.4)
+            end
+        end)
+    end
+end)
 
 --============= TAB: FRUIT / RAID =============
 local FruitNameMap = {
@@ -1069,7 +1306,7 @@ task.spawn(function()
     while task.wait(0.5) do pcall(AutoHaki) end
 end)
 
--- Auto Farm Level (ROBUST)
+-- Auto Farm Level (ROBUST + CFrameMon)
 task.spawn(function()
     while task.wait(0.25) do
         if State.AutoFarm then
@@ -1118,6 +1355,7 @@ task.spawn(function()
 
                 local q = GetQuestInfo()
                 local fallbackMob = q[3]
+                local cframeMon = q[6]
                 local targetMob = mobFromQuest or fallbackMob
                 if targetMob then
                     targetMob = targetMob:gsub("%s*%[Lv%.?%s*%d+%]",""):gsub("%s*%[.-%]",""):gsub("%s+$",""):gsub("^%s+","")
@@ -1156,7 +1394,8 @@ task.spawn(function()
                         AttackNoCoolDown()
                     end
                 else
-                    if q[2] then topos(q[2] * CFrame.new(0, 30, 0)) end
+                    if cframeMon then toposFull(cframeMon * CFrame.new(0, 30, 0))
+                    elseif q[2] then toposFull(q[2] * CFrame.new(0, 30, 0)) end
                 end
             end)
         end
@@ -1232,8 +1471,7 @@ task.spawn(function()
                 if enemy then
                     local trp = enemy:FindFirstChild("HumanoidRootPart")
                     if trp then
-                        AutoHaki()
-                        EquipWeapon(State.SelectedWeapon)
+                        AutoHaki() EquipWeapon(State.SelectedWeapon)
                         topos(trp.CFrame * CFrame.new(0, getgenv().FarmDistance, 0))
                         trp.CanCollide = false
                         enemy.Humanoid.WalkSpeed = 0
@@ -1255,8 +1493,7 @@ task.spawn(function()
                 if enemy then
                     local trp = enemy:FindFirstChild("HumanoidRootPart")
                     if trp then
-                        AutoHaki()
-                        EquipWeapon(State.SelectedWeapon)
+                        AutoHaki() EquipWeapon(State.SelectedWeapon)
                         topos(trp.CFrame * CFrame.new(0, getgenv().FarmDistance, 0))
                         trp.CanCollide = false
                         enemy.Humanoid.WalkSpeed = 0
@@ -1283,8 +1520,7 @@ task.spawn(function()
                 if enemy then
                     local trp = enemy:FindFirstChild("HumanoidRootPart")
                     if trp then
-                        AutoHaki()
-                        EquipWeapon(State.SelectedWeapon)
+                        AutoHaki() EquipWeapon(State.SelectedWeapon)
                         topos(trp.CFrame * CFrame.new(0, getgenv().FarmDistance, 0))
                         trp.CanCollide = false
                         trp.Size = Vector3.new(80,80,80)
@@ -1310,8 +1546,7 @@ task.spawn(function()
                     if e then
                         local trp = e:FindFirstChild("HumanoidRootPart")
                         if trp then
-                            AutoHaki()
-                            EquipWeapon(State.SelectedWeapon)
+                            AutoHaki() EquipWeapon(State.SelectedWeapon)
                             topos(trp.CFrame * CFrame.new(0, getgenv().FarmDistance, 0))
                             trp.CanCollide = false
                             trp.Size = Vector3.new(80,80,80)
@@ -2063,4 +2298,4 @@ Player.Idled:Connect(function()
 end)
 
 ShowTab("Farm")
-Notify("[LAUNCH] SysxHub v2.1 - Ready")
+Notify("[LAUNCH] SysxHub v2.2 - Ready")
