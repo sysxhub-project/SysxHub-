@@ -1,7 +1,9 @@
 --[[
 ================================================================
- SYSX HUB v2.2 FINAL — ALL FIXES
+ SYSX HUB v2.3 FINAL
  Logo: 114593995135483 | Banner: 71457853614279
+ Fix: FarmFly multi-step (anti teleport), ESP Chest (multi-detect),
+      Wait quest proper, farm level tween smooth
 ================================================================
 ]]
 
@@ -67,8 +69,7 @@ local State = {
     SelectedMaterial=nil, SelectedWeapon="Melee",
     FastAttack=true, FastAttackDelay=0.08,
     BringMob=true, BringRange=300,
-    AutoFarmSea=false,
-    SelectedBoat="PirateBrigade",
+    AutoFarmSea=false, SelectedBoat="PirateBrigade",
     AutoStoreFruit=false, AutoBuyFruit=false, AutoFindFruit=false,
     AutoRaid=false, SelectedChip="Flame", AutoAwaken=false,
     AutoCakePrince=false, AutoDoughKing=false,
@@ -172,31 +173,7 @@ function topos(Tween_Pos)
     end)
 end
 
-getgenv().Tweening = false
-function toposStable(targetCF, duration)
-    if getgenv().Tweening then return end
-    local hrp = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-    local dist = (targetCF.Position - hrp.Position).Magnitude
-    if dist < 3 then return end
-    getgenv().Tweening = true
-    pcall(function()
-        local finalCF = CFrame.new(targetCF.X, targetCF.Y, targetCF.Z)
-        local speed = TweenSpeed
-        if dist < 30 then speed = TweenSpeed * 0.4 end
-        local dur = duration or math.max(dist / speed, 0.2)
-        local tw = TweenService:Create(hrp, TweenInfo.new(dur, Enum.EasingStyle.Linear), {CFrame = finalCF})
-        tw:Play()
-        tw.Completed:Wait()
-        if hrp and hrp.Parent then
-            hrp.AssemblyLinearVelocity = Vector3.zero
-            hrp.AssemblyAngularVelocity = Vector3.zero
-        end
-    end)
-    getgenv().Tweening = false
-end
-
--- Farm Fly: tween cepat + auto noclip
+--============= FARM FLY (MULTI-STEP SMOOTH) =============
 local FarmNoclipConn = nil
 local function SetFarmNoclip(on)
     if on then
@@ -215,29 +192,61 @@ local function SetFarmNoclip(on)
     end
 end
 
-function FarmFly(targetCF)
+-- Fly smooth: multi-step tween per 200 stud biar keliatan gerak
+function FarmFly(targetCF, speed)
     if not Player.Character or not Player.Character:FindFirstChild("HumanoidRootPart") then return end
     if Player.Character.Humanoid.Health <= 0 then return end
     local hrp = Player.Character.HumanoidRootPart
-    local dist = (targetCF.Position - hrp.Position).Magnitude
-    if dist < 20 then return end
+    
+    local startPos = hrp.Position
+    local endPos = targetCF.Position
+    local dist = (endPos - startPos).Magnitude
+    if dist < 15 then return end
+    
+    speed = speed or 400  -- stud per detik
     SetFarmNoclip(true)
-    if dist > 800 then
-        hrp.CFrame = targetCF
+    
+    -- Multi-step: pecah jadi step 200 stud
+    local stepSize = 200
+    local steps = math.ceil(dist / stepSize)
+    local currentPos = startPos
+    
+    for i = 1, steps do
+        -- Cek apakah masih mau fly
+        if not (State.AutoFarm or State.AutoFarmNearest or State.AutoFarmMaterial or State.AutoFarmBones or State.AutoFarmSea or State.AutoBoss or State.AutoCakePrince or State.AutoDoughKing or State.AutoEliteHunter or State.AutoSoulReaper or State.AutoFactory or State.AutoPiratesSea) then
+            break
+        end
+        if not Player.Character or not Player.Character:FindFirstChild("HumanoidRootPart") then break end
+        if Player.Character.Humanoid.Health <= 0 then break end
+        
+        -- Hitung posisi target step ini
+        local remaining = (endPos - currentPos).Magnitude
+        local thisStep = math.min(stepSize, remaining)
+        if thisStep < 1 then break end
+        local dir = (endPos - currentPos).Unit
+        local nextPos = currentPos + dir * thisStep
+        
+        local dur = thisStep / speed
+        -- Min dur biar ga terlalu instant
+        if dur < 0.15 then dur = 0.15 end
+        
+        local tw = TweenService:Create(hrp, TweenInfo.new(dur, Enum.EasingStyle.Linear), {CFrame = CFrame.new(nextPos)})
+        tw:Play()
+        tw.Completed:Wait()
+        
+        currentPos = nextPos
+    end
+    
+    -- Snap ke target final kalau masih ada sisa
+    if Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") then
+        local finalPos = hrp.Position
+        if (endPos - finalPos).Magnitude > 3 then
+            hrp.CFrame = CFrame.new(endPos)
+        end
         hrp.AssemblyLinearVelocity = Vector3.zero
         hrp.AssemblyAngularVelocity = Vector3.zero
-        task.wait(0.2)
-        SetFarmNoclip(false)
-        return
     end
-    local speed = 500
-    local dur = math.max(dist / speed, 0.2)
-    local tw = TweenService:Create(hrp, TweenInfo.new(dur, Enum.EasingStyle.Linear), {CFrame = targetCF})
-    tw:Play()
-    tw.Completed:Wait()
-    hrp.AssemblyLinearVelocity = Vector3.zero
-    hrp.AssemblyAngularVelocity = Vector3.zero
-    task.wait(0.15)
+    
     SetFarmNoclip(false)
 end
 
@@ -291,6 +300,42 @@ function AttackNoCoolDown()
             RegisterHit:FireServer(mainTarget, hitTargets)
         end)
     end
+end
+
+--============= GET CHESTS (MULTI-METHOD) =============
+local function GetChests()
+    local list = {}
+    local seen = {}
+    -- Method 1: CollectionService tag
+    pcall(function()
+        for _, c in ipairs(CollectionService:GetTagged("_ChestTagged")) do
+            if c:IsA("BasePart") and c.Parent and not c:GetAttribute("IsDisabled") then
+                if not seen[c] then seen[c] = true table.insert(list, c) end
+            end
+        end
+    end)
+    -- Method 2: Workspace.ChestModels folder
+    pcall(function()
+        local cm = Workspace:FindFirstChild("ChestModels")
+        if cm then
+            for _, c in ipairs(cm:GetChildren()) do
+                if c:IsA("BasePart") and not seen[c] then
+                    seen[c] = true
+                    table.insert(list, c)
+                end
+            end
+        end
+    end)
+    -- Method 3: scan workspace biasa
+    pcall(function()
+        for _, c in ipairs(Workspace:GetChildren()) do
+            if c:IsA("BasePart") and string.find(c.Name, "Chest") and not seen[c] then
+                seen[c] = true
+                table.insert(list, c)
+            end
+        end
+    end)
+    return list
 end
 
 --============= DYNAMIC QUEST =============
@@ -778,7 +823,7 @@ end
 CreateButton(DiscordPage, "[CP] Copy Discord Link", function()
     if setclipboard then setclipboard("https://discord.gg/E5kQJW3hn") Notify("[OK] Discord copied") end
 end)
-CreateLabel(DiscordPage, "SysxHub v2.2 FINAL", 34)
+CreateLabel(DiscordPage, "SysxHub v2.3 FINAL", 34)
 
 --============= TAB: FARM =============
 CreateLabel(FarmPage, "=== Farm Settings ===", 24)
@@ -973,11 +1018,8 @@ CreateToggle(QuestItemsPage, "Auto Rainbow Haki", false, function(s)
                     }
                     if not questGui.Visible then
                         local horned = Vector3.new(-11892, 930, -8760)
-                        if (horned - HRP.Position).Magnitude > 30 then
-                            topos(CFrame.new(horned))
-                        else
-                            CommF_:InvokeServer("HornedMan", "Bet")
-                        end
+                        if (horned - HRP.Position).Magnitude > 30 then topos(CFrame.new(horned))
+                        else CommF_:InvokeServer("HornedMan", "Bet") end
                     else
                         local found = false
                         for _, t in ipairs(targets) do
@@ -995,10 +1037,7 @@ CreateToggle(QuestItemsPage, "Auto Rainbow Haki", false, function(s)
                         end
                         if not found then
                             for _, t in ipairs(targets) do
-                                if not FindEnemy({t.name}, 99999) then
-                                    topos(t.pos)
-                                    break
-                                end
+                                if not FindEnemy({t.name}, 99999) then topos(t.pos) break end
                             end
                         end
                     end
@@ -1272,7 +1311,7 @@ CreateToggle(MiscPage, "Remove Notifications", false, function(s) State.RemoveNo
 
 CreateLabel(MiscPage, "=== Codes ===", 24)
 CreateButton(MiscPage, "[GIFT] Redeem All Codes", function()
-    local codes = {"KITT_RESET","SUB2GAMERROBOT_RESET1","SUB2GAMERROBOT_EXP1","SUB2OFFICIALNOOBIE","AXIORE","BLUXXY","JCWK","KITTGAMING","MAGICBUS","STARCODEHEO","STRAWHATMAINE","TANTAIGAMING","THEGREATACE","ENYU_IS_PRO","FUDD10","FUDD10_V2","BIGNEWS","CHANDLER","SECRET_ADMIN","ADMIN_MELEE"}
+    local codes = {"KITT_RESET","SUB2GAMEROBOT_RESET1","SUB2GAMERROBOT_EXP1","SUB2OFFICIALNOOBIE","AXIORE","BLUXXY","JCWK","KITTGAMING","MAGICBUS","STARCODEHEO","STRAWHATMAINE","TANTAIGAMING","THEGREATACE","ENYU_IS_PRO","FUDD10","FUDD10_V2","BIGNEWS","CHANDLER","SECRET_ADMIN","ADMIN_MELEE"}
     for _, c in ipairs(codes) do pcall(function() Remotes.Redeem:InvokeServer(c) end) task.wait(1) end
     Notify("[GIFT] All codes redeemed")
 end)
@@ -1330,11 +1369,12 @@ task.spawn(function()
     while task.wait(0.5) do pcall(AutoHaki) end
 end)
 
--- Farm Level State Machine
+-- Farm Level State Machine (FIXED)
 task.spawn(function()
-    while task.wait(0.3) do
+    while task.wait(0.4) do
         if State.AutoFarm then
             pcall(function()
+                -- Cek quest
                 local hasQuest = false
                 local mobFromQuest = nil
                 local qFrame = PlayerGui:FindFirstChild("TrackedQuestFrame")
@@ -1345,9 +1385,7 @@ task.spawn(function()
                         local titleLbl = innerFrame:FindFirstChild("QuestTitle") or innerFrame:FindFirstChild("Title") or innerFrame:FindFirstChild("TaskTitle")
                         if titleLbl and titleLbl.Text then
                             mobFromQuest = titleLbl.Text:match("Defeat%s+([^%[]+)") or titleLbl.Text:match("^([^%[]+)")
-                            if mobFromQuest then
-                                mobFromQuest = mobFromQuest:gsub("%s+$",""):gsub("%(.*%)",""):gsub("%s+$","")
-                            end
+                            if mobFromQuest then mobFromQuest = mobFromQuest:gsub("%s+$",""):gsub("%(.*%)",""):gsub("%s+$","") end
                         end
                     end
                 end
@@ -1358,9 +1396,7 @@ task.spawn(function()
                         pcall(function()
                             local txt = qg.Container.QuestTitle.Title.Text
                             mobFromQuest = txt:match("Defeat%s+([^%[]+)") or txt:match("^([^%[]+)")
-                            if mobFromQuest then
-                                mobFromQuest = mobFromQuest:gsub("%s+$",""):gsub("%(.*%)",""):gsub("%s+$","")
-                            end
+                            if mobFromQuest then mobFromQuest = mobFromQuest:gsub("%s+$",""):gsub("%(.*%)",""):gsub("%s+$","") end
                         end)
                     end
                 end
@@ -1368,20 +1404,28 @@ task.spawn(function()
                 local q = GetQuestInfo()
                 local lvlReq, npcCF, mobName, questName, questLvl, CFrameMon = table.unpack(q)
 
-                -- STATE: TRAVEL to NPC
+                -- TRAVEL to NPC (kalau belum quest)
                 if not hasQuest then
                     if not npcCF then return end
                     local dist = (HRP.Position - npcCF.Position).Magnitude
                     if dist > 15 then
                         FarmFly(npcCF * CFrame.new(0, 5, -5))
                     else
+                        -- SAMPE NPC: ambil quest, tunggu sampe quest aktif
                         CommF_:InvokeServer("StartQuest", questName, questLvl)
-                        task.wait(0.8)
+                        local waitStart = tick()
+                        while tick() - waitStart < 3 do
+                            task.wait(0.15)
+                            local check = PlayerGui:FindFirstChild("TrackedQuestFrame")
+                            if check and check:FindFirstChild("Frame") and check.Frame.Visible then break end
+                            local qg2 = PlayerGui:FindFirstChild("Main") and PlayerGui.Main:FindFirstChild("Quest")
+                            if qg2 and qg2.Visible then break end
+                        end
                     end
                     return
                 end
 
-                -- STATE: KILL
+                -- KILL mob
                 local targetMob = mobFromQuest or mobName
                 if targetMob then
                     targetMob = targetMob:gsub("%s*%[Lv%.?%s*%d+%]",""):gsub("%s*%[.-%]",""):gsub("%s+$",""):gsub("^%s+","")
@@ -1437,8 +1481,7 @@ task.spawn(function()
                 if best then
                     local trp = best:FindFirstChild("HumanoidRootPart")
                     if trp then
-                        AutoHaki()
-                        EquipWeapon(State.SelectedWeapon)
+                        AutoHaki() EquipWeapon(State.SelectedWeapon)
                         local d = (trp.Position - HRP.Position).Magnitude
                         if d > 25 then FarmFly(trp.CFrame * CFrame.new(0, getgenv().FarmDistance, 0)) end
                         trp.CanCollide = false
@@ -1452,28 +1495,24 @@ task.spawn(function()
     end
 end)
 
--- Auto Chest
+-- Auto Chest (FIXED - multi detect)
 task.spawn(function()
-    local chestsCache = nil
-    local firstRun = true
     while task.wait(0.3) do
         if State.AutoChest then
             pcall(function()
-                if firstRun then
-                    firstRun = false
-                    chestsCache = {}
-                    for _, obj in pairs(game:GetDescendants()) do
-                        if obj.Name:find("Chest") and obj.ClassName == "Part" then table.insert(chestsCache, obj) end
-                    end
-                end
-                local valid = {}
-                for _, c in ipairs(chestsCache or {}) do
-                    if c.Parent and c:FindFirstChild("TouchInterest") then table.insert(valid, c) end
-                end
-                if #valid > 0 then
+                local chests = GetChests()
+                if #chests > 0 then
                     local rootPos = HRP.Position
-                    table.sort(valid, function(a, b) return (rootPos - a.Position).Magnitude < (rootPos - b.Position).Magnitude end)
-                    HRP.CFrame = CFrame.new(valid[1].Position + Vector3.new(0, 2, 0))
+                    table.sort(chests, function(a, b) return (rootPos - a.Position).Magnitude < (rootPos - b.Position).Magnitude end)
+                    local target = chests[1]
+                    if target and target.Parent then
+                        HRP.CFrame = CFrame.new(target.Position + Vector3.new(0, 2, 0))
+                        pcall(function()
+                            firetouchinterest(HRP, target, 0)
+                            task.wait(0.05)
+                            firetouchinterest(HRP, target, 1)
+                        end)
+                    end
                 end
             end)
         end
@@ -1497,9 +1536,7 @@ task.spawn(function()
                         enemy.Humanoid.WalkSpeed = 0
                         AttackNoCoolDown()
                     end
-                elseif data.Position then
-                    FarmFly(data.Position + Vector3.new(0, 30, 0))
-                end
+                elseif data.Position then FarmFly(data.Position + Vector3.new(0, 30, 0)) end
             end)
         end
     end
@@ -1520,9 +1557,7 @@ task.spawn(function()
                         enemy.Humanoid.WalkSpeed = 0
                         AttackNoCoolDown()
                     end
-                else
-                    FarmFly(CFrame.new(-9516, 142, 5537) + Vector3.new(0, 30, 0))
-                end
+                else FarmFly(CFrame.new(-9516, 142, 5537) + Vector3.new(0, 30, 0)) end
             end)
         end
     end
@@ -1897,7 +1932,7 @@ task.spawn(function()
     end
 end)
 
--- Auto V2 / V3
+-- Auto V2/V3
 task.spawn(function()
     while task.wait(1) do
         if State.AutoV2 then
@@ -2017,9 +2052,7 @@ task.spawn(function()
         if State.AutoBuyFruit then
             pcall(function()
                 local ok1 = pcall(function() CommF_:InvokeServer("Cousin", "Buy") end)
-                if not ok1 then
-                    pcall(function() CommF_:InvokeServer("Cousin", "RandomFruit") end)
-                end
+                if not ok1 then pcall(function() CommF_:InvokeServer("Cousin", "RandomFruit") end) end
                 task.wait(0.3)
             end)
         end
@@ -2041,10 +2074,7 @@ task.spawn(function()
                         end
                     end
                 end
-                if best then
-                    local targetCF = CFrame.new(best.Position) + Vector3.new(0, 3, 0)
-                    FarmFly(targetCF)
-                end
+                if best then FarmFly(CFrame.new(best.Position) + Vector3.new(0, 3, 0)) end
             end)
         end
     end
@@ -2097,7 +2127,7 @@ task.spawn(function()
     end
 end)
 
--- Teleport to Player
+-- Teleport Player
 task.spawn(function()
     while task.wait(0.3) do
         if State.TeleportPlayer and State.SelectedPlayer then
@@ -2158,7 +2188,7 @@ task.spawn(function()
     end
 end)
 
--- Noclip (dari setting user)
+-- Noclip (user)
 RunService.Stepped:Connect(function()
     if State.Noclip then
         pcall(function()
@@ -2294,13 +2324,11 @@ task.spawn(function()
                 end
             end
             if State.ESPChest then
-                for _, c in ipairs(CollectionService:GetTagged("_ChestTagged")) do
-                    if not c:GetAttribute("IsDisabled") then
-                        local pp = c:FindFirstChildWhichIsA("BasePart") or c.PrimaryPart
-                        if pp then
-                            local d = math.floor((pp.Position - myPos).Magnitude)
-                            createESP(pp, d.." | Chest", Color3.fromRGB(255,215,0), "Chest")
-                        end
+                local chests = GetChests()
+                for _, c in ipairs(chests) do
+                    if c:IsA("BasePart") then
+                        local d = math.floor((c.Position - myPos).Magnitude)
+                        createESP(c, d.." | Chest", Color3.fromRGB(255,215,0), "Chest")
                     end
                 end
             end
@@ -2362,4 +2390,4 @@ Player.Idled:Connect(function()
 end)
 
 ShowTab("Farm")
-Notify("[LAUNCH] SysxHub v2.2 FINAL")
+Notify("[LAUNCH] SysxHub v2.3 FINAL")
