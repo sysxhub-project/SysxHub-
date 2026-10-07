@@ -41,7 +41,7 @@ local World3 = (placeId == 7449423635 or placeId == 100117331123089)
 local DISCORD_INVITE = "https://discord.gg/xWa9NpFRr"
 
 --================================================================
--- THEME — Outline Style
+-- THEME
 --================================================================
 local BLUE_PALETTE = {
     Color3.fromRGB(135, 206, 250),
@@ -61,7 +61,6 @@ local THEME = {
     Text_Primary    = Color3.fromRGB(230, 238, 248),
     Text_Secondary  = Color3.fromRGB(150, 165, 190),
     Text_Muted      = Color3.fromRGB(105, 118, 145),
-    Border          = Color3.fromRGB(50, 70, 120),
     Static_Blue     = Color3.fromRGB(60, 130, 220),
     Static_BlueSoft = Color3.fromRGB(180, 220, 255),
     Toggle_On       = Color3.fromRGB(60, 130, 220),
@@ -126,21 +125,17 @@ end
 -- STATE
 --================================================================
 local State = {
-    -- Farm
     AutoFarm=false, AutoFarmNearest=false, AutoFarmMastery=false,
     AutoFarmMaterial=false, AutoFarmBones=false, AutoFarmWoodPlanks=false,
-    AutoCollectChest=false, AutoTreasureChest=false, AutoCollectDrops=false,
-    AutoFarmerDrops=false, AutoAttackBoss=false, AutoAttackAllBoss=false,
+    AutoCollectChest=false, AutoAttackBoss=false, AutoAttackAllBoss=false,
     AutoTyrant=false, AutoCitizenQuest=false, AutoDarkFragment=false,
     AutoSweetChalice=false, SelectedWeapon="Melee", SelectedMaterial=nil,
     SelectedBoss=nil, FastAttack=true, BringMob=true, BringRange=300,
     BringCount=2, AutoHaki=true, AutoKen=false,
 
-    -- Pvp
     AutoAimbot=false, SelectedPlayer=nil, TeleportPlayer=false,
-    AutoDodgeSkill=false, MethodAimbot="Target nearest Player",
+    AutoDodgeSkill=false,
 
-    -- Quest
     AutoSaber=false, AutoYama=false, AutoTushita=false, AutoSharkAnchor=false,
     AutoPole=false, AutoFoxLamp=false, AutoDarkDagger=false, AutoCanvander=false,
     AutoBuddySword=false, AutoHallowScythe=false, AutoCDK=false,
@@ -151,12 +146,11 @@ local State = {
     AutoCakePrince=false, AutoDoughKing=false, AutoEliteHunter=false,
     AutoSoulReaper=false, AutoKillRipIndra=false, AutoFactory=false,
     AutoPiratesSea=false, AutoDragonHunter=false, AutoCollectBerry=false,
+    AutoGetGhoul=false, AutoGetCyborg=false,
 
-    -- Stats
     AutoStatPoint=false, PointsPerClick=1, SelectedStat="Melee",
     StatMelee=false, StatDefense=false, StatSword=false, StatGun=false, StatFruit=false,
 
-    -- Sea
     SelectedBoat=nil, DangerLevel="6", CombatWeapon="Random",
     SpeedBoat=200, SpeedTweenBoat=350, SpeedFlyBoat=3,
     AutoFarmSea=false, AttackSeaBeasts=false, DodgeSeaBeasts=false,
@@ -165,66 +159,48 @@ local State = {
     ProtectBoat=false, AutoRepairShip=false, AutoDodgeRoughSea=false,
     NoClipRock=false, NoFog=false,
     AutoSummonKitsune=false, TweenKitsune=false, AutoCollectEmber=false,
-    AutoSummonSoulEmber=false, AutoTradeEmber=false, ValuesEmber=10,
+    AutoTradeEmber=false,
     TweenFrozenDimension=false, AutoFindLevi=false, AutoAttackLevi=false,
-    AutoAttackLeviSeg=false, AutoAttackLeviTail=false, UseFruitLevi=false,
-    UseSkullGuitarLevi=false, AutoChangeDragonstorm=false, AutoFireHeart=false,
-    AttackMultiSegments=false, ValueDamageMultiSeg=30000, TweenBoatFrozen=false,
-    AutoBuyBoatBH=false, SelectOwnerBH=nil, UseBoatBH=false, MultiFindLevi=false,
-    SelectOwnerMulti=nil, AutoStartLevi=false, AutoBuySpy=false, AutoDestroyIDK=false,
-    AutoSummonMirage=false, TweenMirage=false, AutoFindMirage=false, WillBack10km=false,
+    AutoAttackLeviSeg=false, AutoAttackLeviTail=false,
+    AutoBuyBoatBH=false, AutoStartLevi=false, AutoBuySpy=false, AutoDestroyIDK=false,
+    AutoSummonMirage=false, TweenMirage=false, AutoFindMirage=false,
     AutoSummonPre=false, TweenPre=false, AutoFindPre=false, AutoEventPre=false,
     FullyEventPre=false, AutoCollectBone=false, AutoCollectEgg=false,
     AutoToothNecklace=false, AutoTerrorJaw=false, AutoMonsterMagnet=false,
     AutoSharkAnchorCraft=false, AutoCraftVolcanic=false,
     FlyBoat=false, DriveBoatTiki=false, DriveBoatHydra=false,
-    TeleportBoatRough=false, TweenUntilEvent=false,
 
-    -- Sea to Sea (baru)
     AutoTravelSea1=false, AutoTravelSea2=false, AutoTravelSea3=false,
 
-    -- Fishing
     AutoEquipRod=false, AutoFishing=false, AutoSellFish=false, AutoSellCorruptedFish=false,
     SelectedBait="Basic Bait",
 
-    -- Race
-    AutoRaceV2=false, AutoRaceV3=false, AutoTrial=false, AutoKillAfterTrialRace=false,
-    AutoTrialDraco=false, FullyTrialDraco=false,
-    AutoBuyGearV4=false, AutoChooseGears=false, SelectedGearV4="Omega",
-    AutoGetCyborg=false, AutoGetGhoul=false, AutoRaceDraco=false,
+    AutoRaceV2=false, AutoRaceV3=false, AutoTrial=false,
+    AutoKillAfterTrialRace=false, AutoFinishTrainV4=false,
+    AutoPullLeverV4=false, SelectedTrainMethod="Bone", AutoTrain=false,
+    TweenGreatTree=false, TeleportTempleOffTime=false,
 
-    -- Race V4 (baru)
-    AutoPullLeverV4=false, AutoTrialV4=false, AutoFinishTrainV4=false,
-
-    -- Fruit & Raid
-    AutoStoreFruit=false, AutoBuyFruit=false, AutoBuySniper=false,
-    AutoFindFruit=false, AutoRandomFruit=false, SelectedSniperFruit="Flame",
+    AutoStoreFruit=false, AutoBuySniper=false,
+    AutoFindFruit=false, SelectedSniperFruit="Flame",
     AutoRaid=false, AutoBuyChip=false, AutoAwakenFruit=false,
-    SelectedRaid="Flame", SelectedChip="Flame",
+    SelectedChip="Flame",
 
-    -- Shop
     AutoBuyMelee={}, AutoFullyMelees=false, SelectedMelee="Black Leg",
 
-    -- Teleport
     SelectedIsland=nil,
 
-    -- Visual
-    ESPPlayer=false, ESPChest=false, ESPBerry=false, ESPFlower=false,
-    ESPDevilFruit=false, ESPIsland=false, ESPMirage=false, ESPKitsune=false,
-    RemoveDamage=false, RemoveNotifications=false, BoostFPS=false,
-    BlackScreen=false, WhiteScreen=false,
+    ESPPlayer=false, ESPChest=false, ESPDevilFruit=false, ESPIsland=false,
+    ESPMirage=false, ESPKitsune=false,
 
-    -- MISC
     AutoHop1h=false, HopWhenIdle=false, WalkSpeed=16, JumpPower=50,
     InfiniteJump=false, WalkOnWater=false, NoClip=false,
     AntiAFK=true, AutoResetChar=false, FastAttackMisc=true,
     AntiFlag=false, AntiKick=true, KickRecovery=true, AutoExpRedeem=false,
-    WebhookURL="", WebhookReport=true, NotiProfile=false,
-    PingDiscord=false, FPScap=60,
+    WebhookURL="", FPScap=60,
 }
 
-getgenv().FarmDistance    = 20
-getgenv().FarmSpeed       = 200
+getgenv().FarmDistance = 20
+getgenv().FarmSpeed = 200
 
 --================================================================
 -- ANTI AFK
@@ -327,13 +303,6 @@ function BringMob(target)
         BringState.target = target
         local sp = FindSpawnPart(target.Name, true)
         BringState.spot = sp and sp.CFrame or root.CFrame
-        local enemies = Workspace:FindFirstChild("Enemies")
-        if enemies then
-            for _, m in ipairs(enemies:GetChildren()) do
-                local ig = m:FindFirstChild("Ignored")
-                if ig then ig:Destroy() end
-            end
-        end
     end
 
     local hrp = GetHRP(); if not hrp then return end
@@ -383,9 +352,7 @@ function BringMob(target)
                     mRoot.AssemblyLinearVelocity = Vector3.zero
                     mRoot.AssemblyAngularVelocity = Vector3.zero
                 end
-                mRoot.CFrame = spot * CFrame.new(
-                    math.random(-8, 8) / 10, -3, math.random(-8, 8) / 10
-                )
+                mRoot.CFrame = spot * CFrame.new(math.random(-8, 8) / 10, -3, math.random(-8, 8) / 10)
                 mHum.WalkSpeed = 0
                 mHum.AutoRotate = false
                 mHum.BreakJointsOnDeath = false
@@ -487,6 +454,7 @@ local function AnyFarm()
         or State.AutoEliteHunter or State.AutoSoulReaper or State.AutoFactory
         or State.AutoPiratesSea or State.AutoFindFruit or State.AutoTyrant
         or State.AutoCitizenQuest or State.AutoDragonHunter or State.AutoEventPre
+        or State.AutoTrain or State.AutoFinishTrainV4
 end
 
 function FarmTeleport(goal, speed, customTimeout)
@@ -534,18 +502,12 @@ function FarmTeleport(goal, speed, customTimeout)
 end
 
 --================================================================
--- CHEST SYSTEM — Source Baru
+-- CHEST SYSTEM
 --================================================================
-local ChestData = {
-    MaxSpeed = 300,
-    Unchecked = {},
-    FirstRun = true,
-}
+local ChestData = { MaxSpeed = 300, Unchecked = {}, FirstRun = true }
 
 local function GetCharacter()
-    if not player.Character then
-        player.CharacterAdded:Wait()
-    end
+    if not player.Character then player.CharacterAdded:Wait() end
     player.Character:WaitForChild("HumanoidRootPart")
     return player.Character
 end
@@ -597,17 +559,13 @@ local function SetChestNoclip(on)
             end)
         end)
     else
-        if ChestNoclipConn then
-            ChestNoclipConn:Disconnect()
-            ChestNoclipConn = nil
-        end
+        if ChestNoclipConn then ChestNoclipConn:Disconnect() ChestNoclipConn = nil end
     end
 end
 
 local function ChestTeleport(goalCF, speed)
     if not IsAlive() then return end
     speed = speed or ChestData.MaxSpeed
-
     SetChestNoclip(true)
     local root = GetHRP()
     if not root then SetChestNoclip(false); return end
@@ -619,13 +577,9 @@ local function ChestTeleport(goalCF, speed)
         if not State.AutoCollectChest then break end
         if not IsAlive() then break end
         if tick() > timeout then break end
-
-        local root2 = GetHRP()
-        if not root2 then break end
-
+        local root2 = GetHRP(); if not root2 then break end
         local dist = (root2.Position - goalCF.Position).Magnitude
         if dist < 1 then break end
-
         local dir = (goalCF.Position - root2.Position).Unit
         local step = speed * RunService.Heartbeat:Wait()
         root2.CFrame = root2.CFrame + dir * step
@@ -637,7 +591,6 @@ local function ChestTeleport(goalCF, speed)
             root3.CFrame = goalCF
         end
     end
-
     SetChestNoclip(false)
 end
 
@@ -653,7 +606,6 @@ end)
 
 CombatController = {
     GRAB = true, GRAB_DISTANCE = 350,
-    MAX_ATTACK_DURATION = 2, MAX_ATTACK_DURATION_2 = 60,
     CurrentIndex = 1, LastFound = os.time()
 }
 
@@ -730,10 +682,8 @@ function CombatController.Attack(mobNames)
                 while task.wait() do
                     if not mon.Parent or not hum.Parent or hum.Health <= 0 then break end
                     if not AnyFarm() then break end
-
                     local targetCF = hrp.CFrame + Vector3.new(0, 35, 0)
                     FarmTeleport(targetCF, getgenv().FarmSpeed, 20)
-
                     if Dist(hrp.Position, GetHRP() and GetHRP().Position) < 150 then
                         CombatController.Grab(mon.Name)
                         AutoHaki()
@@ -779,24 +729,19 @@ task.spawn(function()
 end)
 
 local function AimbotTarget()
-    if State.MethodAimbot == "Select Player" then
-        local p = Players:FindFirstChild(State.SelectedPlayer or "")
-        return p and p.Character
-    else
-        local hrp = GetHRP(); if not hrp then return nil end
-        local closest, best = nil, math.huge
-        for _, p in ipairs(Players:GetPlayers()) do
-            if p ~= player and p.Character then
-                local trp = p.Character:FindFirstChild("HumanoidRootPart")
-                local hum = p.Character:FindFirstChildOfClass("Humanoid")
-                if trp and hum and hum.Health > 0 then
-                    local d = (trp.Position - hrp.Position).Magnitude
-                    if d < best and d <= 2000 then closest = p.Character; best = d end
-                end
+    local hrp = GetHRP(); if not hrp then return nil end
+    local closest, best = nil, math.huge
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= player and p.Character then
+            local trp = p.Character:FindFirstChild("HumanoidRootPart")
+            local hum = p.Character:FindFirstChildOfClass("Humanoid")
+            if trp and hum and hum.Health > 0 then
+                local d = (trp.Position - hrp.Position).Magnitude
+                if d < best and d <= 2000 then closest = p.Character; best = d end
             end
         end
-        return closest
     end
+    return closest
 end
 
 task.spawn(function()
@@ -822,21 +767,6 @@ end)
 --================================================================
 -- UTILITY
 --================================================================
-function CheckMoon()
-    local lig = Lighting
-    local phase = lig:GetAttribute("MoonPhase")
-    if phase then
-        if phase == 5 then return "Full Moon"
-        elseif phase == 4 then return "Next Night"
-        else return "Bad Moon" end
-    end
-    local sky = lig:FindFirstChildOfClass("Sky")
-    local m = sky and sky.MoonTextureId:match("%d+$")
-    if m == "9709149431" then return "Full Moon"
-    elseif m == "9709149052" then return "Next Night"
-    else return "Bad Moon" end
-end
-
 function GetCurrentSea()
     local map = Lighting:GetAttribute("MAP")
     if map == "Sea1" then return 1 end
@@ -893,8 +823,7 @@ end)
 
 task.spawn(function()
     while task.wait(0.5) do
-        if State.AutoRaceV3 then
-            pcall(function()
+        if State.AutoRaceV3 then            pcall(function()
                 if GetCurrentSea() ~= 2 then CommF_:InvokeServer("TravelDressrosa"); return end
                 local res = CommF_:InvokeServer("Wenlocktoad", "1")
                 if res == 0 then CommF_:InvokeServer("Wenlocktoad", "2")
@@ -908,6 +837,27 @@ task.spawn(function()
     end
 end)
 
+-- Auto Get Ghoul
+task.spawn(function()
+    while task.wait(0.5) do
+        if State.AutoGetGhoul then
+            pcall(function()
+                if GetCurrentSea() ~= 2 then CommF_:InvokeServer("TravelDressrosa"); return end
+                local res = CommF_:InvokeServer("Ectoplasm", "BuyCheck", 4)
+                if res == 2 then
+                    Notify("Ghoul already owned")
+                    State.AutoGetGhoul = false
+                    return
+                end
+                CombatController.Attack({"Ship Deckhand","Ship Steward","Ship Officer","Ship Engineer"})
+                CommF_:InvokeServer("Ectoplasm", "Buy", 4)
+                CommF_:InvokeServer("Ectoplasm", "Change", 4)
+            end)
+        end
+    end
+end)
+
+-- Auto Get Cyborg
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoGetCyborg then
@@ -929,20 +879,95 @@ task.spawn(function()
     end
 end)
 
+-- Auto Train V4
 task.spawn(function()
     while task.wait(0.5) do
-        if State.AutoGetGhoul then
+        if State.AutoTrain then
             pcall(function()
-                if GetCurrentSea() ~= 2 then CommF_:InvokeServer("TravelDressrosa"); return end
-                local res = CommF_:InvokeServer("Ectoplasm", "BuyCheck", 4)
-                if res == 2 then
-                    Notify("Ghoul already owned")
-                    State.AutoGetGhoul = false
-                    return
+                local mobs
+                if State.SelectedTrainMethod == "Bone" then
+                    mobs = {"Reborn Skeleton","Living Zombie","Demonic Soul","Posessed Mummy"}
+                elseif State.SelectedTrainMethod == "Cake" then
+                    mobs = {"Baking Staff","Head Baker","Cake Guard","Cookie Crafter"}
+                else
+                    mobs = {"Reborn Skeleton","Living Zombie","Demonic Soul","Posessed Mummy"}
                 end
-                CombatController.Attack({"Ship Deckhand","Ship Steward","Ship Officer","Ship Engineer"})
-                CommF_:InvokeServer("Ectoplasm", "Buy", 4)
-                CommF_:InvokeServer("Ectoplasm", "Change", 4)
+                local enemy = FindEnemy(mobs, 99999)
+                if enemy then
+                    CombatController.Attack({enemy.Name})
+                else
+                    local sp = FindSpawnPart(mobs[1], true)
+                    if sp then
+                        FarmTeleport(sp.CFrame * CFrame.new(0, 60, 0), getgenv().FarmSpeed, 25)
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- Auto Finish Train V4
+task.spawn(function()
+    while task.wait(1) do
+        if State.AutoFinishTrainV4 then
+            pcall(function()
+                local mobs = {"Reborn Skeleton","Living Zombie","Demonic Soul","Posessed Mummy"}
+                local enemy = FindEnemy(mobs, 99999)
+                if enemy then
+                    CombatController.Attack({enemy.Name})
+                else
+                    local sp = FindSpawnPart(mobs[1], true)
+                    if sp then
+                        FarmTeleport(sp.CFrame * CFrame.new(0, 60, 0), getgenv().FarmSpeed, 25)
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- Auto Pull Lever V4
+task.spawn(function()
+    while task.wait(1) do
+        if State.AutoPullLeverV4 then
+            pcall(function()
+                for _, d in pairs(Workspace.Map["Temple of Time"]:GetDescendants()) do
+                    if d.Name == "ProximityPrompt" then
+                        pcall(function() fireproximityprompt(d, math.huge) end)
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- Tween Great Tree
+task.spawn(function()
+    while task.wait(1) do
+        if State.TweenGreatTree then
+            pcall(function()
+                local hrp = GetHRP()
+                if hrp then
+                    FarmTeleport(CFrame.new(2443, 36, -6573), getgenv().FarmSpeed, 30)
+                end
+            end)
+        end
+    end
+end)
+
+-- Teleport Temple Off Time
+task.spawn(function()
+    while task.wait(1) do
+        if State.TeleportTempleOffTime then
+            pcall(function()
+                local hrp = GetHRP()
+                if hrp then
+                    hrp.CFrame = CFrame.new(28286.35, 14895.30, 102.62)
+                    local ms = RS:FindFirstChild("MapStash")
+                    local tot = ms and ms:FindFirstChild("Temple of Time")
+                    if tot then tot.Parent = Workspace.Map end
+                    Notify("At Temple of Time")
+                end
             end)
         end
     end
@@ -1051,129 +1076,6 @@ end)
 
 task.spawn(function()
     while task.wait(0.5) do
-        if State.AutoSharkAnchor then
-            pcall(function()
-                if player.Backpack:FindFirstChild("Shark Anchor") or (player.Character and player.Character:FindFirstChild("Shark Anchor")) then
-                    Notify("Shark Anchor obtained")
-                    State.AutoSharkAnchor = false
-                    return
-                end
-                local function hasItem(name)
-                    return player.Backpack:FindFirstChild(name) or (player.Character and player.Character:FindFirstChild(name))
-                end
-                if not hasItem("Shark Tooth Necklace") then
-                    pcall(function() CommF_:InvokeServer("CraftItem", "Check", "ToothNecklace") end)
-                    pcall(function() CommF_:InvokeServer("CraftItem", "Craft", "ToothNecklace") end)
-                elseif not hasItem("Terror Jaw") then
-                    pcall(function() CommF_:InvokeServer("CraftItem", "Check", "TerrorJaw") end)
-                    pcall(function() CommF_:InvokeServer("CraftItem", "Craft", "TerrorJaw") end)
-                elseif not hasItem("Monster Magnet") then
-                    pcall(function() CommF_:InvokeServer("CraftItem", "Check", "SharkAnchor") end)
-                    pcall(function() CommF_:InvokeServer("CraftItem", "Craft", "SharkAnchor") end)
-                end
-            end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(0.5) do
-        if State.AutoSoulGuitar then
-            pcall(function()
-                if not World3 then CommF_:InvokeServer("TravelZou"); return end
-                if player.Backpack:FindFirstChild("Skull Guitar") or (player.Character and player.Character:FindFirstChild("Skull Guitar")) then
-                    Notify("Soul Guitar obtained")
-                    State.AutoSoulGuitar = false
-                    return
-                end
-                local prog = CommF_:InvokeServer("GuitarPuzzleProgress", "Check")
-                if not prog then
-                    CommF_:InvokeServer("gravestoneEvent", 2)
-                    CommF_:InvokeServer("gravestoneEvent", 2, true)
-                    return
-                end
-                if not prog.Swamp then CombatController.Attack({"Living Zombie"})
-                elseif not prog.Gravestones then CommF_:InvokeServer("GuitarPuzzleProgress", "Ghost")
-                elseif not prog.Ghost then CommF_:InvokeServer("GuitarPuzzleProgress", "Ghost")
-                else CommF_:InvokeServer("soulGuitarBuy") end
-            end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(0.5) do
-        if State.AutoBartilo then
-            pcall(function()
-                if not World2 then CommF_:InvokeServer("TravelDressrosa"); return end
-                if player.Backpack:FindFirstChild("Warrior Helmet") then
-                    Notify("Bartilo done")
-                    State.AutoBartilo = false
-                    return
-                end
-                local progress = CommF_:InvokeServer("BartiloQuestProgress")
-                if progress and not progress.KilledBandits then
-                    if not (playerGui.Main.Quest and playerGui.Main.Quest.Visible) then
-                        CommF_:InvokeServer("StartQuest", "BartiloQuest", 1)
-                    else
-                        CombatController.Attack("Swan Pirate")
-                    end
-                elseif progress and not progress.KilledSpring then
-                    CombatController.Attack("Jeremy")
-                elseif progress and not progress.DidPlates then
-                    local hrp = GetHRP()
-                    if Dist(hrp.Position, Vector3.new(-1836, 44, 1656)) > 20 then
-                        FarmTeleport(CFrame.new(-1836, 44, 1656), getgenv().FarmSpeed, 20)
-                    end
-                end
-            end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(0.5) do
-        if State.AutoSecondSea then
-            pcall(function()
-                if not World1 then State.AutoSecondSea = false; return end
-                if player.Data.Level.Value < 700 then return end
-                local prog = CommF_:InvokeServer("DressrosaQuestProgress")
-                if prog then
-                    if not prog.TalkedDetective then
-                        CommF_:InvokeServer("DressrosaQuestProgress", "Detective")
-                        CommF_:InvokeServer("DressrosaQuestProgress", "UseKey")
-                    elseif not prog.KilledIceBoss then
-                        CombatController.Attack("Ice Admiral")
-                    else
-                        CommF_:InvokeServer("TravelDressrosa")
-                        State.AutoSecondSea = false
-                        Notify("Second Sea unlocked")
-                    end
-                end
-            end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(0.5) do
-        if State.AutoThirdSea then
-            pcall(function()
-                if not World2 then State.AutoThirdSea = false; return end
-                if player.Data.Level.Value < 1500 then return end
-                local prog = CommF_:InvokeServer("ZQuestProgress", "Check")
-                if prog == 1 then
-                    CommF_:InvokeServer("TravelZou")
-                    State.AutoThirdSea = false
-                    Notify("Third Sea unlocked")
-                end
-            end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(0.5) do
         if State.AutoCakePrince then
             pcall(function()
                 if not World3 then CommF_:InvokeServer("TravelZou"); return end
@@ -1246,84 +1148,6 @@ task.spawn(function()
     end
 end)
 
-task.spawn(function()
-    while task.wait(0.5) do
-        if State.AutoKillRipIndra then
-            pcall(function()
-                if not World3 then CommF_:InvokeServer("TravelZou"); return end
-                local rip = FindEnemy({"rip_indra True Form"}, 99999)
-                if rip then CombatController.Attack("rip_indra True Form") end
-            end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(0.5) do
-        if State.AutoFactory then
-            pcall(function()
-                if not World2 then CommF_:InvokeServer("TravelDressrosa"); return end
-                local core = FindEnemy({"Core"}, 99999)
-                if core then CombatController.Attack("Core")
-                else FarmTeleport(CFrame.new(502.73, 143.07, -379.07), getgenv().FarmSpeed, 30) end
-            end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(0.5) do
-        if State.AutoPiratesSea then
-            pcall(function()
-                if not World3 then CommF_:InvokeServer("TravelZou"); return end
-                local e = FindEnemy({"Pirate Grand Brigade", "Pirate Millionaire"}, 2000)
-                if e then CombatController.Attack({e.Name})
-                else FarmTeleport(CFrame.new(-5556, 314, -2988), getgenv().FarmSpeed, 30) end
-            end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(0.5) do
-        if State.AutoDragonHunter then
-            pcall(function()
-                if not World3 then CommF_:InvokeServer("TravelZou"); return end
-                local e = FindEnemy({"Hydra Enforcer","Venomous Assailant"}, 5000)
-                if e then CombatController.Attack({e.Name})
-                else
-                    local em = Workspace:FindFirstChild("EmberTemplate")
-                    if em and em:FindFirstChild("Part") then
-                        FarmTeleport(em.Part.CFrame, getgenv().FarmSpeed, 20)
-                    end
-                end
-            end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(0.5) do
-        if State.AutoCollectBerry then
-            pcall(function()
-                local hrp = GetHRP()
-                for _, d in pairs(Workspace.Map:GetDescendants()) do
-                    if d.Name == "Berries" then
-                        for i = 1, 8 do
-                            if d:GetAttribute("_BerryCFrame" .. i) then
-                                local cf = d:GetAttribute("_BerryCFrame" .. i)
-                                if typeof(cf) == "CFrame" and Dist(hrp.Position, cf.Position) > 5 then
-                                    FarmTeleport(cf, getgenv().FarmSpeed, 15)
-                                end
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
 --================================================================
 -- SEA HANDLERS
 --================================================================
@@ -1337,7 +1161,6 @@ task.spawn(function()
                 if State.AttackTerrorshark then table.insert(targets, "Terrorshark") end
                 if State.AttackFishCrew then table.insert(targets, "Fish Crew Member") end
                 if State.AttackSeaBeasts then table.insert(targets, "SeaBeast1") end
-
                 if #targets > 0 then
                     local e = FindEnemy(targets, 3000)
                     if e then
@@ -1353,746 +1176,6 @@ task.spawn(function()
                 end
             end)
         end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(0.3) do
-        if State.ProtectBoat then
-            pcall(function()
-                local boats = Workspace:FindFirstChild("Boats"); if not boats then return end
-                for _, bp in ipairs(boats:GetChildren()) do
-                    local o = bp:FindFirstChild("Owner")
-                    if o and tostring(o.Value) == player.Name then
-                        local seat = bp:FindFirstChild("VehicleSeat")
-                        if seat then
-                            local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-                            if hum and not hum.Sit then
-                                local saved = seat.CFrame
-                                seat.CFrame = saved + Vector3.new(math.random(75,100), math.random(75,100), math.random(75,100))
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(1) do
-        if State.AutoRepairShip then
-            pcall(function()
-                local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-                if hum and hum.Sit then
-                    local bar = playerGui.Main.BottomHUDList.ShipHealthBar
-                    if bar and bar.Visible then
-                        local parts = string.split(string.gsub(bar.TextLabel.Text, "Ship ", ""), "/")
-                        local cur = tonumber(parts[1]) or 0
-                        local max = tonumber(parts[2]) or 100
-                        if cur < max then
-                            local hammer = player.Character:FindFirstChild("_RepairHammer")
-                            if hammer then
-                                if not hammer:GetAttribute("Repairing") then
-                                    hammer.M1Down:FireServer("Default")
-                                end
-                            else
-                                CommF_:InvokeServer("requestHammer")
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(1) do
-        if State.NoFog then pcall(function() Lighting.FogEnd = 100000 end) end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(1) do
-        if State.AutoDodgeRoughSea then
-            pcall(function()
-                local rain = Lighting:FindFirstChild("RainCorrection")
-                if rain and rain.Enabled then
-                    local hrp = GetHRP()
-                    if hrp then hrp.CFrame = hrp.CFrame * CFrame.new(0, 500, 0) end
-                end
-            end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(0.5) do
-        if State.NoClipRock then
-            pcall(function()
-                local boats = Workspace:FindFirstChild("Boats")
-                if boats then
-                    for _, d in ipairs(boats:GetDescendants()) do
-                        if d:IsA("BasePart") then d.CanCollide = false end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(1) do
-        if State.AutoSummonKitsune then
-            pcall(function()
-                if not Workspace.Map:FindFirstChild("KitsuneIsland") then
-                    local boat = nil
-                    for _, b in ipairs(Workspace.Boats:GetChildren()) do
-                        local o = b:FindFirstChild("Owner")
-                        if o and tostring(o.Value) == player.Name then boat = b end
-                    end
-                    if not boat then
-                        CommF_:InvokeServer("BuyBoat", "PirateBrigade")
-                    else
-                        local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-                        local seat = boat:FindFirstChild("VehicleSeat")
-                        if seat and not hum.Sit then FarmTeleport(seat.CFrame, getgenv().FarmSpeed, 10) end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(2) do
-        if State.AutoTradeEmber then
-            pcall(function()
-                local rf = Net and Net:FindFirstChild("RF/KitsuneStatuePray")
-                if rf then rf:InvokeServer() end
-            end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(1) do
-        if State.AutoFindLevi then
-            pcall(function()
-                if not Workspace._WorldOrigin.Locations:FindFirstChild("Frozen Dimension") then
-                    local boat = nil
-                    for _, b in ipairs(Workspace.Boats:GetChildren()) do
-                        local o = b:FindFirstChild("Owner")
-                        if o and tostring(o.Value) == player.Name then boat = b end
-                    end
-                    if not boat then
-                        CommF_:InvokeServer("BuyBoat", "Beast Hunter")
-                    else
-                        local seat = boat:FindFirstChild("VehicleSeat")
-                        if seat then seat.CFrame = CFrame.new(-118140.65, 31.78, 172404.87) end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(0.2) do
-        if State.AutoAttackLevi then
-            pcall(function()
-                local levi = Workspace:FindFirstChild("SeaBeasts")
-                levi = levi and levi:FindFirstChild("Leviathan")
-                if levi then
-                    local hum = levi:FindFirstChild("Humanoid")
-                    local hrp = levi:FindFirstChild("HumanoidRootPart")
-                    if hum and hrp and hum.Health > 0 then
-                        FarmTeleport(hrp.CFrame * CFrame.new(0, 900, 100), 350, 20)
-                        EquipWeapon(State.SelectedWeapon)
-                        AutoHaki()
-                        LockAimPositionTo(hrp.CFrame)
-                        AttackNoCoolDown()
-                    end
-                end
-            end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(5) do
-        if State.AutoBuySpy then
-            pcall(function()
-                if GetCurrentSea() == 3 then
-                    local res = CommF_:InvokeServer("InfoLeviathan", "1")
-                    if res == 2 then
-                        CommF_:InvokeServer("InfoLeviathan", "1")
-                        CommF_:InvokeServer("InfoLeviathan", "2")
-                    end
-                end
-            end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(1) do
-        if State.AutoSummonMirage then
-            pcall(function()
-                if not Workspace._WorldOrigin.Locations:FindFirstChild("Mirage Island") then
-                    local boat = nil
-                    for _, b in ipairs(Workspace.Boats:GetChildren()) do
-                        local o = b:FindFirstChild("Owner")
-                        if o and tostring(o.Value) == player.Name then boat = b end
-                    end
-                    if not boat then
-                        CommF_:InvokeServer("BuyBoat", "PirateBrigade")
-                    else
-                        local seat = boat:FindFirstChild("VehicleSeat")
-                        if seat then seat.CFrame = seat.CFrame * CFrame.new(0, 5, -500000) end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(1) do
-        if State.AutoFindMirage then
-            pcall(function()
-                local mirage = Workspace._WorldOrigin.Locations:FindFirstChild("Mirage Island")
-                if mirage and mirage.PrimaryPart then
-                    FarmTeleport(mirage.PrimaryPart.CFrame * CFrame.new(0, 100, 0), 350, 30)
-                end
-            end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(1) do
-        if State.AutoSummonPre then
-            pcall(function()
-                if not Workspace.Map:FindFirstChild("PrehistoricIsland") then
-                    local boat = nil
-                    for _, b in ipairs(Workspace.Boats:GetChildren()) do
-                        local o = b:FindFirstChild("Owner")
-                        if o and tostring(o.Value) == player.Name then boat = b end
-                    end
-                    if not boat then
-                        CommF_:InvokeServer("BuyBoat", "PirateBrigade")
-                    else
-                        local seat = boat:FindFirstChild("VehicleSeat")
-                        if seat then seat.CFrame = CFrame.new(-118140.65, 31.78, 172404.87) end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(1) do
-        if State.AutoFindPre then
-            pcall(function()
-                local pre = Workspace.Map:FindFirstChild("PrehistoricIsland")
-                if pre then FarmTeleport(pre:GetPivot() * CFrame.new(0, 100, 0), 350, 30) end
-            end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(0.5) do
-        if State.AutoEventPre then
-            pcall(function()
-                if not Workspace.Map:FindFirstChild("PrehistoricIsland") then return end
-                local golem = FindEnemy({"Lava Golem"}, 99999)
-                if golem then CombatController.Attack("Lava Golem") end
-                local pre = Workspace.Map.PrehistoricIsland
-                if pre then
-                    for _, d in ipairs(pre:GetDescendants()) do
-                        if d.Name == "TouchInterest" and d.Parent.Name ~= "TrialTeleport" then
-                            d:Destroy()
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
---================================================================
--- FISHING
---================================================================
-local function DetectRod()
-    if not player.Character then return nil end
-    local rod = player.Character:FindFirstChild("FishingRodData", true)
-    if rod then return rod.Parent end
-    for _, c in ipairs(player.Backpack:GetChildren()) do
-        if c:FindFirstChild("FishingRodData") then return c end
-    end
-    return nil
-end
-
-task.spawn(function()
-    while task.wait(0.5) do
-        if State.AutoEquipRod then
-            pcall(function()
-                local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-                if not hum then return end
-                local current = player.Character:FindFirstChildOfClass("Tool")
-                if not (current and current:GetAttribute("InventoryCategory") == "Rod") then
-                    for _, c in ipairs(player.Backpack:GetChildren()) do
-                        if c:IsA("Tool") and c:GetAttribute("InventoryCategory") == "Rod" then
-                            hum:EquipTool(c)
-                            break
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(0.5) do
-        if State.AutoFishing then
-            pcall(function()
-                local rod = DetectRod()
-                if not rod then return end
-                local state = rod:GetAttribute("ServerState")
-                if state == "Idle" or state == "ReeledIn" then
-                    local req = RS:FindFirstChild("FishReplicated")
-                    req = req and req:FindFirstChild("FishingRequest")
-                    if req then
-                        req:InvokeServer("StartCasting")
-                        task.wait(0.7)
-                        req:InvokeServer("CastLineAtLocation",
-                            (GetHRP().CFrame * CFrame.new(0, 0, -50)).Position, 98, true)
-                    end
-                elseif state == "Biting" then
-                    local req = RS:FindFirstChild("FishReplicated")
-                    req = req and req:FindFirstChild("FishingRequest")
-                    if req then
-                        req:InvokeServer("Catching", true)
-                        task.wait(0.25)
-                        req:InvokeServer("Catch", 1)
-                    end
-                end
-            end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(1) do
-        if State.AutoSellFish then
-            pcall(function()
-                local jobs = RS:FindFirstChild("JobsReplicated")
-                if jobs then jobs:InvokeServer("FishingNPC", "SellFish") end
-            end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(1) do
-        if State.AutoSellCorruptedFish then
-            pcall(function()
-                local net = RS.Modules.Net
-                local rf = net:FindFirstChild("RF/JobsRemoteFunction")
-                if rf then rf:InvokeServer("FishingNPC", "SellCorruptedFish") end
-            end)
-        end
-    end
-end)
-
---================================================================
--- FRUIT & RAID
---================================================================
-task.spawn(function()
-    while task.wait(2) do
-        if State.AutoStoreFruit then
-            pcall(function()
-                for _, tool in ipairs(player.Backpack:GetChildren()) do
-                    if tool:IsA("Tool") and string.find(tool.Name, "Fruit") then
-                        CommF_:InvokeServer("StoreFruit", tool:GetAttribute("OriginalName") or tool.Name, tool)
-                        task.wait(0.5)
-                    end
-                end
-                for _, tool in ipairs(player.Character:GetChildren()) do
-                    if tool:IsA("Tool") and string.find(tool.Name, "Fruit") then
-                        CommF_:InvokeServer("StoreFruit", tool:GetAttribute("OriginalName") or tool.Name, tool)
-                        task.wait(0.5)
-                    end
-                end
-            end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(3) do
-        if State.AutoBuyFruit then
-            pcall(function()
-                local res = CommF_:InvokeServer("Cousin", "Buy")
-                if res then Notify("Bought Random Fruit: " .. tostring(res)) end
-            end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(5) do
-        if State.AutoRandomFruit then
-            pcall(function()
-                local res = CommF_:InvokeServer("Cousin", "Buy")
-                if res then
-                    Notify("Rolled: " .. tostring(res))
-                    if State.AutoStoreFruit then
-                        task.wait(1)
-                        for _, tool in ipairs(player.Backpack:GetChildren()) do
-                            if tool:IsA("Tool") and string.find(tool.Name, "Fruit") then
-                                CommF_:InvokeServer("StoreFruit",
-                                    tool:GetAttribute("OriginalName") or tool.Name, tool)
-                                task.wait(0.5)
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(2) do
-        if State.AutoFindFruit then
-            pcall(function()
-                for _, c in ipairs(Workspace:GetChildren()) do
-                    if c:IsA("Tool") and string.find(c.Name, "Fruit") then
-                        local h = c:FindFirstChild("Handle")
-                        if h then
-                            FarmTeleport(h.CFrame, getgenv().FarmSpeed, 15)
-                            break
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(0.5) do
-        if State.AutoAwakenFruit then
-            pcall(function()
-                CommF_:InvokeServer("Awakener", "Check")
-                CommF_:InvokeServer("Awakener", "Awaken")
-            end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(0.5) do
-        if State.AutoRaid then
-            pcall(function()
-                if GetCurrentSea() < 2 then return end
-                if player.Data.Level.Value < 1100 then return end
-
-                local mapName = World2 and "CircleIsland" or (World3 and "Boat Castle")
-                local map = mapName and Workspace.Map:FindFirstChild(mapName)
-                if not map then return end
-                local raidSummon = map:FindFirstChild("RaidSummon2")
-                if not raidSummon then return end
-
-                local chip = player.Backpack:FindFirstChild("Special Microchip") or (player.Character and player.Character:FindFirstChild("Special Microchip"))
-                if chip then
-                    local btn = raidSummon.Button:FindFirstChild("Main")
-                    if btn then
-                        if player:DistanceFromCharacter(btn.Position) > 20 then
-                            FarmTeleport(btn.CFrame, getgenv().FarmSpeed, 20)
-                        else
-                            fireclickdetector(btn.ClickDetector)
-                        end
-                    end
-                elseif State.AutoBuyChip then
-                    if player.Data.Fragments.Value >= 100000 then
-                        CommF_:InvokeServer("RaidsNpc", "Select", State.SelectedChip or "Flame")
-                        task.wait(1)
-                        CommF_:InvokeServer("RaidsNpc", "Buy")
-                    end
-                end
-            end)
-        end
-    end
-end)
-
---================================================================
--- AUTO BUY MELEES
---================================================================
-local MeleePrices = {
-    ["Black Leg"]       = {Price = {Beli = 150000},                   Id = "BlackLeg",       Npc = "Dark Step Teacher"},
-    ["Electro"]         = {Price = {Beli = 500000},                   Id = "Electro",        Npc = "Mad Scientist"},
-    ["Fishman Karate"]  = {Price = {Beli = 750000},                   Id = "FishmanKarate",  Npc = "Water Kung-fu Teacher"},
-    ["Dragon Claw"]     = {Price = {Fragments = 1500},                Id = "DragonClaw",     Npc = "Sabi"},
-    ["Superhuman"]      = {Price = {Beli = 3000000},                  Id = "Superhuman",     Npc = "Martial Arts Master"},
-    ["Death Step"]      = {Price = {Beli = 2500000, Fragments = 5000}, Id = "DeathStep",      Npc = "Phoeyu, the Reformed"},
-    ["Sharkman Karate"] = {Price = {Beli = 2500000, Fragments = 5000}, Id = "SharkmanKarate", Npc = "Sharkman Teacher"},
-    ["Electric Claw"]   = {Price = {Beli = 2500000, Fragments = 5000}, Id = "ElectricClaw",   Npc = "Previous Hero"},
-    ["Dragon Talon"]    = {Price = {Beli = 2500000, Fragments = 5000}, Id = "DragonTalon",    Npc = "Uzoth"},
-    ["Godhuman"]        = {Price = {Beli = 5000000, Fragments = 5000}, Id = "Godhuman",       Npc = "Ancient Monk"},
-    ["Sanguine Art"]    = {Price = {Beli = 5000000, Fragments = 5000}, Id = "SanguineArt",    Npc = "Shafi"},
-}
-
-task.spawn(function()
-    while task.wait(1) do
-        for name, enabled in pairs(State.AutoBuyMelee) do
-            if enabled then
-                pcall(function()
-                    local data = MeleePrices[name]
-                    if not data then return end
-                    local has = false
-                    for _, x in ipairs(player.Backpack:GetChildren()) do
-                        if x:IsA("Tool") and (x.Name == name or x.ToolTip == "Melee") then has = true end
-                    end
-                    if has then return end
-
-                    local beli = player.Data.Beli.Value
-                    local frags = player.Data.Fragments.Value
-                    local needBeli = data.Price.Beli or 0
-                    local needFrag = data.Price.Fragments or 0
-                    if beli < needBeli or frags < needFrag then return end
-
-                    local npc = Workspace.NPCs:FindFirstChild(data.Npc) or Workspace:FindFirstChild(data.Npc, true)
-                    if npc then
-                        local root = npc:FindFirstChild("HumanoidRootPart")
-                        if root and player:DistanceFromCharacter(root.Position) > 10 then
-                            FarmTeleport(root.CFrame * CFrame.new(0, 3, 5), getgenv().FarmSpeed, 20)
-                            return
-                        end
-                    end
-
-                    CommF_:InvokeServer("Buy" .. data.Id)
-                    task.wait(1)
-                    Notify("Bought: " .. name)
-                end)
-            end
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(1) do
-        if State.AutoFullyMelees then
-            for name, _ in pairs(MeleePrices) do
-                State.AutoBuyMelee[name] = true
-            end
-        end
-    end
-end)
-
---================================================================
--- ESP — Text Hitam + Glow Putih (Neon)
---================================================================
-local ESPObjects = {}
-local GLOW_LAYERS = 5
-
-local function CreateESPBillboard(adornee, text)
-    if not adornee or not adornee.Parent then return end
-    if ESPObjects[adornee] and ESPObjects[adornee].Parent then
-        local lbl = ESPObjects[adornee]:FindFirstChild("ESP_Text")
-        if lbl then lbl.Text = text end
-        return ESPObjects[adornee]
-    end
-
-    local bb = Instance.new("BillboardGui")
-    bb.Name = "SYSX_ESP"
-    bb.Size = UDim2.fromOffset(140, 20)
-    bb.StudsOffset = Vector3.new(0, 3, 0)
-    bb.AlwaysOnTop = true
-    bb.LightInfluence = 0
-    bb.MaxDistance = 1000
-    bb.Adornee = adornee
-    bb.Parent = adornee
-
-    for i = 1, GLOW_LAYERS do
-        local glowLbl = Instance.new("TextLabel")
-        glowLbl.Name = "ESP_Glow_" .. i
-        glowLbl.BackgroundTransparency = 1
-        glowLbl.Size = UDim2.fromScale(1, 1)
-        glowLbl.Position = UDim2.fromScale(0.5, 0.5)
-        glowLbl.AnchorPoint = Vector2.new(0.5, 0.5)
-        glowLbl.Text = text
-        glowLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
-        glowLbl.TextSize = 11
-        glowLbl.Font = Enum.Font.GothamBold
-        glowLbl.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
-        glowLbl.TextStrokeTransparency = 1 - (i * 0.15)
-        glowLbl.TextTransparency = 0.5
-        glowLbl.ZIndex = 1
-        glowLbl.Parent = bb
-    end
-
-    local lbl = Instance.new("TextLabel")
-    lbl.Name = "ESP_Text"
-    lbl.BackgroundTransparency = 1
-    lbl.Size = UDim2.fromScale(1, 1)
-    lbl.Position = UDim2.fromScale(0.5, 0.5)
-    lbl.AnchorPoint = Vector2.new(0.5, 0.5)
-    lbl.Text = text
-    lbl.TextColor3 = Color3.fromRGB(0, 0, 0)
-    lbl.TextSize = 11
-    lbl.Font = Enum.Font.GothamBold
-    lbl.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
-    lbl.TextStrokeTransparency = 0
-    lbl.TextTransparency = 0
-    lbl.ZIndex = 10
-    lbl.Parent = bb
-
-    ESPObjects[adornee] = bb
-    return bb
-end
-
-local function UpdateESPText(adornee, text)
-    local bb = ESPObjects[adornee]
-    if not bb then return end
-    local main = bb:FindFirstChild("ESP_Text")
-    if main then main.Text = text end
-    for i = 1, GLOW_LAYERS do
-        local g = bb:FindFirstChild("ESP_Glow_" .. i)
-        if g then g.Text = text end
-    end
-end
-
-local function ClearESPKind(kind)
-    for k, v in pairs(ESPObjects) do
-        if v:GetAttribute("ESP_Kind") == kind then
-            pcall(function() v:Destroy() end)
-            ESPObjects[k] = nil
-        end
-    end
-end
-
-task.spawn(function()
-    while task.wait(0.3) do
-        if State.ESPPlayer then
-            pcall(function()
-                local hrp = GetHRP(); if not hrp then return end
-                for _, plr in ipairs(Players:GetPlayers()) do
-                    if plr ~= player and plr.Character then
-                        local trp = plr.Character:FindFirstChild("HumanoidRootPart")
-                        local hum = plr.Character:FindFirstChildOfClass("Humanoid")
-                        if trp and hum and hum.Health > 0 then
-                            local d = math.floor((trp.Position - hrp.Position).Magnitude)
-                            local text = plr.Name .. " [" .. d .. "m]"
-                            UpdateESPText(trp, text)
-                            local bb = CreateESPBillboard(trp, text)
-                            if bb then bb:SetAttribute("ESP_Kind", "Player") end
-                        end
-                    end
-                end
-            end)
-        else ClearESPKind("Player") end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(0.3) do
-        if State.ESPChest then
-            pcall(function()
-                local hrp = GetHRP(); if not hrp then return end
-                for _, c in ipairs(GetSortedChests()) do
-                    local d = math.floor((c.Position - hrp.Position).Magnitude)
-                    local text = "Chest [" .. d .. "m]"
-                    UpdateESPText(c, text)
-                    local bb = CreateESPBillboard(c, text)
-                    if bb then bb:SetAttribute("ESP_Kind", "Chest") end
-                end
-            end)
-        else ClearESPKind("Chest") end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(0.3) do
-        if State.ESPDevilFruit then
-            pcall(function()
-                local hrp = GetHRP(); if not hrp then return end
-                for _, c in ipairs(Workspace:GetChildren()) do
-                    if (c:IsA("Tool") or c:IsA("Model")) and string.find(c.Name, "Fruit") then
-                        local h = c:FindFirstChild("Handle") or c.PrimaryPart
-                        if h then
-                            local d = math.floor((h.Position - hrp.Position).Magnitude)
-                            local text = c.Name .. " [" .. d .. "m]"
-                            UpdateESPText(h, text)
-                            local bb = CreateESPBillboard(h, text)
-                            if bb then bb:SetAttribute("ESP_Kind", "Fruit") end
-                        end
-                    end
-                end
-            end)
-        else ClearESPKind("Fruit") end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(0.5) do
-        if State.ESPIsland then
-            pcall(function()
-                local hrp = GetHRP(); if not hrp then return end
-                local locs = Workspace._WorldOrigin.Locations
-                for _, c in ipairs(locs:GetChildren()) do
-                    if c:IsA("BasePart") then
-                        local d = math.floor((c.Position - hrp.Position).Magnitude)
-                        local text = c.Name .. " [" .. d .. "m]"
-                        UpdateESPText(c, text)
-                        local bb = CreateESPBillboard(c, text)
-                        if bb then bb:SetAttribute("ESP_Kind", "Island") end
-                    end
-                end
-            end)
-        else ClearESPKind("Island") end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(0.5) do
-        if State.ESPMirage then
-            pcall(function()
-                local hrp = GetHRP(); if not hrp then return end
-                local m = Workspace._WorldOrigin.Locations:FindFirstChild("Mirage Island")
-                if m and m:IsA("BasePart") then
-                    local d = math.floor((m.Position - hrp.Position).Magnitude)
-                    local text = "Mirage [" .. d .. "m]"
-                    UpdateESPText(m, text)
-                    local bb = CreateESPBillboard(m, text)
-                    if bb then bb:SetAttribute("ESP_Kind", "Mirage") end
-                end
-            end)
-        else ClearESPKind("Mirage") end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(0.5) do
-        if State.ESPKitsune then
-            pcall(function()
-                local hrp = GetHRP(); if not hrp then return end
-                local k = Workspace._WorldOrigin.Locations:FindFirstChild("Kitsune Island")
-                if k and k:IsA("BasePart") then
-                    local d = math.floor((k.Position - hrp.Position).Magnitude)
-                    local text = "Kitsune [" .. d .. "m]"
-                    UpdateESPText(k, text)
-                    local bb = CreateESPBillboard(k, text)
-                    if bb then bb:SetAttribute("ESP_Kind", "Kitsune") end
-                end
-            end)
-        else ClearESPKind("Kitsune") end
     end
 end)
 
@@ -2145,27 +1228,8 @@ task.spawn(function()
     end
 end)
 
-local lastMoved = tick()
-task.spawn(function()
-    while task.wait(1) do
-        local hrp = GetHRP()
-        if hrp then lastMoved = tick() end
-        if State.HopWhenIdle and tick() - lastMoved > 300 then
-            pcall(function()
-                local data = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"))
-                for _, v in pairs(data.data) do
-                    if v.id ~= game.JobId and v.playing < v.maxPlayers then
-                        TeleportService:TeleportToPlaceInstance(game.PlaceId, v.id, player)
-                        return
-                    end
-                end
-            end)
-        end
-    end
-end)
-
 --================================================================
--- UI BUILD — Outline Style
+-- UI BUILD
 --================================================================
 local old = playerGui:FindFirstChild("SysxHub")
 if old then old:Destroy() end
@@ -2387,7 +1451,6 @@ local function CreateToggle(parent, text, default, cb)
     })
     Corner(B, 9)
     RegisterAccent(Stroke(B, THEME.Outline, 1.2, 0.25))
-
     Create("TextLabel", {
         Parent = B, BackgroundTransparency = 1,
         Position = UDim2.new(0, 12, 0, 0),
@@ -2396,7 +1459,6 @@ local function CreateToggle(parent, text, default, cb)
         TextSize = 11, Font = Enum.Font.GothamMedium,
         TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 101,
     })
-
     local Ind = Create("Frame", {
         Parent = B, BackgroundColor3 = THEME.Toggle_Off,
         Size = UDim2.fromOffset(36, 20),
@@ -2762,6 +1824,17 @@ CreateLabel(HomePage, "PlaceId: " .. game.PlaceId, 30)
 --================================================================
 -- FARM
 --================================================================
+CreateLabel(FarmPage, "Farm Config", 26)
+CreateDropdown(FarmPage, "Select Weapon",
+    {"Melee","Sword","Blox Fruit","Gun"},
+    function(o) State.SelectedWeapon = o end)
+CreateToggle(FarmPage, "Bring Mob", true, function(s) State.BringMob = s end)
+CreateSlider(FarmPage, "Bring Mob Radius", 50, 1000, 300, function(v) State.BringRange = v end)
+CreateSlider(FarmPage, "Bring Mob Count", 1, 10, 2, function(v) State.BringCount = v end)
+CreateSlider(FarmPage, "Farm Speed", 50, 500, 200, function(v) getgenv().FarmSpeed = v end)
+CreateToggle(FarmPage, "Auto Haki", true, function(s) State.AutoHaki = s end)
+CreateToggle(FarmPage, "Auto Ken", false, function(s) State.AutoKen = s end)
+
 CreateLabel(FarmPage, "Level Farming", 26)
 CreateToggle(FarmPage, "Auto Farm Level", false, function(s) State.AutoFarm = s end)
 CreateToggle(FarmPage, "Auto Farm Nearest", false, function(s) State.AutoFarmNearest = s end)
@@ -2774,18 +1847,37 @@ CreateToggle(FarmPage, "Auto Collect Chest", false, function(s)
 end)
 CreateToggle(FarmPage, "Auto Farm Bones", false, function(s) State.AutoFarmBones = s end)
 CreateToggle(FarmPage, "Auto Farm Wood Planks", false, function(s) State.AutoFarmWoodPlanks = s end)
-CreateToggle(FarmPage, "Auto Treasure Chest", false, function(s) State.AutoTreasureChest = s end)
-CreateToggle(FarmPage, "Auto Collect Drops", false, function(s) State.AutoCollectDrops = s end)
-CreateToggle(FarmPage, "Auto Farmer Drops", false, function(s) State.AutoFarmerDrops = s end)
 
+CreateLabel(FarmPage, "Material Farm", 26)
+local MaterialList = {
+    [1] = {"Angel Wings","Leather + Scrap Metal","Magma Ore","Fish Tail"},
+    [2] = {"Leather + Scrap Metal","Magma Ore","Mystic Droplet","Radioactive Material","Vampire Fang","Ectoplasm"},
+    [3] = {"Leather + Scrap Metal","Fish Tail","Gunpowder","Mini Tusk","Conjured Cocoa","Dragon Scale"},
+}
+local function GetSeaList()
+    local map = Lighting:GetAttribute("MAP")
+    if map == "Sea1" then return 1 end
+    if map == "Sea2" then return 2 end
+    if map == "Sea3" then return 3 end
+    if World1 then return 1 end
+    if World2 then return 2 end
+    if World3 then return 3 end
+    return 1
+end
+local CurrentSeaList = GetSeaList()
 CreateDropdown(FarmPage, "Select Material",
-    {"Angel Wings","Leather + Scrap Metal","Magma Ore","Fish Tail"},
+    MaterialList[CurrentSeaList] or MaterialList[1],
     function(o) State.SelectedMaterial = o end)
 CreateToggle(FarmPage, "Auto Farm Material", false, function(s) State.AutoFarmMaterial = s end)
 
 CreateLabel(FarmPage, "Boss Farm", 26)
+local BossList = {
+    [1] = {"Greybeard","The Saw","Saber Expert","The Gorilla King","Bobby","Yeti","Vice Admiral","Warden","Chief Warden","Swan","Magma Admiral","Fishman Lord","Wysper","Thunder God","Cyborg"},
+    [2] = {"Darkbeard","Cursed Captain","Order","Don Swan","Diamond","Jeremy","Fajita","Smoke Admiral","Awakened Ice Admiral","Tide Keeper"},
+    [3] = {"Dough King","Cake Prince","rip_indra True Form","Soul Reaper","Stone","Island Empress","Kilo Admiral","Captain Elephant","Beautiful Pirate","Cake Queen","Longma"},
+}
 CreateDropdown(FarmPage, "Select Boss",
-    {"Darkbeard","Cursed Captain","rip_indra True Form"},
+    BossList[CurrentSeaList] or BossList[1],
     function(o) State.SelectedBoss = o end)
 CreateToggle(FarmPage, "Auto Attack Boss", false, function(s) State.AutoAttackBoss = s end)
 CreateToggle(FarmPage, "Auto Attack All Boss", false, function(s) State.AutoAttackAllBoss = s end)
@@ -2793,17 +1885,6 @@ CreateToggle(FarmPage, "Auto Tyrant of the Skies", false, function(s) State.Auto
 CreateToggle(FarmPage, "Auto Citizen Quest", false, function(s) State.AutoCitizenQuest = s end)
 CreateToggle(FarmPage, "Auto Dark Fragment", false, function(s) State.AutoDarkFragment = s end)
 CreateToggle(FarmPage, "Auto Sweet Chalice", false, function(s) State.AutoSweetChalice = s end)
-
-CreateLabel(FarmPage, "Farm Config", 26)
-CreateDropdown(FarmPage, "Select Weapon",
-    {"Melee","Sword","Blox Fruit","Gun"},
-    function(o) State.SelectedWeapon = o end)
-CreateToggle(FarmPage, "Bring Mob", true, function(s) State.BringMob = s end)
-CreateSlider(FarmPage, "Bring Mob Radius", 50, 1000, 300, function(v) State.BringRange = v end)
-CreateSlider(FarmPage, "Bring Mob Count", 1, 10, 2, function(v) State.BringCount = v end)
-CreateSlider(FarmPage, "Farm Speed", 50, 500, 200, function(v) getgenv().FarmSpeed = v end)
-CreateToggle(FarmPage, "Auto Haki", true, function(s) State.AutoHaki = s end)
-CreateToggle(FarmPage, "Auto Ken", false, function(s) State.AutoKen = s end)
 
 --================================================================
 -- PVP [COMBAT]
@@ -2819,14 +1900,15 @@ end
 CreateDropdown(PvpPage, "Select Player PVP", pvpPlayers, function(o) State.SelectedPlayer = o end)
 CreateToggle(PvpPage, "Teleport Player", false, function(s) State.TeleportPlayer = s end)
 
-CreateDropdown(PvpPage, "Select Method Aimbot",
-    {"Select Player","Target nearest Player"},
-    function(o) State.MethodAimbot = o end)
 CreateButton(PvpPage, "Refresh Player", function() Notify("Rejoin to refresh player list") end)
 
 --================================================================
 -- QUEST & ITEM
 --================================================================
+CreateLabel(QuestPage, "Auto Get Race", 26)
+CreateToggle(QuestPage, "Auto Get Ghoul", false, function(s) State.AutoGetGhoul = s end)
+CreateToggle(QuestPage, "Auto Get Cyborg", false, function(s) State.AutoGetCyborg = s end)
+
 CreateLabel(QuestPage, "Sword Quest", 26)
 CreateToggle(QuestPage, "Auto Saber Quest", false, function(s) State.AutoSaber = s end)
 CreateToggle(QuestPage, "Auto Yama Quest", false, function(s) State.AutoYama = s end)
@@ -2901,7 +1983,6 @@ CreateDropdown(SeaPage, "Combat Weapon",
     {"Melee","Blox Fruit","Gun","Sword","Random"},
     function(o) State.CombatWeapon = o end)
 
--- Sea to Sea (baru)
 CreateLabel(SeaPage, "Sea to Sea", 26)
 CreateToggle(SeaPage, "Auto Travel to Sea 1", false, function(s)
     State.AutoTravelSea1 = s
@@ -2944,10 +2025,6 @@ CreateToggle(SeaPage, "Auto Travel to Sea 3", false, function(s)
             end
         end)
     end
-end)
-CreateButton(SeaPage, "Refresh Sea Detection", function()
-    local s = GetCurrentSea()
-    Notify("Current Sea: " .. s)
 end)
 
 CreateLabel(SeaPage, "Sea Event", 26)
@@ -3033,117 +2110,69 @@ end)
 --================================================================
 -- RACE
 --================================================================
-CreateLabel(RacePage, "Race V2/V3", 26)
+CreateLabel(RacePage, "Auto Upgrade Race", 26)
 CreateToggle(RacePage, "Auto Race V2", false, function(s) State.AutoRaceV2 = s end)
 CreateToggle(RacePage, "Auto Race V3", false, function(s) State.AutoRaceV3 = s end)
-CreateToggle(RacePage, "Auto Get Cyborg", false, function(s) State.AutoGetCyborg = s end)
-CreateToggle(RacePage, "Auto Get Ghoul", false, function(s) State.AutoGetGhoul = s end)
 
 CreateLabel(RacePage, "Race V4 Trial", 26)
 CreateToggle(RacePage, "Auto Trial", false, function(s) State.AutoTrial = s end)
-CreateToggle(RacePage, "Auto Kill Players After Trial", false, function(s) State.AutoKillAfterTrialRace = s end)
-CreateToggle(RacePage, "Auto Trial Draco", false, function(s) State.AutoTrialDraco = s end)
-CreateToggle(RacePage, "Fully Trial Draco", false, function(s) State.FullyTrialDraco = s end)
-CreateToggle(RacePage, "No Frog", false, function(s)
-    if s then
-        Lighting.FogEnd = 100000
-        for _, d in pairs(Lighting:GetDescendants()) do
-            if d:IsA("Atmosphere") then d:Destroy() end
-        end
-    end
-end)
+CreateToggle(RacePage, "Auto Finish Train", false, function(s) State.AutoFinishTrainV4 = s end)
+CreateToggle(RacePage, "Auto Kill Player Trial", false, function(s) State.AutoKillAfterTrialRace = s end)
 
--- Race V4 (baru)
-CreateLabel(RacePage, "Race V4 Options", 26)
-CreateToggle(RacePage, "Auto Pull Lever V4", false, function(s)
-    State.AutoPullLeverV4 = s
-    if s then
-        task.spawn(function()
-            while State.AutoPullLeverV4 do
-                task.wait(1)
-                pcall(function()
-                    for _, d in pairs(Workspace.Map["Temple of Time"]:GetDescendants()) do
-                        if d.Name == "ProximityPrompt" then
-                            pcall(function() fireproximityprompt(d, math.huge) end)
-                        end
-                    end
-                end)
-            end
-        end)
-    end
-end)
-CreateToggle(RacePage, "Auto Trial V4", false, function(s)
-    State.AutoTrialV4 = s
-    if s then
-        task.spawn(function()
-            while State.AutoTrialV4 do
-                task.wait(1)
-                pcall(function()
-                    local hrp = GetHRP()
-                    if hrp then
-                        hrp.CFrame = CFrame.new(28286.35, 14895.30, 102.62)
-                        local ms = RS:FindFirstChild("MapStash")
-                        local tot = ms and ms:FindFirstChild("Temple of Time")
-                        if tot then tot.Parent = Workspace.Map end
-                    end
-                end)
-            end
-        end)
-    end
-end)
-CreateToggle(RacePage, "Auto Finish Train V4", false, function(s)
-    State.AutoFinishTrainV4 = s
-    if s then
-        task.spawn(function()
-            while State.AutoFinishTrainV4 do
-                task.wait(1)
-                pcall(function()
-                    local mobs = {"Reborn Skeleton","Living Zombie","Demonic Soul","Posessed Mummy"}
-                    local enemy = FindEnemy(mobs, 99999)
-                    if enemy then
-                        CombatController.Attack({enemy.Name})
-                    else
-                        local sp = FindSpawnPart(mobs[1], true)
-                        if sp then
-                            FarmTeleport(sp.CFrame * CFrame.new(0, 60, 0), getgenv().FarmSpeed, 25)
-                        end
-                    end
-                end)
-            end
-        end)
-    end
-end)
+CreateLabel(RacePage, "Race V4 Train", 26)
+CreateDropdown(RacePage, "Select Method Train",
+    {"Bone","Cake"},
+    function(o) State.SelectedTrainMethod = o end)
+CreateToggle(RacePage, "Auto Train", false, function(s) State.AutoTrain = s end)
+CreateToggle(RacePage, "Pull Lever", false, function(s) State.AutoPullLeverV4 = s end)
 
-CreateLabel(RacePage, "Temple Teleport", 26)
-CreateButton(RacePage, "Teleport To Temple", function()
-    local hrp = GetHRP()
-    if hrp then hrp.CFrame = CFrame.new(28286.35, 14895.30, 102.62) end
-    local ms = RS:FindFirstChild("MapStash")
-    local tot = ms and ms:FindFirstChild("Temple of Time")
-    if tot then tot.Parent = Workspace.Map end
-    Notify("At Temple of Time")
-end)
-CreateButton(RacePage, "Pull Lever", function()
-    for _, d in pairs(Workspace.Map["Temple of Time"]:GetDescendants()) do
-        if d.Name == "ProximityPrompt" then
-            pcall(function() fireproximityprompt(d, math.huge) end)
-        end
-    end
-    Notify("Lever pulled")
-end)
-
-CreateLabel(RacePage, "Gear V4", 26)
-CreateDropdown(RacePage, "Select Gear V4", {"Alpha","Omega"}, function(o) State.SelectedGearV4 = o end)
-CreateToggle(RacePage, "Auto Buy Gear V4", false, function(s) State.AutoBuyGearV4 = s end)
-CreateToggle(RacePage, "Auto Choose Gears", false, function(s) State.AutoChooseGears = s end)
-CreateToggle(RacePage, "Auto Race Draco", false, function(s) State.AutoRaceDraco = s end)
+CreateLabel(RacePage, "Race V4 Teleport", 26)
+CreateToggle(RacePage, "Tween Great Tree", false, function(s) State.TweenGreatTree = s end)
+CreateToggle(RacePage, "Teleport Temple Off Time", false, function(s) State.TeleportTempleOffTime = s end)
 
 --================================================================
 -- FRUIT & RAID
 --================================================================
 CreateLabel(FruitRaidPage, "Fruit", 26)
 CreateToggle(FruitRaidPage, "Auto Store Fruit", false, function(s) State.AutoStoreFruit = s end)
-CreateToggle(FruitRaidPage, "Auto Buy Fruit (Cousin)", false, function(s) State.AutoBuyFruit = s end)
+
+CreateButton(FruitRaidPage, "Random Fruit (Roll 1x)", function()
+    local res = CommF_:InvokeServer("Cousin", "Buy")
+    if res then
+        Notify("Rolled: " .. tostring(res))
+        if State.AutoStoreFruit then
+            task.wait(1)
+            for _, tool in ipairs(player.Backpack:GetChildren()) do
+                if tool:IsA("Tool") and string.find(tool.Name, "Fruit") then
+                    CommF_:InvokeServer("StoreFruit", tool:GetAttribute("OriginalName") or tool.Name, tool)
+                    task.wait(0.5)
+                end
+            end
+        end
+    else
+        Notify("Random Fruit failed")
+    end
+end)
+
+CreateButton(FruitRaidPage, "Random Fruit (Roll 10x)", function()
+    for i = 1, 10 do
+        local res = CommF_:InvokeServer("Cousin", "Buy")
+        if res then
+            Notify("Rolled " .. i .. "/10: " .. tostring(res))
+            if State.AutoStoreFruit then
+                task.wait(0.5)
+                for _, tool in ipairs(player.Backpack:GetChildren()) do
+                    if tool:IsA("Tool") and string.find(tool.Name, "Fruit") then
+                        CommF_:InvokeServer("StoreFruit", tool:GetAttribute("OriginalName") or tool.Name, tool)
+                        task.wait(0.3)
+                    end
+                end
+            end
+        end
+        task.wait(1)
+    end
+    Notify("Finished rolling 10x")
+end)
 
 CreateDropdown(FruitRaidPage, "Select Sniper Fruit",
     {"Flame","Ice","Quake","Light","Dark"},
@@ -3151,17 +2180,12 @@ CreateDropdown(FruitRaidPage, "Select Sniper Fruit",
 CreateToggle(FruitRaidPage, "Auto Buy Sniper Fruit", false, function(s) State.AutoBuySniper = s end)
 
 CreateToggle(FruitRaidPage, "Auto Find Fruit", false, function(s) State.AutoFindFruit = s end)
-CreateToggle(FruitRaidPage, "Auto Random Fruit", false, function(s) State.AutoRandomFruit = s end)
 
 CreateLabel(FruitRaidPage, "Raid", 26)
-CreateDropdown(FruitRaidPage, "Select Raid",
-    {"Flame","Ice","Sand","Dark","Light","Magma","Quake","Buddha","Love","Spider","Sound","Phoenix","Portal","Rumble","Pain","Blizzard","Gravity"},
-    function(o) State.SelectedRaid = o end)
-CreateToggle(FruitRaidPage, "Auto Raid", false, function(s) State.AutoRaid = s end)
-
 CreateDropdown(FruitRaidPage, "Select Chip",
-    {"Flame","Ice","Sand","Dark","Light","Magma","Quake","Buddha"},
+    {"Flame","Ice","Sand","Dark","Light","Magma","Quake","Buddha","Love","Spider","Sound","Phoenix","Portal","Rumble","Pain","Blizzard","Gravity"},
     function(o) State.SelectedChip = o end)
+CreateToggle(FruitRaidPage, "Auto Raid", false, function(s) State.AutoRaid = s end)
 CreateToggle(FruitRaidPage, "Auto Buy Chip", false, function(s) State.AutoBuyChip = s end)
 CreateToggle(FruitRaidPage, "Auto Awaken Fruit", false, function(s) State.AutoAwakenFruit = s end)
 
@@ -3350,13 +2374,6 @@ CreateToggle(VisualPage, "ESP Island", false, function(s) State.ESPIsland = s en
 CreateToggle(VisualPage, "ESP Mirage Island", false, function(s) State.ESPMirage = s end)
 CreateToggle(VisualPage, "ESP Kitsune Island", false, function(s) State.ESPKitsune = s end)
 
-CreateLabel(VisualPage, "Remove UI", 26)
-CreateToggle(VisualPage, "Remove Damage", false, function(s) State.RemoveDamage = s end)
-CreateToggle(VisualPage, "Remove Notifications", false, function(s) State.RemoveNotifications = s end)
-CreateToggle(VisualPage, "Boost FPS", false, function(s) State.BoostFPS = s end)
-CreateToggle(VisualPage, "Black Screen", false, function(s) State.BlackScreen = s end)
-CreateToggle(VisualPage, "White Screen", false, function(s) State.WhiteScreen = s end)
-
 --================================================================
 -- MISC (All Setting)
 --================================================================
@@ -3367,11 +2384,6 @@ CreateButton(MiscPage, "Rejoin Server", function()
     TeleportService:Teleport(game.PlaceId, player)
 end)
 CreateLabel(MiscPage, "JobId: " .. game.JobId, 30)
-
-CreateLabel(MiscPage, "Config", 26)
-CreateButton(MiscPage, "Reset Config", function()
-    Notify("Config reset (rejoin to apply)")
-end)
 
 CreateLabel(MiscPage, "Webhook", 26)
 local WebhookBox = Create("TextBox", {
@@ -3399,9 +2411,6 @@ WebhookBox.FocusLost:Connect(function()
         Notify("Invalid Webhook URL")
     end
 end)
-CreateToggle(MiscPage, "Webhook Error Report", true, function(s) State.WebhookReport = s end)
-CreateToggle(MiscPage, "Noti Profile", false, function(s) State.NotiProfile = s end)
-CreateToggle(MiscPage, "Ping Discord", false, function(s) State.PingDiscord = s end)
 
 CreateLabel(MiscPage, "Local Player", 26)
 CreateSlider(MiscPage, "WalkSpeed", 16, 300, 16, function(v)
@@ -3429,26 +2438,6 @@ CreateLabel(MiscPage, "Screen", 26)
 CreateSlider(MiscPage, "FPS Cap", 15, 240, 60, function(v)
     State.FPScap = v
     pcall(function() if setfpscap then setfpscap(v) end end)
-end)
-CreateToggle(MiscPage, "White Screen", false, function(s)
-    pcall(function() RunService:Set3dRenderingEnabled(not s) end)
-end)
-CreateToggle(MiscPage, "Black Screen", false, function(s)
-    local bs = playerGui:FindFirstChild("SX_BlackScreen")
-    if s then
-        if not bs then
-            bs = Instance.new("ScreenGui")
-            bs.Name = "SX_BlackScreen"
-            bs.Parent = playerGui
-            bs.IgnoreGuiInset = true
-            bs.DisplayOrder = 999998
-            local f = Instance.new("Frame")
-            f.Size = UDim2.fromScale(1,1)
-            f.BackgroundColor3 = Color3.new(0,0,0)
-            f.BorderSizePixel = 0
-            f.Parent = bs
-        end
-    elseif bs then bs:Destroy() end
 end)
 
 CreateLabel(MiscPage, "Utility", 26)
@@ -3488,7 +2477,7 @@ task.spawn(function()
     end
 end)
 
--- Auto Farm Level (Fixed)
+-- Auto Farm Level
 task.spawn(function()
     while task.wait(0.25) do
         if State.AutoFarm then
@@ -3572,7 +2561,6 @@ task.spawn(function()
     end
 end)
 
--- Auto Farm Mastery (tambahan fix)
 task.spawn(function()
     while task.wait(0.35) do
         if State.AutoFarmMastery then
@@ -3584,7 +2572,6 @@ task.spawn(function()
     end
 end)
 
--- Auto Collect Chest (pakai source baru)
 task.spawn(function()
     while task.wait(0.2) do
         if State.AutoCollectChest then
@@ -3617,6 +2604,14 @@ task.spawn(function()
                     ["Leather + Scrap Metal"] = {"Pirate","Brute"},
                     ["Magma Ore"] = {"Military Soldier","Lava Pirate"},
                     ["Fish Tail"] = {"Fishman Warrior","Fishman Captain"},
+                    ["Mystic Droplet"] = {"Water Fighter","Sea Soldier"},
+                    ["Radioactive Material"] = {"Factory Staff"},
+                    ["Vampire Fang"] = {"Vampire"},
+                    ["Ectoplasm"] = {"Ship Deckhand","Ship Steward","Ship Officer","Ship Engineer"},
+                    ["Gunpowder"] = {"Pistol Billionaire"},
+                    ["Mini Tusk"] = {"Mythological Pirate"},
+                    ["Conjured Cocoa"] = {"Cocoa Warrior","Chocolate Bar Battler"},
+                    ["Dragon Scale"] = {"Dragon Crew Archer","Dragon Crew Warrior"},
                 }
                 local npcs = mats[State.SelectedMaterial]
                 if npcs then CombatController.Attack(npcs) end
@@ -3632,11 +2627,13 @@ task.spawn(function()
         end
         if State.AutoAttackAllBoss then
             pcall(function()
-                CombatController.Attack({
-                    "Greybeard","The Saw","Saber Expert","The Gorilla King","Bobby",
-                    "Yeti","Vice Admiral","Warden","Chief Warden","Swan",
-                    "Magma Admiral","Fishman Lord","Wysper","Thunder God","Cyborg"
-                })
+                local allBoss = {}
+                for _, list in pairs(BossList) do
+                    for _, name in ipairs(list) do
+                        table.insert(allBoss, name)
+                    end
+                end
+                CombatController.Attack(allBoss)
             end)
         end
         if State.AutoTyrant then
@@ -3674,13 +2671,6 @@ end)
 task.spawn(function()
     while task.wait(1) do
         if State.AutoKen then pcall(function() CommF_:InvokeServer("Ken", true) end) end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(0.5) do
-        if State.RemoveDamage then pcall(function() RS.Assets.GUI.DamageCounter.Enabled = false end) end
-        if State.RemoveNotifications then pcall(function() playerGui.Notifications.Enabled = false end) end
     end
 end)
 
@@ -3746,7 +2736,7 @@ close.Activated:Connect(function()
 end)
 
 --================================================================
--- FLOATING BUTTON (Logo)
+-- FLOATING BUTTON (Icon Only)
 --================================================================
 local floatingButton = Instance.new("ScreenGui")
 floatingButton.Name = "SYSX_FloatingButton"
@@ -3758,10 +2748,10 @@ floatingButton.Parent = playerGui
 
 local btnHolder = Instance.new("Frame")
 btnHolder.Name = "ButtonHolder"
-btnHolder.Size = UDim2.fromOffset(56, 56)
-btnHolder.Position = UDim2.new(1, -80, 0, 120)
+btnHolder.Size = UDim2.fromOffset(40, 40)
+btnHolder.Position = UDim2.new(1, -60, 0, 120)
 btnHolder.BackgroundColor3 = THEME.BG_Secondary
-btnHolder.BackgroundTransparency = 0.1
+btnHolder.BackgroundTransparency = 0.05
 btnHolder.BorderSizePixel = 0
 btnHolder.Active = true
 btnHolder.Parent = floatingButton
@@ -3772,22 +2762,20 @@ btnCorner.Parent = btnHolder
 
 local btnStroke = Instance.new("UIStroke")
 btnStroke.Color = THEME.Outline
-btnStroke.Thickness = 1.8
+btnStroke.Thickness = 1.5
 btnStroke.Transparency = 0.15
 btnStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 btnStroke.Parent = btnHolder
 
-local logoText = Instance.new("TextLabel")
-logoText.Name = "LogoText"
-logoText.Text = "SYSX"
-logoText.Size = UDim2.fromScale(1, 1)
-logoText.BackgroundTransparency = 1
-logoText.TextColor3 = THEME.Accent_Bright
-logoText.TextSize = 14
-logoText.Font = Enum.Font.GothamBlack
-logoText.TextStrokeColor3 = THEME.Outline
-logoText.TextStrokeTransparency = 0.3
-logoText.Parent = btnHolder
+local logoImage = Instance.new("ImageLabel")
+logoImage.Name = "LogoImage"
+logoImage.Image = "rbxassetid://1962037745"
+logoImage.Size = UDim2.fromScale(0.7, 0.7)
+logoImage.Position = UDim2.fromScale(0.5, 0.5)
+logoImage.AnchorPoint = Vector2.new(0.5, 0.5)
+logoImage.BackgroundTransparency = 1
+logoImage.ZIndex = 2
+logoImage.Parent = btnHolder
 
 local btnClick = Instance.new("TextButton")
 btnClick.Name = "ClickArea"
@@ -3795,6 +2783,7 @@ btnClick.Size = UDim2.fromScale(1, 1)
 btnClick.BackgroundTransparency = 1
 btnClick.Text = ""
 btnClick.AutoButtonColor = false
+btnClick.ZIndex = 3
 btnClick.Parent = btnHolder
 
 local uiVisible = true
@@ -3806,32 +2795,32 @@ local function ToggleUI()
     if uiVisible then
         TweenService:Create(btnHolder, ti, {BackgroundColor3 = THEME.BG_Secondary}):Play()
         TweenService:Create(btnStroke, ti, {Color = THEME.Outline}):Play()
-        TweenService:Create(logoText, ti, {TextColor3 = THEME.Accent_Bright}):Play()
     else
         TweenService:Create(btnHolder, ti, {BackgroundColor3 = THEME.Static_Blue}):Play()
         TweenService:Create(btnStroke, ti, {Color = THEME.Accent_Bright}):Play()
-        TweenService:Create(logoText, ti, {TextColor3 = Color3.fromRGB(255, 255, 255)}):Play()
     end
 end
 
 btnClick.MouseButton1Click:Connect(ToggleUI)
 
 btnClick.MouseEnter:Connect(function()
-    TweenService:Create(btnHolder, TweenInfo.new(0.15), {Size = UDim2.fromOffset(60, 60)}):Play()
+    TweenService:Create(btnHolder, TweenInfo.new(0.15), {Size = UDim2.fromOffset(44, 44)}):Play()
     TweenService:Create(btnStroke, TweenInfo.new(0.15), {Transparency = 0}):Play()
 end)
 
 btnClick.MouseLeave:Connect(function()
-    TweenService:Create(btnHolder, TweenInfo.new(0.15), {Size = UDim2.fromOffset(56, 56)}):Play()
+    TweenService:Create(btnHolder, TweenInfo.new(0.15), {Size = UDim2.fromOffset(40, 40)}):Play()
     TweenService:Create(btnStroke, TweenInfo.new(0.15), {Transparency = 0.15}):Play()
 end)
 
 local fbDragging = false
 local fbStart, fbPos
+local fbMoved = false
 btnHolder.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1
         or input.UserInputType == Enum.UserInputType.Touch then
         fbDragging = true
+        fbMoved = false
         fbStart = input.Position
         fbPos = btnHolder.Position
     end
@@ -3840,6 +2829,9 @@ UserInputService.InputChanged:Connect(function(input)
     if fbDragging and (input.UserInputType == Enum.UserInputType.MouseMovement
         or input.UserInputType == Enum.UserInputType.Touch) then
         local delta = input.Position - fbStart
+        if math.abs(delta.X) > 3 or math.abs(delta.Y) > 3 then
+            fbMoved = true
+        end
         btnHolder.Position = UDim2.new(
             fbPos.X.Scale, fbPos.X.Offset + delta.X,
             fbPos.Y.Scale, fbPos.Y.Offset + delta.Y
@@ -3853,6 +2845,11 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 
+btnClick.MouseButton1Click:Connect(function()
+    if fbMoved then return end
+    ToggleUI()
+end)
+
 UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
     if input.KeyCode == Enum.KeyCode.LeftControl then ToggleUI() end
@@ -3862,4 +2859,4 @@ end)
 -- STARTUP
 --================================================================
 ShowTab("Farm")
-Notify("SYSX HUB v1.1 Loaded — New Chest + Fixed Farm Level ✅")
+Notify("SYSX HUB v1.1 Loaded ✅")
