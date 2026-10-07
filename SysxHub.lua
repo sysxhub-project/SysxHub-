@@ -1,29 +1,28 @@
 --[[
 ================================================================
-    SYSX HUB v2.5 — Blox Fruits
-    Structure: 14 Tabs
-    Home&Status, Farm, Pvp[combat], Quest&Item, Stats, Sea,
-    Fishing, Race, Fruit&raid, Shop, Teleport, Visual,
-    SETTINGS, MISC
+    SYSX HUB v1.0 — Blox Fruits
+    Structure: 13 Tabs (all setting in MISC)
+    Home&Status, Farm, Pvp[Combat], Quest&Item, Stats, Sea,
+    Fishing, Race, Fruit&Raid, Shop, Teleport, Visual, MISC
 ================================================================
 ]]
 
 --================================================================
 -- SERVICES
 --================================================================
-local Players           = game:GetService("Players")
-local RS                = game:GetService("ReplicatedStorage")
-local TweenService      = game:GetService("TweenService")
-local UserInputService  = game:GetService("UserInputService")
-local RunService        = game:GetService("RunService")
-local Workspace         = game:GetService("Workspace")
-local VirtualUser       = game:GetService("VirtualUser")
+local Players             = game:GetService("Players")
+local RS                  = game:GetService("ReplicatedStorage")
+local TweenService        = game:GetService("TweenService")
+local UserInputService    = game:GetService("UserInputService")
+local RunService          = game:GetService("RunService")
+local Workspace           = game:GetService("Workspace")
+local VirtualUser         = game:GetService("VirtualUser")
 local VirtualInputManager = game:GetService("VirtualInputManager")
-local TeleportService   = game:GetService("TeleportService")
-local Lighting          = game:GetService("Lighting")
-local HttpService       = game:GetService("HttpService")
-local CollectionService = game:GetService("CollectionService")
-local GuiService        = game:GetService("GuiService")
+local TeleportService     = game:GetService("TeleportService")
+local Lighting            = game:GetService("Lighting")
+local HttpService         = game:GetService("HttpService")
+local CollectionService   = game:GetService("CollectionService")
+local GuiService          = game:GetService("GuiService")
 
 local player    = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -42,7 +41,7 @@ local World3 = (placeId == 7449423635 or placeId == 100117331123089)
 local DISCORD_INVITE = "https://discord.gg/xWa9NpFRr"
 
 --================================================================
--- THEME
+-- THEME — Outline Style
 --================================================================
 local BLUE_PALETTE = {
     Color3.fromRGB(135, 206, 250),
@@ -53,22 +52,23 @@ local BLUE_PALETTE = {
 }
 
 local THEME = {
-    BG_Main = Color3.fromRGB(8, 12, 24),
-    BG_Secondary = Color3.fromRGB(16, 22, 40),
-    BG_Tertiary = Color3.fromRGB(24, 32, 56),
-    BG_Hover = Color3.fromRGB(32, 44, 76),
-    BG_Active = Color3.fromRGB(44, 60, 100),
-    Accent_Bright = Color3.fromRGB(180, 220, 255),
-    Text_Primary = Color3.fromRGB(230, 238, 248),
-    Text_Secondary = Color3.fromRGB(150, 165, 190),
-    Text_Muted = Color3.fromRGB(105, 118, 145),
-    Border = Color3.fromRGB(40, 55, 90),
-    Static_Blue = Color3.fromRGB(60, 130, 220),
+    BG_Main         = Color3.fromRGB(8, 12, 24),
+    BG_Secondary    = Color3.fromRGB(12, 18, 32),
+    BG_Tertiary     = Color3.fromRGB(20, 28, 50),
+    BG_Hover        = Color3.fromRGB(28, 38, 66),
+    BG_Active       = Color3.fromRGB(40, 56, 96),
+    Accent_Bright   = Color3.fromRGB(180, 220, 255),
+    Text_Primary    = Color3.fromRGB(230, 238, 248),
+    Text_Secondary  = Color3.fromRGB(150, 165, 190),
+    Text_Muted      = Color3.fromRGB(105, 118, 145),
+    Border          = Color3.fromRGB(50, 70, 120),
+    Static_Blue     = Color3.fromRGB(60, 130, 220),
     Static_BlueSoft = Color3.fromRGB(180, 220, 255),
-    Toggle_On = Color3.fromRGB(30, 100, 180),
-    Toggle_Off = Color3.fromRGB(55, 60, 80),
-    Toggle_DotOn = Color3.fromRGB(255, 255, 255),
-    Toggle_DotOff = Color3.fromRGB(180, 185, 200),
+    Toggle_On       = Color3.fromRGB(60, 130, 220),
+    Toggle_Off      = Color3.fromRGB(30, 36, 52),
+    Toggle_DotOn    = Color3.fromRGB(255, 255, 255),
+    Toggle_DotOff   = Color3.fromRGB(140, 145, 160),
+    Outline         = Color3.fromRGB(80, 130, 220),
 }
 
 local ACCENT_REGISTRY = {}
@@ -84,27 +84,39 @@ local function Create(cls, props)
     for k, v in pairs(props or {}) do pcall(function() o[k] = v end) end
     return o
 end
+
 local function Corner(p, r)
-    local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, r or 10); c.Parent = p
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, r or 10)
+    c.Parent = p
 end
+
 local function Stroke(p, c, t, tr)
     local s = Instance.new("UIStroke")
-    s.Color = c or THEME.Border; s.Thickness = t or 1; s.Transparency = tr or 0.55
-    s.Parent = p; return s
+    s.Color = c or THEME.Outline
+    s.Thickness = t or 1.5
+    s.Transparency = tr or 0.15
+    s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    s.Parent = p
+    return s
 end
+
 local function TW(o, props, t)
     TweenService:Create(o, TweenInfo.new(t or 0.25, Enum.EasingStyle.Quart), props):Play()
 end
+
 local function GetHRP()
     local c = player.Character
     return c and c:FindFirstChild("HumanoidRootPart") or nil
 end
+
 local function IsAlive()
     local c = player.Character
     if not c then return false end
     local h = c:FindFirstChildOfClass("Humanoid")
     return h and h.Health > 0 and c:FindFirstChild("HumanoidRootPart") ~= nil
 end
+
 local function Dist(a, b)
     if not a or not b then return math.huge end
     return (a - b).Magnitude
@@ -114,6 +126,7 @@ end
 -- STATE
 --================================================================
 local State = {
+    -- Farm
     AutoFarm=false, AutoFarmNearest=false, AutoFarmMastery=false,
     AutoFarmMaterial=false, AutoFarmBones=false, AutoFarmWoodPlanks=false,
     AutoCollectChest=false, AutoTreasureChest=false, AutoCollectDrops=false,
@@ -123,9 +136,11 @@ local State = {
     SelectedBoss=nil, FastAttack=true, BringMob=true, BringRange=300,
     BringCount=2, AutoHaki=true, AutoKen=false,
 
+    -- Pvp
     AutoAimbot=false, SelectedPlayer=nil, TeleportPlayer=false,
     AutoDodgeSkill=false, MethodAimbot="Target nearest Player",
 
+    -- Quest
     AutoSaber=false, AutoYama=false, AutoTushita=false, AutoSharkAnchor=false,
     AutoPole=false, AutoFoxLamp=false, AutoDarkDagger=false, AutoCanvander=false,
     AutoBuddySword=false, AutoHallowScythe=false, AutoCDK=false,
@@ -137,9 +152,11 @@ local State = {
     AutoSoulReaper=false, AutoKillRipIndra=false, AutoFactory=false,
     AutoPiratesSea=false, AutoDragonHunter=false, AutoCollectBerry=false,
 
+    -- Stats
     AutoStatPoint=false, PointsPerClick=1,
     StatMelee=false, StatDefense=false, StatSword=false, StatGun=false, StatFruit=false,
 
+    -- Sea
     SelectedBoat=nil, DangerLevel="6", CombatWeapon="Random",
     SpeedBoat=200, SpeedTweenBoat=350, SpeedFlyBoat=3,
     AutoFarmSea=false, AttackSeaBeasts=false, DodgeSeaBeasts=false,
@@ -163,42 +180,46 @@ local State = {
     FlyBoat=false, DriveBoatTiki=false, DriveBoatHydra=false,
     TeleportBoatRough=false, TweenUntilEvent=false,
 
+    -- Fishing
     AutoEquipRod=false, AutoFishing=false, AutoSellFish=false, AutoSellCorruptedFish=false,
     SelectedBait="Basic Bait",
 
+    -- Race
     AutoRaceV2=false, AutoRaceV3=false, AutoTrial=false, AutoKillAfterTrialRace=false,
     AutoTrialDraco=false, FullyTrialDraco=false,
     AutoBuyGearV4=false, AutoChooseGears=false, SelectedGearV4="Omega",
     AutoGetCyborg=false, AutoGetGhoul=false, AutoRaceDraco=false,
 
+    -- Fruit & Raid
     AutoStoreFruit=false, AutoBuyFruit=false, AutoBuySniper=false,
     AutoBuySniperMirage=false, AutoFindFruit=false, AutoGetSpawnerFruit=false,
-    AutoRandomFruit=false, AutoDropFruit=false, AutoEatFruit=false,
+    AutoRandomFruit=false,
     AutoRaid=false, AutoBuyChip=false, AutoAwakenFruit=false,
     SelectedRaid="Flame", SelectedChip="Flame",
 
+    -- Shop
     AutoBuyMelee={}, AutoFullyMelees=false,
 
+    -- Teleport
     SelectedIsland=nil,
 
+    -- Visual
     ESPPlayer=false, ESPChest=false, ESPBerry=false, ESPFlower=false,
     ESPDevilFruit=false, ESPIsland=false, ESPMirage=false, ESPKitsune=false,
-    RemoveDamage=false, RemoveNotifications=false, BoostFPS=false, BlackScreen=false,
-    WhiteScreen=false,
+    RemoveDamage=false, RemoveNotifications=false, BoostFPS=false,
+    BlackScreen=false, WhiteScreen=false,
 
-    WebhookURL="", WebhookReport=true, NotiProfile=false,
-    PingDiscord=false, FPScap=60,
-
+    -- MISC (all setting here)
     AutoHop1h=false, HopWhenIdle=false, WalkSpeed=16, JumpPower=50,
-    InfiniteJump=false, Fly=false, WalkOnWater=false, NoClip=false,
+    InfiniteJump=false, WalkOnWater=false, NoClip=false,
     AntiAFK=true, AutoResetChar=false, FastAttackMisc=true,
     AntiFlag=false, AntiKick=true, KickRecovery=true, AutoExpRedeem=false,
+    WebhookURL="", WebhookReport=true, NotiProfile=false,
+    PingDiscord=false, FPScap=60,
 }
 
 getgenv().FarmDistance    = 20
 getgenv().FarmSpeed       = 200
-getgenv().CustomWalkSpeed = 100
-getgenv().CustomJumpPower = 50
 
 --================================================================
 -- ANTI AFK
@@ -211,7 +232,7 @@ player.Idled:Connect(function()
 end)
 
 --================================================================
--- BRING MOB SYSTEM
+-- MOB SPAWN CACHE
 --================================================================
 local TableMobSpawn = {}
 local NameCache = {}
@@ -285,6 +306,9 @@ function FindEnemy(names, maxRange)
     return best
 end
 
+--================================================================
+-- BRING MOB
+--================================================================
 local BringState = { target=nil, spot=nil, lastPos=0 }
 function BringMob(target)
     if not State.BringMob then return end
@@ -430,15 +454,6 @@ function AttackNoCoolDown()
     end
 end
 
-function SendKey(key, hold)
-    hold = hold or 0.05
-    pcall(function()
-        VirtualInputManager:SendKeyEvent(true, key, false, game)
-        task.wait(hold)
-        VirtualInputManager:SendKeyEvent(false, key, false, game)
-    end)
-end
-
 --================================================================
 -- TELEPORT SYSTEM
 --================================================================
@@ -478,7 +493,8 @@ function FarmTeleport(goal, speed, customTimeout)
     local timeout = customTimeout or math.max(15, initDist / speed * 3)
 
     SetFarmNoclip(true)
-    local lastTick = tick(); local timeoutStart = tick()
+    local lastTick = tick()
+    local timeoutStart = tick()
 
     while true do
         if not AnyFarm() then break end
@@ -540,12 +556,14 @@ local function GetSortedChests()
         end
     end
     local rp = root.Position
-    table.sort(active, function(a,b) return (rp-a.Position).Magnitude < (rp-b.Position).Magnitude end)
+    table.sort(active, function(a, b)
+        return (rp - a.Position).Magnitude < (rp - b.Position).Magnitude
+    end)
     return active
 end
 
 --================================================================
--- COMBAT CONTROLLER (Kaitun-style)
+-- COMBAT CONTROLLER
 --================================================================
 _G.FastAttack = 0
 task.spawn(function()
@@ -655,7 +673,7 @@ function CombatController.Attack(mobNames)
 end
 
 --================================================================
--- Aimbot System
+-- AIMBOT
 --================================================================
 local AimPos = nil
 local AimTarget = nil
@@ -673,12 +691,8 @@ task.spawn(function()
         local Method = getnamecallmethod()
         local Args = {...}
         if Method == 'FireServer' and self.Name == 'RemoteEvent' and AimPos and tostring(AimPos.X) ~= "nan" then
-            if #Args == 1 and typeof(Args[1]) == "Vector3" then
-                Args[1] = AimPos.Position
-            end
-            if #Args == 1 and typeof(Args[1]) == "CFrame" then
-                Args[1] = AimPos
-            end
+            if #Args == 1 and typeof(Args[1]) == "Vector3" then Args[1] = AimPos.Position end
+            if #Args == 1 and typeof(Args[1]) == "CFrame" then Args[1] = AimPos end
         end
         return OldNameCall(self, table.unpack(Args))
     end)
@@ -727,7 +741,7 @@ task.spawn(function()
 end)
 
 --================================================================
--- RACE HANDLERS
+-- UTILITY
 --================================================================
 function CheckMoon()
     local lig = Lighting
@@ -755,15 +769,14 @@ function GetCurrentSea()
     return 0
 end
 
--- Race V2
+--================================================================
+-- RACE HANDLERS
+--================================================================
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoRaceV2 then
             pcall(function()
-                if GetCurrentSea() ~= 2 then
-                    CommF_:InvokeServer("TravelDressrosa")
-                    return
-                end
+                if GetCurrentSea() ~= 2 then CommF_:InvokeServer("TravelDressrosa"); return end
                 local res = CommF_:InvokeServer("Alchemist", "1")
                 if res == 0 then
                     local pos = CFrame.new(-2779.83521, 72.9661407, -3574.02002)
@@ -799,39 +812,28 @@ task.spawn(function()
     end
 end)
 
--- Race V3
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoRaceV3 then
             pcall(function()
-                if GetCurrentSea() ~= 2 then
-                    CommF_:InvokeServer("TravelDressrosa")
-                    return
-                end
+                if GetCurrentSea() ~= 2 then CommF_:InvokeServer("TravelDressrosa"); return end
                 local res = CommF_:InvokeServer("Wenlocktoad", "1")
-                if res == 0 then
-                    CommF_:InvokeServer("Wenlocktoad", "2")
+                if res == 0 then CommF_:InvokeServer("Wenlocktoad", "2")
                 elseif res == 2 then
                     CommF_:InvokeServer("Wenlocktoad", "3")
                     Notify("Race V3 done!")
                     State.AutoRaceV3 = false
-                elseif res == 1 then
-                    Notify("Race V3 in progress (farm 2M Beli)")
                 end
             end)
         end
     end
 end)
 
--- Auto Cyborg
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoGetCyborg then
             pcall(function()
-                if GetCurrentSea() ~= 2 then
-                    CommF_:InvokeServer("TravelDressrosa")
-                    return
-                end
+                if GetCurrentSea() ~= 2 then CommF_:InvokeServer("TravelDressrosa"); return end
                 local res = CommF_:InvokeServer("CyborgTrainer", "Check")
                 if res == 2 then
                     Notify("Cyborg already owned")
@@ -848,15 +850,11 @@ task.spawn(function()
     end
 end)
 
--- Auto Ghoul
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoGetGhoul then
             pcall(function()
-                if GetCurrentSea() ~= 2 then
-                    CommF_:InvokeServer("TravelDressrosa")
-                    return
-                end
+                if GetCurrentSea() ~= 2 then CommF_:InvokeServer("TravelDressrosa"); return end
                 local res = CommF_:InvokeServer("Ectoplasm", "BuyCheck", 4)
                 if res == 2 then
                     Notify("Ghoul already owned")
@@ -871,99 +869,20 @@ task.spawn(function()
     end
 end)
 
--- Auto Trial V4
-task.spawn(function()
-    while task.wait(0.5) do
-        if State.AutoTrial then
-            pcall(function()
-                if not IsAlive() then return end
-                if Workspace.Map:FindFirstChild("Temple of Time") then
-                    local hrp = GetHRP()
-                    if Dist(hrp.Position, Vector3.new(28286, 14895, 102)) < 3000 then
-                        local race = player.Data.Race.Value
-                        local trialNames = {
-                            Human = "Trial of Strength",
-                            Mink = "Trial of Speed",
-                            Fishman = "Trial of Water",
-                            Ghoul = "Trial of Carnage",
-                            Cyborg = "Trial of the Machine",
-                            Skypiea = "Trial of the King",
-                        }
-                        local trial = trialNames[race]
-                        if trial then
-                            local loc = Workspace._WorldOrigin.Locations:FindFirstChild(trial)
-                            if loc then
-                                FarmTeleport(loc.CFrame, 300, 20)
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
--- Auto Buy Gear V4
-task.spawn(function()
-    while task.wait(1) do
-        if State.AutoBuyGearV4 then
-            pcall(function()
-                local ok, res = pcall(function()
-                    return CommF_:InvokeServer("UpgradeRace", "Check", 2)
-                end)
-                if ok and type(res) == "number" then
-                    if res == 2 or res == 4 or res == 7 then
-                        CommF_:InvokeServer("UpgradeRace", "Buy", 2)
-                        Notify("Gear V4 purchased")
-                        task.wait(2)
-                    end
-                end
-            end)
-        end
-    end
-end)
-
--- Auto Choose Gears
-task.spawn(function()
-    while task.wait(1) do
-        if State.AutoChooseGears then
-            pcall(function()
-                local templeGui = playerGui:FindFirstChild("TempleGui")
-                if templeGui then
-                    for _, btn in ipairs(templeGui:GetDescendants()) do
-                        if btn:IsA("TextButton") and btn.Name:find("Gear") then
-                            local connections = getconnections and getconnections(btn.Activated) or {}
-                            for _, c in ipairs(connections) do
-                                pcall(function() c.Function() end)
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
 --================================================================
 -- QUEST HANDLERS
 --================================================================
-
--- Auto Saber
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoSaber then
             pcall(function()
-                if not World1 then
-                    CommF_:InvokeServer("TravelMain")
-                    return
-                end
+                if not World1 then CommF_:InvokeServer("TravelMain"); return end
                 if player.Data.Level.Value < 200 then return end
                 if player.Backpack:FindFirstChild("Saber") or (player.Character and player.Character:FindFirstChild("Saber")) then
                     Notify("Saber obtained")
                     State.AutoSaber = false
                     return
                 end
-
                 local progress = CommF_:InvokeServer("ProQuestProgress")
                 if progress then
                     if not progress.UsedTorch then
@@ -995,15 +914,11 @@ task.spawn(function()
     end
 end)
 
--- Auto Yama
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoYama then
             pcall(function()
-                if not World3 then
-                    CommF_:InvokeServer("TravelZou")
-                    return
-                end
+                if not World3 then CommF_:InvokeServer("TravelZou"); return end
                 if player.Backpack:FindFirstChild("Yama") or (player.Character and player.Character:FindFirstChild("Yama")) then
                     Notify("Yama obtained")
                     State.AutoYama = false
@@ -1012,11 +927,8 @@ task.spawn(function()
                 local progress = CommF_:InvokeServer("EliteHunter", "Progress") or 0
                 if progress < 30 then
                     local elite = FindEnemy({"Diablo","Deandre","Urban"}, 99999)
-                    if elite then
-                        CombatController.Attack({elite.Name})
-                    else
-                        CommF_:InvokeServer("EliteHunter")
-                    end
+                    if elite then CombatController.Attack({elite.Name})
+                    else CommF_:InvokeServer("EliteHunter") end
                 else
                     local katana = Workspace.Map:FindFirstChild("Waterfall")
                     katana = katana and katana:FindFirstChild("SealedKatana")
@@ -1033,15 +945,11 @@ task.spawn(function()
     end
 end)
 
--- Auto Tushita
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoTushita then
             pcall(function()
-                if not World3 then
-                    CommF_:InvokeServer("TravelZou")
-                    return
-                end
+                if not World3 then CommF_:InvokeServer("TravelZou"); return end
                 if player.Backpack:FindFirstChild("Tushita") or (player.Character and player.Character:FindFirstChild("Tushita")) then
                     Notify("Tushita obtained")
                     State.AutoTushita = false
@@ -1062,7 +970,6 @@ task.spawn(function()
     end
 end)
 
--- Auto Shark Anchor
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoSharkAnchor then
@@ -1090,38 +997,11 @@ task.spawn(function()
     end
 end)
 
--- Auto CDK
-task.spawn(function()
-    while task.wait(0.5) do
-        if State.AutoCDK then
-            pcall(function()
-                if not World3 then
-                    CommF_:InvokeServer("TravelZou")
-                    return
-                end
-                if player.Backpack:FindFirstChild("Cursed Dual Katana") or (player.Character and player.Character:FindFirstChild("Cursed Dual Katana")) then
-                    Notify("CDK obtained")
-                    State.AutoCDK = false
-                    return
-                end
-                local hasTushita = player.Backpack:FindFirstChild("Tushita") ~= nil
-                local hasYama = player.Backpack:FindFirstChild("Yama") ~= nil
-                if not hasTushita then State.AutoTushita = true end
-                if not hasYama then State.AutoYama = true end
-            end)
-        end
-    end
-end)
-
--- Auto Soul Guitar
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoSoulGuitar then
             pcall(function()
-                if not World3 then
-                    CommF_:InvokeServer("TravelZou")
-                    return
-                end
+                if not World3 then CommF_:InvokeServer("TravelZou"); return end
                 if player.Backpack:FindFirstChild("Skull Guitar") or (player.Character and player.Character:FindFirstChild("Skull Guitar")) then
                     Notify("Soul Guitar obtained")
                     State.AutoSoulGuitar = false
@@ -1133,48 +1013,20 @@ task.spawn(function()
                     CommF_:InvokeServer("gravestoneEvent", 2, true)
                     return
                 end
-                if not prog.Swamp then
-                    CombatController.Attack({"Living Zombie"})
-                elseif not prog.Gravestones then
-                    CommF_:InvokeServer("GuitarPuzzleProgress", "Ghost")
-                elseif not prog.Ghost then
-                    CommF_:InvokeServer("GuitarPuzzleProgress", "Ghost")
-                elseif not prog.Trophies then
-                    local tablet = Workspace.Map["Haunted Castle"].Tablet
-                    if tablet then
-                        for _, seg in ipairs({"Segment6","Segment2","Segment8","Segment9","Segment5"}) do
-                            local part = tablet[seg]
-                            if part and part.Line.Rotation.Z ~= 0 then
-                                fireclickdetector(part.ClickDetector)
-                            end
-                        end
-                    end
-                elseif not prog.Pipes then
-                    for k, col in pairs({Part1="Really black", Part2="Really black", Part3="Dusty Rose", Part4="Storm blue", Part5="Really black"}) do
-                        pcall(function()
-                            local p = Workspace.Map["Haunted Castle"]["Lab Puzzle"].ColorFloor.Model[k]
-                            if p and p.BrickColor.Name ~= col then
-                                fireclickdetector(p.ClickDetector)
-                            end
-                        end)
-                    end
-                else
-                    CommF_:InvokeServer("soulGuitarBuy")
-                end
+                if not prog.Swamp then CombatController.Attack({"Living Zombie"})
+                elseif not prog.Gravestones then CommF_:InvokeServer("GuitarPuzzleProgress", "Ghost")
+                elseif not prog.Ghost then CommF_:InvokeServer("GuitarPuzzleProgress", "Ghost")
+                else CommF_:InvokeServer("soulGuitarBuy") end
             end)
         end
     end
 end)
 
--- Auto Bartilo
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoBartilo then
             pcall(function()
-                if not World2 then
-                    CommF_:InvokeServer("TravelDressrosa")
-                    return
-                end
+                if not World2 then CommF_:InvokeServer("TravelDressrosa"); return end
                 if player.Backpack:FindFirstChild("Warrior Helmet") then
                     Notify("Bartilo done")
                     State.AutoBartilo = false
@@ -1200,15 +1052,11 @@ task.spawn(function()
     end
 end)
 
--- Auto Second Sea Puzzle
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoSecondSea then
             pcall(function()
-                if not World1 then
-                    State.AutoSecondSea = false
-                    return
-                end
+                if not World1 then State.AutoSecondSea = false; return end
                 if player.Data.Level.Value < 700 then return end
                 local prog = CommF_:InvokeServer("DressrosaQuestProgress")
                 if prog then
@@ -1228,15 +1076,11 @@ task.spawn(function()
     end
 end)
 
--- Auto Third Sea Puzzle
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoThirdSea then
             pcall(function()
-                if not World2 then
-                    State.AutoThirdSea = false
-                    return
-                end
+                if not World2 then State.AutoThirdSea = false; return end
                 if player.Data.Level.Value < 1500 then return end
                 local prog = CommF_:InvokeServer("ZQuestProgress", "Check")
                 if prog == 1 then
@@ -1249,29 +1093,11 @@ task.spawn(function()
     end
 end)
 
--- Auto Dojo Quest
-task.spawn(function()
-    while task.wait(0.5) do
-        if State.AutoDojo then
-            pcall(function()
-                local res = CommF_:InvokeServer("DojoQuest", "Check")
-                if res and res.Belt then
-                    CombatController.Attack({"Reborn Skeleton"})
-                end
-            end)
-        end
-    end
-end)
-
--- Auto Cake Prince
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoCakePrince then
             pcall(function()
-                if not World3 then
-                    CommF_:InvokeServer("TravelZou")
-                    return
-                end
+                if not World3 then CommF_:InvokeServer("TravelZou"); return end
                 if Workspace.Enemies:FindFirstChild("Cake Prince") then
                     CombatController.Attack("Cake Prince")
                 elseif Workspace.Enemies:FindFirstChild("Dough King") then
@@ -1286,15 +1112,11 @@ task.spawn(function()
     end
 end)
 
--- Auto Dough King
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoDoughKing then
             pcall(function()
-                if not World3 then
-                    CommF_:InvokeServer("TravelZou")
-                    return
-                end
+                if not World3 then CommF_:InvokeServer("TravelZou"); return end
                 if Workspace.Enemies:FindFirstChild("Dough King") then
                     CombatController.Attack("Dough King")
                     return
@@ -1311,35 +1133,24 @@ task.spawn(function()
     end
 end)
 
--- Auto Elite Hunter
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoEliteHunter then
             pcall(function()
-                if not World3 then
-                    CommF_:InvokeServer("TravelZou")
-                    return
-                end
+                if not World3 then CommF_:InvokeServer("TravelZou"); return end
                 local elite = FindEnemy({"Diablo","Deandre","Urban"}, 99999)
-                if elite then
-                    CombatController.Attack({elite.Name})
-                else
-                    CommF_:InvokeServer("EliteHunter")
-                end
+                if elite then CombatController.Attack({elite.Name})
+                else CommF_:InvokeServer("EliteHunter") end
             end)
         end
     end
 end)
 
--- Auto Soul Reaper
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoSoulReaper then
             pcall(function()
-                if not World3 then
-                    CommF_:InvokeServer("TravelZou")
-                    return
-                end
+                if not World3 then CommF_:InvokeServer("TravelZou"); return end
                 if Workspace.Enemies:FindFirstChild("Soul Reaper") then
                     CombatController.Attack("Soul Reaper")
                     return
@@ -1347,10 +1158,8 @@ task.spawn(function()
                 local hasHallow = player.Backpack:FindFirstChild("Hallow Essence") or (player.Character and player.Character:FindFirstChild("Hallow Essence"))
                 if hasHallow then
                     local summoner = Workspace.Map["Haunted Castle"].Summoner.Detection
-                    if summoner then
-                        if Dist(GetHRP().Position, summoner.Position) > 8 then
-                            FarmTeleport(summoner.CFrame, getgenv().FarmSpeed, 20)
-                        end
+                    if summoner and Dist(GetHRP().Position, summoner.Position) > 8 then
+                        FarmTeleport(summoner.CFrame, getgenv().FarmSpeed, 20)
                     end
                 end
             end)
@@ -1358,76 +1167,51 @@ task.spawn(function()
     end
 end)
 
--- Auto Kill Rip Indra
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoKillRipIndra then
             pcall(function()
-                if not World3 then
-                    CommF_:InvokeServer("TravelZou")
-                    return
-                end
+                if not World3 then CommF_:InvokeServer("TravelZou"); return end
                 local rip = FindEnemy({"rip_indra True Form"}, 99999)
-                if rip then
-                    CombatController.Attack("rip_indra True Form")
-                end
+                if rip then CombatController.Attack("rip_indra True Form") end
             end)
         end
     end
 end)
 
--- Auto Factory
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoFactory then
             pcall(function()
-                if not World2 then
-                    CommF_:InvokeServer("TravelDressrosa")
-                    return
-                end
+                if not World2 then CommF_:InvokeServer("TravelDressrosa"); return end
                 local core = FindEnemy({"Core"}, 99999)
-                if core then
-                    CombatController.Attack("Core")
-                else
-                    FarmTeleport(CFrame.new(502.73, 143.07, -379.07), getgenv().FarmSpeed, 30)
-                end
+                if core then CombatController.Attack("Core")
+                else FarmTeleport(CFrame.new(502.73, 143.07, -379.07), getgenv().FarmSpeed, 30) end
             end)
         end
     end
 end)
 
--- Auto Pirates Sea
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoPiratesSea then
             pcall(function()
-                if not World3 then
-                    CommF_:InvokeServer("TravelZou")
-                    return
-                end
+                if not World3 then CommF_:InvokeServer("TravelZou"); return end
                 local e = FindEnemy({"Pirate Grand Brigade", "Pirate Millionaire"}, 2000)
-                if e then
-                    CombatController.Attack({e.Name})
-                else
-                    FarmTeleport(CFrame.new(-5556, 314, -2988), getgenv().FarmSpeed, 30)
-                end
+                if e then CombatController.Attack({e.Name})
+                else FarmTeleport(CFrame.new(-5556, 314, -2988), getgenv().FarmSpeed, 30) end
             end)
         end
     end
 end)
 
--- Auto Dragon Hunter
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoDragonHunter then
             pcall(function()
-                if not World3 then
-                    CommF_:InvokeServer("TravelZou")
-                    return
-                end
+                if not World3 then CommF_:InvokeServer("TravelZou"); return end
                 local e = FindEnemy({"Hydra Enforcer","Venomous Assailant"}, 5000)
-                if e then
-                    CombatController.Attack({e.Name})
+                if e then CombatController.Attack({e.Name})
                 else
                     local em = Workspace:FindFirstChild("EmberTemplate")
                     if em and em:FindFirstChild("Part") then
@@ -1439,7 +1223,6 @@ task.spawn(function()
     end
 end)
 
--- Auto Collect Berry
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoCollectBerry then
@@ -1450,10 +1233,8 @@ task.spawn(function()
                         for i = 1, 8 do
                             if d:GetAttribute("_BerryCFrame" .. i) then
                                 local cf = d:GetAttribute("_BerryCFrame" .. i)
-                                if typeof(cf) == "CFrame" then
-                                    if Dist(hrp.Position, cf.Position) > 5 then
-                                        FarmTeleport(cf, getgenv().FarmSpeed, 15)
-                                    end
+                                if typeof(cf) == "CFrame" and Dist(hrp.Position, cf.Position) > 5 then
+                                    FarmTeleport(cf, getgenv().FarmSpeed, 15)
                                 end
                             end
                         end
@@ -1549,9 +1330,7 @@ end)
 
 task.spawn(function()
     while task.wait(1) do
-        if State.NoFog then
-            pcall(function() Lighting.FogEnd = 100000 end)
-        end
+        if State.NoFog then pcall(function() Lighting.FogEnd = 100000 end) end
     end
 end)
 
@@ -1599,9 +1378,7 @@ task.spawn(function()
                     else
                         local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
                         local seat = boat:FindFirstChild("VehicleSeat")
-                        if seat and not hum.Sit then
-                            FarmTeleport(seat.CFrame, getgenv().FarmSpeed, 10)
-                        end
+                        if seat and not hum.Sit then FarmTeleport(seat.CFrame, getgenv().FarmSpeed, 10) end
                     end
                 end
             end)
@@ -1673,23 +1450,6 @@ task.spawn(function()
                     if res == 2 then
                         CommF_:InvokeServer("InfoLeviathan", "1")
                         CommF_:InvokeServer("InfoLeviathan", "2")
-                    end
-                end
-            end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(1) do
-        if State.AutoDestroyIDK then
-            pcall(function()
-                local res = CommF_:InvokeServer("InfoLeviathan", "1")
-                if res == 0 then
-                    local seaBeast = FindEnemy({"SeaBeast1","Terrorshark"}, 2000)
-                    if seaBeast then
-                        local trp = seaBeast:FindFirstChild("HumanoidRootPart")
-                        if trp then FarmTeleport(trp.CFrame * CFrame.new(0, 55, 0), 350, 20) end
                     end
                 end
             end)
@@ -1786,7 +1546,8 @@ task.spawn(function()
 end)
 
 --================================================================
--- FISHING SYSTEM--================================================================
+-- FISHING
+--================================================================
 local function DetectRod()
     if not player.Character then return nil end
     local rod = player.Character:FindFirstChild("FishingRodData", true)
@@ -1830,7 +1591,7 @@ task.spawn(function()
                     if req then
                         req:InvokeServer("StartCasting")
                         task.wait(0.7)
-                        req:InvokeServer("CastLineAtLocation", 
+                        req:InvokeServer("CastLineAtLocation",
                             (GetHRP().CFrame * CFrame.new(0, 0, -50)).Position, 98, true)
                     end
                 elseif state == "Biting" then
@@ -1895,9 +1656,35 @@ task.spawn(function()
 end)
 
 task.spawn(function()
+    while task.wait(3) do
+        if State.AutoBuyFruit then
+            pcall(function()
+                local res = CommF_:InvokeServer("Cousin", "Buy")
+                if res then Notify("Bought Random Fruit: " .. tostring(res)) end
+            end)
+        end
+    end
+end)
+
+task.spawn(function()
     while task.wait(5) do
-        if State.AutoBuyFruit or State.AutoRandomFruit then
-            pcall(function() CommF_:InvokeServer("Cousin", "Buy") end)
+        if State.AutoRandomFruit then
+            pcall(function()
+                local res = CommF_:InvokeServer("Cousin", "Buy")
+                if res then
+                    Notify("Rolled: " .. tostring(res))
+                    if State.AutoStoreFruit then
+                        task.wait(1)
+                        for _, tool in ipairs(player.Backpack:GetChildren()) do
+                            if tool:IsA("Tool") and string.find(tool.Name, "Fruit") then
+                                CommF_:InvokeServer("StoreFruit",
+                                    tool:GetAttribute("OriginalName") or tool.Name, tool)
+                                task.wait(0.5)
+                            end
+                        end
+                    end
+                end
+            end)
         end
     end
 end)
@@ -1913,40 +1700,6 @@ task.spawn(function()
                             FarmTeleport(h.CFrame, getgenv().FarmSpeed, 15)
                             break
                         end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(3) do
-        if State.AutoDropFruit then
-            pcall(function()
-                for _, t in ipairs(player.Backpack:GetChildren()) do
-                    if t:IsA("Tool") and string.find(t.Name, "Fruit") then
-                        CommF_:InvokeServer("Drop", t.Name, t)
-                        task.wait(0.5)
-                    end
-                end
-            end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(3) do
-        if State.AutoEatFruit then
-            pcall(function()
-                if player.Data.DevilFruit.Value ~= "" then return end
-                for _, t in ipairs(player.Backpack:GetChildren()) do
-                    if t:IsA("Tool") and string.find(t.Name, "Fruit") then
-                        player.Character.Humanoid:EquipTool(t)
-                        task.wait(0.3)
-                        local eat = t:FindFirstChild("EatRemote")
-                        if eat then eat:InvokeServer("Eat") end
-                        break
                     end
                 end
             end)
@@ -1989,8 +1742,7 @@ task.spawn(function()
                         end
                     end
                 elseif State.AutoBuyChip then
-                    if player.Data.Fragments.Value >= 100000 then
-                        CommF_:InvokeServer("RaidsNpc", "Select", State.SelectedChip or "Flame")
+                    if player.Data.Fragments.Value >= 100000 then                        CommF_:InvokeServer("RaidsNpc", "Select", State.SelectedChip or "Flame")
                         task.wait(1)
                         CommF_:InvokeServer("RaidsNpc", "Buy")
                     end
@@ -2004,17 +1756,17 @@ end)
 -- AUTO BUY MELEES
 --================================================================
 local MeleePrices = {
-    ["Black Leg"] = {Price = {Beli = 150000}, Id = "BlackLeg", Npc = "Dark Step Teacher"},
-    ["Electro"] = {Price = {Beli = 500000}, Id = "Electro", Npc = "Mad Scientist"},
-    ["Fishman Karate"] = {Price = {Beli = 750000}, Id = "FishmanKarate", Npc = "Water Kung-fu Teacher"},
-    ["Dragon Claw"] = {Price = {Fragments = 1500}, Id = "DragonClaw", Npc = "Sabi"},
-    ["Superhuman"] = {Price = {Beli = 3000000}, Id = "Superhuman", Npc = "Martial Arts Master"},
-    ["Death Step"] = {Price = {Beli = 2500000, Fragments = 5000}, Id = "DeathStep", Npc = "Phoeyu, the Reformed"},
+    ["Black Leg"]       = {Price = {Beli = 150000},                   Id = "BlackLeg",       Npc = "Dark Step Teacher"},
+    ["Electro"]         = {Price = {Beli = 500000},                   Id = "Electro",        Npc = "Mad Scientist"},
+    ["Fishman Karate"]  = {Price = {Beli = 750000},                   Id = "FishmanKarate",  Npc = "Water Kung-fu Teacher"},
+    ["Dragon Claw"]     = {Price = {Fragments = 1500},                Id = "DragonClaw",     Npc = "Sabi"},
+    ["Superhuman"]      = {Price = {Beli = 3000000},                  Id = "Superhuman",     Npc = "Martial Arts Master"},
+    ["Death Step"]      = {Price = {Beli = 2500000, Fragments = 5000}, Id = "DeathStep",      Npc = "Phoeyu, the Reformed"},
     ["Sharkman Karate"] = {Price = {Beli = 2500000, Fragments = 5000}, Id = "SharkmanKarate", Npc = "Sharkman Teacher"},
-    ["Electric Claw"] = {Price = {Beli = 2500000, Fragments = 5000}, Id = "ElectricClaw", Npc = "Previous Hero"},
-    ["Dragon Talon"] = {Price = {Beli = 2500000, Fragments = 5000}, Id = "DragonTalon", Npc = "Uzoth"},
-    ["Godhuman"] = {Price = {Beli = 5000000, Fragments = 5000}, Id = "Godhuman", Npc = "Ancient Monk"},
-    ["Sanguine Art"] = {Price = {Beli = 5000000, Fragments = 5000}, Id = "SanguineArt", Npc = "Shafi"},
+    ["Electric Claw"]   = {Price = {Beli = 2500000, Fragments = 5000}, Id = "ElectricClaw",   Npc = "Previous Hero"},
+    ["Dragon Talon"]    = {Price = {Beli = 2500000, Fragments = 5000}, Id = "DragonTalon",    Npc = "Uzoth"},
+    ["Godhuman"]        = {Price = {Beli = 5000000, Fragments = 5000}, Id = "Godhuman",       Npc = "Ancient Monk"},
+    ["Sanguine Art"]    = {Price = {Beli = 5000000, Fragments = 5000}, Id = "SanguineArt",    Npc = "Shafi"},
 }
 
 task.spawn(function()
@@ -2065,9 +1817,11 @@ task.spawn(function()
 end)
 
 --================================================================
--- ESP SYSTEM (Text Hitam + Glow Putih)
+-- ESP — Text Hitam + Glow Putih (Neon)
 --================================================================
 local ESPObjects = {}
+local GLOW_LAYERS = 5
+
 local function CreateESPBillboard(adornee, text)
     if not adornee or not adornee.Parent then return end
     if ESPObjects[adornee] and ESPObjects[adornee].Parent then
@@ -2078,34 +1832,31 @@ local function CreateESPBillboard(adornee, text)
 
     local bb = Instance.new("BillboardGui")
     bb.Name = "SYSX_ESP"
-    bb.Size = UDim2.fromOffset(120, 20)
-    bb.StudsOffset = Vector3.new(0, 2.5, 0)
+    bb.Size = UDim2.fromOffset(140, 20)
+    bb.StudsOffset = Vector3.new(0, 3, 0)
     bb.AlwaysOnTop = true
     bb.LightInfluence = 0
-    bb.MaxDistance = 500
+    bb.MaxDistance = 1000
     bb.Adornee = adornee
     bb.Parent = adornee
 
-    local glow = Instance.new("Frame")
-    glow.Name = "ESP_Glow"
-    glow.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    glow.BackgroundTransparency = 0.4
-    glow.Size = UDim2.fromScale(1.1, 1.4)
-    glow.Position = UDim2.fromScale(0.5, 0.5)
-    glow.AnchorPoint = Vector2.new(0.5, 0.5)
-    glow.BorderSizePixel = 0
-    glow.ZIndex = 1
-    glow.Parent = bb
-
-    local gc = Instance.new("UICorner")
-    gc.CornerRadius = UDim.new(1, 0)
-    gc.Parent = glow
-
-    local gs = Instance.new("UIStroke")
-    gs.Color = Color3.fromRGB(255, 255, 255)
-    gs.Thickness = 1.5
-    gs.Transparency = 0.3
-    gs.Parent = glow
+    for i = 1, GLOW_LAYERS do
+        local glowLbl = Instance.new("TextLabel")
+        glowLbl.Name = "ESP_Glow_" .. i
+        glowLbl.BackgroundTransparency = 1
+        glowLbl.Size = UDim2.fromScale(1, 1)
+        glowLbl.Position = UDim2.fromScale(0.5, 0.5)
+        glowLbl.AnchorPoint = Vector2.new(0.5, 0.5)
+        glowLbl.Text = text
+        glowLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+        glowLbl.TextSize = 11
+        glowLbl.Font = Enum.Font.GothamBold
+        glowLbl.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
+        glowLbl.TextStrokeTransparency = 1 - (i * 0.15)
+        glowLbl.TextTransparency = 0.5
+        glowLbl.ZIndex = 1
+        glowLbl.Parent = bb
+    end
 
     local lbl = Instance.new("TextLabel")
     lbl.Name = "ESP_Text"
@@ -2117,12 +1868,25 @@ local function CreateESPBillboard(adornee, text)
     lbl.TextColor3 = Color3.fromRGB(0, 0, 0)
     lbl.TextSize = 11
     lbl.Font = Enum.Font.GothamBold
-    lbl.TextStrokeTransparency = 1
-    lbl.ZIndex = 2
+    lbl.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
+    lbl.TextStrokeTransparency = 0
+    lbl.TextTransparency = 0
+    lbl.ZIndex = 10
     lbl.Parent = bb
 
     ESPObjects[adornee] = bb
     return bb
+end
+
+local function UpdateESPText(adornee, text)
+    local bb = ESPObjects[adornee]
+    if not bb then return end
+    local main = bb:FindFirstChild("ESP_Text")
+    if main then main.Text = text end
+    for i = 1, GLOW_LAYERS do
+        local g = bb:FindFirstChild("ESP_Glow_" .. i)
+        if g then g.Text = text end
+    end
 end
 
 local function ClearESPKind(kind)
@@ -2145,7 +1909,9 @@ task.spawn(function()
                         local hum = plr.Character:FindFirstChildOfClass("Humanoid")
                         if trp and hum and hum.Health > 0 then
                             local d = math.floor((trp.Position - hrp.Position).Magnitude)
-                            local bb = CreateESPBillboard(trp, plr.Name .. " [" .. d .. "m]")
+                            local text = plr.Name .. " [" .. d .. "m]"
+                            UpdateESPText(trp, text)
+                            local bb = CreateESPBillboard(trp, text)
                             if bb then bb:SetAttribute("ESP_Kind", "Player") end
                         end
                     end
@@ -2162,7 +1928,9 @@ task.spawn(function()
                 local hrp = GetHRP(); if not hrp then return end
                 for _, c in ipairs(GetSortedChests()) do
                     local d = math.floor((c.Position - hrp.Position).Magnitude)
-                    local bb = CreateESPBillboard(c, "Chest [" .. d .. "m]")
+                    local text = "Chest [" .. d .. "m]"
+                    UpdateESPText(c, text)
+                    local bb = CreateESPBillboard(c, text)
                     if bb then bb:SetAttribute("ESP_Kind", "Chest") end
                 end
             end)
@@ -2180,7 +1948,9 @@ task.spawn(function()
                         local h = c:FindFirstChild("Handle") or c.PrimaryPart
                         if h then
                             local d = math.floor((h.Position - hrp.Position).Magnitude)
-                            local bb = CreateESPBillboard(h, c.Name .. " [" .. d .. "m]")
+                            local text = c.Name .. " [" .. d .. "m]"
+                            UpdateESPText(h, text)
+                            local bb = CreateESPBillboard(h, text)
                             if bb then bb:SetAttribute("ESP_Kind", "Fruit") end
                         end
                     end
@@ -2199,7 +1969,9 @@ task.spawn(function()
                 for _, c in ipairs(locs:GetChildren()) do
                     if c:IsA("BasePart") then
                         local d = math.floor((c.Position - hrp.Position).Magnitude)
-                        local bb = CreateESPBillboard(c, c.Name .. " [" .. d .. "m]")
+                        local text = c.Name .. " [" .. d .. "m]"
+                        UpdateESPText(c, text)
+                        local bb = CreateESPBillboard(c, text)
                         if bb then bb:SetAttribute("ESP_Kind", "Island") end
                     end
                 end
@@ -2216,7 +1988,9 @@ task.spawn(function()
                 local m = Workspace._WorldOrigin.Locations:FindFirstChild("Mirage Island")
                 if m and m:IsA("BasePart") then
                     local d = math.floor((m.Position - hrp.Position).Magnitude)
-                    local bb = CreateESPBillboard(m, "Mirage [" .. d .. "m]")
+                    local text = "Mirage [" .. d .. "m]"
+                    UpdateESPText(m, text)
+                    local bb = CreateESPBillboard(m, text)
                     if bb then bb:SetAttribute("ESP_Kind", "Mirage") end
                 end
             end)
@@ -2232,7 +2006,9 @@ task.spawn(function()
                 local k = Workspace._WorldOrigin.Locations:FindFirstChild("Kitsune Island")
                 if k and k:IsA("BasePart") then
                     local d = math.floor((k.Position - hrp.Position).Magnitude)
-                    local bb = CreateESPBillboard(k, "Kitsune [" .. d .. "m]")
+                    local text = "Kitsune [" .. d .. "m]"
+                    UpdateESPText(k, text)
+                    local bb = CreateESPBillboard(k, text)
                     if bb then bb:SetAttribute("ESP_Kind", "Kitsune") end
                 end
             end)
@@ -2243,28 +2019,6 @@ end)
 --================================================================
 -- MISC HANDLERS
 --================================================================
-task.spawn(function()
-    while task.wait(0.5) do
-        if State.Fly then
-            pcall(function()
-                local hrp = GetHRP(); if not hrp then return end
-                if not hrp:FindFirstChild("SYSX_Fly") then
-                    local bv = Instance.new("BodyVelocity")
-                    bv.Name = "SYSX_Fly"
-                    bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
-                    bv.Velocity = Vector3.zero
-                    bv.Parent = hrp
-                end
-            end)
-        else
-            pcall(function()
-                local hrp = GetHRP()
-                if hrp and hrp:FindFirstChild("SYSX_Fly") then hrp.SYSX_Fly:Destroy() end
-            end)
-        end
-    end
-end)
-
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoResetChar and IsAlive() then
@@ -2331,7 +2085,7 @@ task.spawn(function()
 end)
 
 --================================================================
--- UI BUILD
+-- UI BUILD — Outline Style
 --================================================================
 local old = playerGui:FindFirstChild("SysxHub")
 if old then old:Destroy() end
@@ -2356,20 +2110,21 @@ local Notif = Create("TextLabel", {
     Visible = false, ZIndex = 999999,
 })
 Corner(Notif, 12)
-RegisterAccent(Stroke(Notif, BLUE_PALETTE[1], 1.5, 0.2))
+RegisterAccent(Stroke(Notif, THEME.Outline, 1.5, 0.15))
 
 local main = Create("Frame", {
     Parent = gui,
     Size = UDim2.fromOffset(700, 540),
     Position = UDim2.new(0.5, -350, 0.5, -270),
     BackgroundColor3 = THEME.BG_Main,
+    BackgroundTransparency = 0.05,
     BorderSizePixel = 0,
     Visible = true,
     ClipsDescendants = true,
     ZIndex = 10,
 })
 Corner(main, 18)
-RegisterAccent(Stroke(main, BLUE_PALETTE[1], 1.2, 0.45))
+RegisterAccent(Stroke(main, THEME.Outline, 2, 0.1))
 
 local header = Create("Frame", {
     Parent = main,
@@ -2390,7 +2145,7 @@ Create("TextLabel", {
     Parent = header, BackgroundTransparency = 1,
     Position = UDim2.fromOffset(20, 32),
     Size = UDim2.fromOffset(340, 15),
-    Text = "Freemium v2.5  •  14 Tabs",
+    Text = "v1.0  •  13 Tabs",
     TextColor3 = THEME.Text_Secondary,
     TextSize = 10, Font = Enum.Font.GothamMedium,
     TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 22,
@@ -2409,14 +2164,14 @@ local close = Create("TextButton", {
     AutoButtonColor = false, ZIndex = 25,
 })
 Corner(close, 10)
-RegisterAccent(Stroke(close, BLUE_PALETTE[1], 1.2, 0.35))
+RegisterAccent(Stroke(close, THEME.Outline, 1.5, 0.15))
 
 Create("Frame", {
     Parent = header,
     Size = UDim2.new(1, -32, 0, 1),
     Position = UDim2.new(0, 16, 1, -2),
-    BackgroundColor3 = Color3.fromRGB(60, 90, 150),
-    BackgroundTransparency = 0.6,
+    BackgroundColor3 = THEME.Outline,
+    BackgroundTransparency = 0.4,
     BorderSizePixel = 0, ZIndex = 22,
 })
 
@@ -2431,11 +2186,12 @@ local content = Create("Frame", {
 local sidebar = Create("Frame", {
     Parent = content,
     BackgroundColor3 = THEME.BG_Secondary,
+    BackgroundTransparency = 0.2,
     Size = UDim2.new(0, 145, 1, 0),
     BorderSizePixel = 0, ZIndex = 15,
 })
 Corner(sidebar, 12)
-Stroke(sidebar, THEME.Border, 1, 0.5)
+RegisterAccent(Stroke(sidebar, THEME.Outline, 1.5, 0.2))
 
 local tabList = Create("ScrollingFrame", {
     Parent = sidebar,
@@ -2445,7 +2201,7 @@ local tabList = Create("ScrollingFrame", {
     CanvasSize = UDim2.new(0, 0, 0, 0),
     AutomaticCanvasSize = Enum.AutomaticSize.Y,
     ScrollBarThickness = 2,
-    ScrollBarImageColor3 = Color3.fromRGB(80, 130, 220),
+    ScrollBarImageColor3 = THEME.Outline,
     BorderSizePixel = 0, ZIndex = 16,
 })
 local TL = Instance.new("UIListLayout")
@@ -2461,7 +2217,7 @@ local contentScroll = Create("ScrollingFrame", {
     CanvasSize = UDim2.new(0, 0, 0, 0),
     AutomaticCanvasSize = Enum.AutomaticSize.Y,
     ScrollBarThickness = 3,
-    ScrollBarImageColor3 = Color3.fromRGB(80, 130, 220),
+    ScrollBarImageColor3 = THEME.Outline,
     BorderSizePixel = 0, ZIndex = 14,
 })
 
@@ -2476,7 +2232,7 @@ local function CreatePage(name)
         CanvasSize = UDim2.new(0, 0, 0, 0),
         AutomaticCanvasSize = Enum.AutomaticSize.Y,
         ScrollBarThickness = 3,
-        ScrollBarImageColor3 = Color3.fromRGB(80, 130, 220),
+        ScrollBarImageColor3 = THEME.Outline,
         BorderSizePixel = 0, Visible = false, ZIndex = 12,
     })
     local L = Instance.new("UIListLayout")
@@ -2491,6 +2247,7 @@ local function CreateTab(name, order)
     local B = Create("TextButton", {
         Parent = tabList,
         BackgroundColor3 = THEME.BG_Secondary,
+        BackgroundTransparency = 0.3,
         Size = UDim2.new(1, 0, 0, 30),
         Text = "", AutoButtonColor = false,
         BorderSizePixel = 0, LayoutOrder = order, ZIndex = 17,
@@ -2507,12 +2264,12 @@ local function CreateTab(name, order)
     Tabs[name] = { Button = B, Label = L, Stroke = nil }
     B.MouseEnter:Connect(function()
         if Tabs[name].Label.TextColor3 ~= THEME.Accent_Bright then
-            TW(B, {BackgroundColor3 = THEME.BG_Hover}, 0.15)
+            TW(B, {BackgroundColor3 = THEME.BG_Hover, BackgroundTransparency = 0.1}, 0.15)
         end
     end)
     B.MouseLeave:Connect(function()
         if Tabs[name].Label.TextColor3 ~= THEME.Accent_Bright then
-            TW(B, {BackgroundColor3 = THEME.BG_Secondary}, 0.15)
+            TW(B, {BackgroundColor3 = THEME.BG_Secondary, BackgroundTransparency = 0.3}, 0.15)
         end
     end)
     return B
@@ -2523,12 +2280,14 @@ local function ShowTab(name)
     for tn, d in pairs(Tabs) do
         if tn == name then
             d.Button.BackgroundColor3 = THEME.BG_Active
+            d.Button.BackgroundTransparency = 0.05
             d.Label.TextColor3 = THEME.Accent_Bright
             if d.Stroke then d.Stroke:Destroy() end
-            d.Stroke = Stroke(d.Button, BLUE_PALETTE[1], 1.2, 0.15)
+            d.Stroke = Stroke(d.Button, THEME.Outline, 1.5, 0.1)
             RegisterAccent(d.Stroke)
         else
             d.Button.BackgroundColor3 = THEME.BG_Secondary
+            d.Button.BackgroundTransparency = 0.3
             d.Label.TextColor3 = THEME.Text_Secondary
             if d.Stroke then d.Stroke:Destroy() d.Stroke = nil end
         end
@@ -2536,17 +2295,18 @@ local function ShowTab(name)
 end
 
 --================================================================
--- COMPONENTS
+-- COMPONENTS — Outline Style
 --================================================================
 local function CreateToggle(parent, text, default, cb)
     local st = default and true or false
     local B = Create("TextButton", {
         Parent = parent, BackgroundColor3 = THEME.BG_Secondary,
+        BackgroundTransparency = 0.15,
         Size = UDim2.new(1, 0, 0, 38), Text = "",
         AutoButtonColor = false, BorderSizePixel = 0, ZIndex = 100,
     })
     Corner(B, 9)
-    RegisterAccent(Stroke(B, BLUE_PALETTE[1], 1, 0.55))
+    RegisterAccent(Stroke(B, THEME.Outline, 1.2, 0.25))
 
     Create("TextLabel", {
         Parent = B, BackgroundTransparency = 1,
@@ -2563,6 +2323,7 @@ local function CreateToggle(parent, text, default, cb)
         Position = UDim2.new(1, -48, 0.5, -10), ZIndex = 101,
     })
     Corner(Ind, 20)
+    Stroke(Ind, THEME.Outline, 1, 0.4)
     local Dot = Create("Frame", {
         Parent = Ind, BackgroundColor3 = THEME.Toggle_DotOff,
         Size = UDim2.fromOffset(14, 14),
@@ -2594,15 +2355,16 @@ end
 local function CreateButton(parent, text, cb)
     local B = Create("TextButton", {
         Parent = parent, BackgroundColor3 = THEME.BG_Secondary,
+        BackgroundTransparency = 0.15,
         Size = UDim2.new(1, 0, 0, 38), Text = text,
         TextColor3 = THEME.Text_Primary, TextSize = 11,
         Font = Enum.Font.GothamMedium, AutoButtonColor = false,
         BorderSizePixel = 0, ZIndex = 100,
     })
     Corner(B, 9)
-    RegisterAccent(Stroke(B, BLUE_PALETTE[1], 1.1, 0.55))
-    B.MouseEnter:Connect(function() TW(B, {BackgroundColor3 = THEME.BG_Hover}, 0.15) end)
-    B.MouseLeave:Connect(function() TW(B, {BackgroundColor3 = THEME.BG_Secondary}, 0.15) end)
+    RegisterAccent(Stroke(B, THEME.Outline, 1.2, 0.25))
+    B.MouseEnter:Connect(function() TW(B, {BackgroundColor3 = THEME.BG_Hover, BackgroundTransparency = 0.05}, 0.15) end)
+    B.MouseLeave:Connect(function() TW(B, {BackgroundColor3 = THEME.BG_Secondary, BackgroundTransparency = 0.15}, 0.15) end)
     B.Activated:Connect(function()
         TW(B, {BackgroundColor3 = THEME.BG_Active}, 0.08)
         task.delay(0.1, function() TW(B, {BackgroundColor3 = THEME.BG_Secondary}, 0.15) end)
@@ -2615,11 +2377,12 @@ local function CreateDropdown(parent, title, options, cb)
     options = options or {"-"}
     local Hold = Create("Frame", {
         Parent = parent, BackgroundColor3 = THEME.BG_Secondary,
+        BackgroundTransparency = 0.15,
         Size = UDim2.new(1, 0, 0, 38),
         BorderSizePixel = 0, ZIndex = 100,
     })
     Corner(Hold, 9)
-    RegisterAccent(Stroke(Hold, BLUE_PALETTE[1], 1.1, 0.55))
+    RegisterAccent(Stroke(Hold, THEME.Outline, 1.2, 0.25))
     local Sel = options[1] or "-"
     local Lbl = Create("TextLabel", {
         Parent = Hold, BackgroundTransparency = 1,
@@ -2642,6 +2405,9 @@ local function CreateDropdown(parent, title, options, cb)
         Size = UDim2.new(1, 0, 1, 0), Text = "",
         AutoButtonColor = false, ZIndex = 110,
     })
+    local SetOptions = function(newList)
+        options = newList
+    end
     click.Activated:Connect(function()
         local Pop = Create("Frame", {
             Parent = gui,
@@ -2649,10 +2415,11 @@ local function CreateDropdown(parent, title, options, cb)
             Position = UDim2.new(0.5, 0, 0.5, 0),
             Size = UDim2.fromOffset(300, math.min(#options*38+80, 420)),
             BackgroundColor3 = THEME.BG_Secondary,
+            BackgroundTransparency = 0.05,
             BorderSizePixel = 0, ZIndex = 999990,
         })
         Corner(Pop, 14)
-        RegisterAccent(Stroke(Pop, BLUE_PALETTE[1], 1.5, 0.25))
+        RegisterAccent(Stroke(Pop, THEME.Outline, 2, 0.1))
         Create("TextLabel", {
             Parent = Pop, BackgroundTransparency = 1,
             Position = UDim2.fromOffset(18, 10),
@@ -2676,7 +2443,7 @@ local function CreateDropdown(parent, title, options, cb)
             CanvasSize = UDim2.new(0, 0, 0, 0),
             AutomaticCanvasSize = Enum.AutomaticSize.Y,
             ScrollBarThickness = 3,
-            ScrollBarImageColor3 = Color3.fromRGB(80, 130, 220),
+            ScrollBarImageColor3 = THEME.Outline,
             BorderSizePixel = 0, ZIndex = 999991,
         })
         local LL = Instance.new("UIListLayout")
@@ -2686,6 +2453,7 @@ local function CreateDropdown(parent, title, options, cb)
         for i, opt in ipairs(options) do
             local OB = Create("TextButton", {
                 Parent = LS, BackgroundColor3 = THEME.BG_Tertiary,
+                BackgroundTransparency = 0.15,
                 Size = UDim2.new(1, -8, 0, 34),
                 Position = UDim2.new(0, 4, 0, 0),
                 Text = opt, TextColor3 = THEME.Text_Primary,
@@ -2695,10 +2463,11 @@ local function CreateDropdown(parent, title, options, cb)
                 TextXAlignment = Enum.TextXAlignment.Left,
             })
             Corner(OB, 7)
+            Stroke(OB, THEME.Outline, 1, 0.3)
             local pad = Instance.new("UIPadding")
             pad.PaddingLeft = UDim.new(0, 12); pad.Parent = OB
-            OB.MouseEnter:Connect(function() TW(OB, {BackgroundColor3 = THEME.BG_Hover}, 0.1) end)
-            OB.MouseLeave:Connect(function() TW(OB, {BackgroundColor3 = THEME.BG_Tertiary}, 0.1) end)
+            OB.MouseEnter:Connect(function() TW(OB, {BackgroundColor3 = THEME.BG_Hover, BackgroundTransparency = 0.05}, 0.1) end)
+            OB.MouseLeave:Connect(function() TW(OB, {BackgroundColor3 = THEME.BG_Tertiary, BackgroundTransparency = 0.15}, 0.1) end)
             OB.Activated:Connect(function()
                 Sel = opt
                 Lbl.Text = title .. ": " .. opt
@@ -2707,18 +2476,19 @@ local function CreateDropdown(parent, title, options, cb)
             end)
         end
     end)
-    return Hold
+    return Hold, SetOptions
 end
 
 local function CreateSlider(parent, title, minV, maxV, defV, cb)
     local val = defV or minV
     local Hold = Create("Frame", {
         Parent = parent, BackgroundColor3 = THEME.BG_Secondary,
+        BackgroundTransparency = 0.15,
         Size = UDim2.new(1, 0, 0, 58),
         BorderSizePixel = 0, ZIndex = 100,
     })
     Corner(Hold, 9)
-    RegisterAccent(Stroke(Hold, BLUE_PALETTE[1], 1, 0.55))
+    RegisterAccent(Stroke(Hold, THEME.Outline, 1.2, 0.25))
     Create("TextLabel", {
         Parent = Hold, BackgroundTransparency = 1,
         Position = UDim2.new(0, 14, 0, 8),
@@ -2733,7 +2503,7 @@ local function CreateSlider(parent, title, minV, maxV, defV, cb)
         Size = UDim2.fromOffset(60, 20), ZIndex = 101,
     })
     Corner(VH, 6)
-    Stroke(VH, THEME.Border, 1, 0.4)
+    Stroke(VH, THEME.Outline, 1, 0.3)
     local VL = Create("TextLabel", {
         Parent = VH, BackgroundTransparency = 1,
         Size = UDim2.fromScale(1, 1),
@@ -2747,6 +2517,7 @@ local function CreateSlider(parent, title, minV, maxV, defV, cb)
         BorderSizePixel = 0, ZIndex = 101,
     })
     Corner(TB, 4)
+    Stroke(TB, THEME.Outline, 1, 0.3)
     local fr = (val - minV) / (maxV - minV)
     local Fill = Create("Frame", {
         Parent = TB, BackgroundColor3 = THEME.Static_Blue,
@@ -2761,7 +2532,7 @@ local function CreateSlider(parent, title, minV, maxV, defV, cb)
         BorderSizePixel = 0, ZIndex = 103,
     })
     Corner(Knob, 20)
-    Stroke(Knob, THEME.BG_Main, 1.5, 0)
+    Stroke(Knob, THEME.Outline, 1.5, 0)
     local Btn = Create("TextButton", {
         Parent = Hold, BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 0, 34),
@@ -2801,18 +2572,18 @@ end
 local function CreateLabel(parent, text, sz)
     local L = Create("TextLabel", {
         Parent = parent, BackgroundColor3 = THEME.BG_Secondary,
+        BackgroundTransparency = 0.3,
         Size = UDim2.new(1, 0, 0, sz or 28),
-        Text = text, TextColor3 = THEME.Text_Primary,
-        TextSize = 10, Font = Enum.Font.GothamMedium,
+        Text = text, TextColor3 = THEME.Accent_Bright,
+        TextSize = 10, Font = Enum.Font.GothamBold,
         TextXAlignment = Enum.TextXAlignment.Left,
-        TextYAlignment = Enum.TextYAlignment.Top,
+        TextYAlignment = Enum.TextYAlignment.Center,
         BorderSizePixel = 0, ZIndex = 100,
     })
     Corner(L, 9)
-    RegisterAccent(Stroke(L, BLUE_PALETTE[1], 1, 0.55))
+    RegisterAccent(Stroke(L, THEME.Outline, 1.2, 0.2))
     local pad = Instance.new("UIPadding")
     pad.PaddingLeft = UDim.new(0, 12)
-    pad.PaddingTop = UDim.new(0, 6)
     pad.Parent = L
     return L
 end
@@ -2866,12 +2637,12 @@ task.spawn(function()
 end)
 
 --================================================================
--- TABS (14)
+-- TABS (13)
 --================================================================
 local TabDefs = {
     {"Home & Status"},{"Farm"},{"Pvp [Combat]"},{"Quest & Item"},{"Stats"},
     {"Sea"},{"Fishing"},{"Race"},{"Fruit & Raid"},{"Shop"},
-    {"Teleport"},{"Visual"},{"SETTINGS"},{"MISC"}
+    {"Teleport"},{"Visual"},{"MISC"}
 }
 for i, d in ipairs(TabDefs) do
     local b = CreateTab(d[1], i)
@@ -2890,20 +2661,18 @@ local FruitRaidPage = CreatePage("Fruit & Raid")
 local ShopPage      = CreatePage("Shop")
 local TeleportPage  = CreatePage("Teleport")
 local VisualPage    = CreatePage("Visual")
-local SettingsPage  = CreatePage("SETTINGS")
 local MiscPage      = CreatePage("MISC")
 
 --================================================================
 -- HOME & STATUS
 --================================================================
-CreateLabel(HomePage, "SYSX HUB v2.5", 32)
+CreateLabel(HomePage, "SYSX HUB v1.0", 32)
 CreateLabel(HomePage,
-    "14 Tabs | Full Code\n" ..
+    "13 Tabs | All Setting in MISC\n" ..
     "Home & Status • Farm • Pvp [Combat]\n" ..
     "Quest & Item • Stats • Sea • Fishing\n" ..
     "Race • Fruit & Raid • Shop • Teleport\n" ..
-    "Visual • SETTINGS • MISC\n\n" ..
-    "All handlers included.", 180)
+    "Visual • MISC", 180)
 CreateButton(HomePage, "Join Discord Server", function()
     if setclipboard then setclipboard(DISCORD_INVITE) end
     pcall(function() GuiService:OpenBrowserWindow(DISCORD_INVITE) end)
@@ -2933,7 +2702,7 @@ CreateToggle(FarmPage, "Auto Treasure Chest", false, function(s) State.AutoTreas
 CreateToggle(FarmPage, "Auto Collect Drops", false, function(s) State.AutoCollectDrops = s end)
 CreateToggle(FarmPage, "Auto Farmer Drops", false, function(s) State.AutoFarmerDrops = s end)
 
-CreateLabel(FarmPage, "Boss Farm (Rutin)", 26)
+CreateLabel(FarmPage, "Boss Farm", 26)
 CreateToggle(FarmPage, "Auto Attack Boss", false, function(s) State.AutoAttackBoss = s end)
 CreateToggle(FarmPage, "Auto Attack All Boss", false, function(s) State.AutoAttackAllBoss = s end)
 CreateToggle(FarmPage, "Auto Tyrant of the Skies", false, function(s) State.AutoTyrant = s end)
@@ -3026,12 +2795,6 @@ CreateToggle(StatsPage, "Auto Defense", false, function(s) State.StatDefense = s
 CreateToggle(StatsPage, "Auto Sword", false, function(s) State.StatSword = s end)
 CreateToggle(StatsPage, "Auto Gun", false, function(s) State.StatGun = s end)
 CreateToggle(StatsPage, "Auto Blox Fruit", false, function(s) State.StatFruit = s end)
-CreateLabel(StatsPage, "Manual Add", 26)
-CreateButton(StatsPage, "Add 100 Melee", function() CommF_:InvokeServer("AddPoint", "Melee", 100) Notify("+100 Melee") end)
-CreateButton(StatsPage, "Add 100 Defense", function() CommF_:InvokeServer("AddPoint", "Defense", 100) Notify("+100 Defense") end)
-CreateButton(StatsPage, "Add 100 Sword", function() CommF_:InvokeServer("AddPoint", "Sword", 100) Notify("+100 Sword") end)
-CreateButton(StatsPage, "Add 100 Gun", function() CommF_:InvokeServer("AddPoint", "Gun", 100) Notify("+100 Gun") end)
-CreateButton(StatsPage, "Add 100 Blox Fruit", function() CommF_:InvokeServer("AddPoint", "Demon Fruit", 100) Notify("+100 Fruit") end)
 
 --================================================================
 -- SEA
@@ -3173,8 +2936,6 @@ CreateToggle(FruitRaidPage, "Auto Store Fruit", false, function(s) State.AutoSto
 CreateToggle(FruitRaidPage, "Auto Buy Fruit (Cousin)", false, function(s) State.AutoBuyFruit = s end)
 CreateToggle(FruitRaidPage, "Auto Find Fruit", false, function(s) State.AutoFindFruit = s end)
 CreateToggle(FruitRaidPage, "Auto Random Fruit", false, function(s) State.AutoRandomFruit = s end)
-CreateToggle(FruitRaidPage, "Auto Drop Fruit", false, function(s) State.AutoDropFruit = s end)
-CreateToggle(FruitRaidPage, "Auto Eat Fruit", false, function(s) State.AutoEatFruit = s end)
 
 CreateLabel(FruitRaidPage, "Raid", 26)
 CreateToggle(FruitRaidPage, "Auto Raid", false, function(s) State.AutoRaid = s end)
@@ -3251,7 +3012,7 @@ CreateButton(ShopPage, "Buy True Triple Katana", function()
 end)
 
 --================================================================
--- TELEPORT
+-- TELEPORT — Island Dropdown per Sea
 --================================================================
 CreateLabel(TeleportPage, "Sea Travel", 26)
 CreateButton(TeleportPage, "Travel to Sea 1", function() CommF_:InvokeServer("TravelMain") Notify("Traveling Sea 1") end)
@@ -3259,13 +3020,113 @@ CreateButton(TeleportPage, "Travel to Sea 2", function() CommF_:InvokeServer("Tr
 CreateButton(TeleportPage, "Travel to Sea 3", function() CommF_:InvokeServer("TravelZou") Notify("Traveling Sea 3") end)
 
 CreateLabel(TeleportPage, "Island Teleport", 26)
-CreateDropdown(TeleportPage, "Select Island", {"Sky 2","Sky 3"}, function(o) State.SelectedIsland = o end)
+
+-- Island positions per sea
+local IslandPositions = {
+    [1] = {
+        ["Start Island"]        = Vector3.new(1071.28, 16.30, 1426.86),
+        ["Marine Start"]        = Vector3.new(-2573.33, 6.88, 2046.99),
+        ["Middle Town"]         = Vector3.new(-655.82, 7.88, 1436.67),
+        ["Jungle"]              = Vector3.new(-1249.77, 11.88, 341.35),
+        ["Pirate Village"]      = Vector3.new(-1122.34, 4.78, 3855.91),
+        ["Desert"]              = Vector3.new(1094.14, 6.47, 4192.88),
+        ["Frozen Village"]      = Vector3.new(1198.00, 27.00, -1211.73),
+        ["Marine Fortress"]     = Vector3.new(-4505.37, 20.68, 4260.55),
+        ["Colosseum"]           = Vector3.new(-1428.35, 7.38, -3014.37),
+        ["Sky 1"]               = Vector3.new(-4970.21, 717.70, -2622.35),
+        ["Sky 2"]               = Vector3.new(-4813.02, 903.70, -1912.69),
+        ["Sky 3"]               = Vector3.new(-7952.31, 5545.52, -320.70),
+        ["Prison"]              = Vector3.new(4854.16, 5.68, 740.19),
+        ["Magma Village"]       = Vector3.new(-5231.75, 8.61, 8467.87),
+        ["Underwater City"]     = Vector3.new(61163.85, 11.77, 1819.78),
+        ["Fountain City"]       = Vector3.new(5132.71, 4.53, 4037.85),
+        ["Cyborg House"]        = Vector3.new(6262.72, 71.30, 3998.23),
+        ["Shanks Room"]         = Vector3.new(-1442.16, 29.87, -28.35),
+        ["Mob Island"]          = Vector3.new(-2850.20, 7.39, 5354.99),
+    },
+    [2] = {
+        ["First Spot"]          = Vector3.new(82.94, 18.07, 2834.98),
+        ["Flamingo Mansion"]    = Vector3.new(-390.09, 331.88, 673.46),
+        ["Flamingo Room"]       = Vector3.new(2302.19, 15.17, 663.81),
+        ["Green Zone"]          = Vector3.new(-2372.14, 72.99, -3166.51),
+        ["Cafe"]                = Vector3.new(-385.25, 73.04, 297.38),
+        ["Factory"]             = Vector3.new(430.42, 210.01, -432.50),
+        ["Colosseum"]           = Vector3.new(-1836.58, 44.58, 1360.30),
+        ["Graveyard Island"]    = Vector3.new(-5571.84, 195.18, -795.43),
+        ["Graveyard Shore"]     = Vector3.new(-5931.77, 5.19, -1189.69),
+        ["Snow Mountain"]       = Vector3.new(1384.68, 453.56, -4990.09),
+        ["Hot and Cold"]        = Vector3.new(-6026.96, 14.74, -5071.96),
+        ["Magma Side"]          = Vector3.new(-5478.39, 15.97, -5246.91),
+        ["Cursed Ship"]         = Vector3.new(902.05, 124.75, 33071.81),
+        ["Ice Castle"]          = Vector3.new(5400.40, 28.21, -6236.99),
+        ["Forgotten Island"]    = Vector3.new(-3043.31, 238.88, -10191.57),
+        ["Usoapp Island"]       = Vector3.new(4748.78, 8.35, 2849.57),
+        ["Raid Lab"]            = Vector3.new(-5554.95, 329.07, -5930.31),
+        ["Mini Sky"]            = Vector3.new(-260.35, 49325.70, -35259.30),
+    },
+    [3] = {
+        ["Port Town"]           = Vector3.new(-287, 30, 5388),
+        ["Hydra Island"]        = Vector3.new(3399.32, 72.41, 1572.99),
+        ["Secret Temple"]       = Vector3.new(5247, 7, 1097),
+        ["Hydra House"]         = Vector3.new(5245, 602, 251),
+        ["Great Tree"]          = Vector3.new(2443, 36, -6573),
+        ["Castle on the Sea"]   = Vector3.new(-5500, 314, -2855),
+        ["Mansion"]             = Vector3.new(-12548, 337, -7481),
+        ["Floating Turtle"]     = Vector3.new(-10016, 332, -8326),
+        ["Haunted Castle"]      = Vector3.new(-9509.34, 142.13, 5535.16),
+        ["Peanut Island"]       = Vector3.new(-2131, 38, -10106),
+        ["Ice Cream Island"]    = Vector3.new(-950, 59, -10907),
+        ["Cake Island"]         = Vector3.new(-1762, 38, -11878),
+        ["Tiki Outpost"]        = Vector3.new(-16204.08, 9.08, 479.22),
+        ["Submerged Island"]    = Vector3.new(11427, -2155, 9730),
+        ["Sealed Cavern"]       = Vector3.new(10437.38, -2227.38, 9670.98),
+    },
+}
+
+local function GetCurrentSeaNum()
+    if World1 then return 1 end
+    if World2 then return 2 end
+    if World3 then return 3 end
+    return 1
+end
+
+local function GetIslandListForSea(sea)
+    local list = {}
+    for name, _ in pairs(IslandPositions[sea] or {}) do
+        table.insert(list, name)
+    end
+    table.sort(list)
+    return list
+end
+
+local CurrentSea = GetCurrentSeaNum()
+local IslandDropdownFrame, IslandDropdownSetOptions = CreateDropdown(
+    TeleportPage,
+    "Select Island",
+    GetIslandListForSea(CurrentSea),
+    function(o) State.SelectedIsland = o end
+)
+
+CreateButton(TeleportPage, "Refresh Island List", function()
+    CurrentSea = GetCurrentSeaNum()
+    if IslandDropdownSetOptions then
+        IslandDropdownSetOptions(GetIslandListForSea(CurrentSea))
+    end
+    Notify("Refreshed island list for Sea " .. CurrentSea)
+end)
+
 CreateButton(TeleportPage, "Tween To Island", function()
-    local isl = {["Sky 2"] = Vector3.new(-4607.82, 872.54, -1667.55), ["Sky 3"] = Vector3.new(-7894.61, 5547.14, -380.29)}
     local sel = State.SelectedIsland
-    if sel and isl[sel] then
-        CommF_:InvokeServer("requestEntrance", isl[sel])
+    if not sel then
+        Notify("Select island first")
+        return
+    end
+    local pos = IslandPositions[CurrentSea] and IslandPositions[CurrentSea][sel]
+    if pos then
+        CommF_:InvokeServer("requestEntrance", pos)
         Notify("Traveling to " .. sel)
+    else
+        Notify("Island not found in this sea")
     end
 end)
 
@@ -3288,15 +3149,26 @@ CreateToggle(VisualPage, "Black Screen", false, function(s) State.BlackScreen = 
 CreateToggle(VisualPage, "White Screen", false, function(s) State.WhiteScreen = s end)
 
 --================================================================
--- SETTINGS
+-- MISC (All Setting)
 --================================================================
-CreateLabel(SettingsPage, "Config", 26)
-CreateButton(SettingsPage, "Reset Config", function() Notify("Config reset (rejoin to apply)") end)
+CreateLabel(MiscPage, "Server & Hop", 26)
+CreateToggle(MiscPage, "Auto Hop (after 1h)", false, function(s) State.AutoHop1h = s end)
+CreateToggle(MiscPage, "Hop When Idle", false, function(s) State.HopWhenIdle = s end)
+CreateButton(MiscPage, "Rejoin Server", function()
+    TeleportService:Teleport(game.PlaceId, player)
+end)
+CreateLabel(MiscPage, "JobId: " .. game.JobId, 30)
 
-CreateLabel(SettingsPage, "Webhook", 26)
+CreateLabel(MiscPage, "Config", 26)
+CreateButton(MiscPage, "Reset Config", function()
+    Notify("Config reset (rejoin to apply)")
+end)
+
+CreateLabel(MiscPage, "Webhook", 26)
 local WebhookBox = Create("TextBox", {
-    Parent = SettingsPage,
+    Parent = MiscPage,
     BackgroundColor3 = THEME.BG_Secondary,
+    BackgroundTransparency = 0.15,
     Size = UDim2.new(1, 0, 0, 38),
     Text = "",
     PlaceholderText = "Paste Discord Webhook URL...",
@@ -3309,7 +3181,7 @@ local WebhookBox = Create("TextBox", {
     BorderSizePixel = 0, ZIndex = 100,
 })
 Corner(WebhookBox, 9)
-RegisterAccent(Stroke(WebhookBox, BLUE_PALETTE[1], 1, 0.55))
+RegisterAccent(Stroke(WebhookBox, THEME.Outline, 1.2, 0.25))
 WebhookBox.FocusLost:Connect(function()
     if WebhookBox.Text ~= "" and WebhookBox.Text:find("discord.com/api/webhooks") then
         State.WebhookURL = WebhookBox.Text
@@ -3318,19 +3190,41 @@ WebhookBox.FocusLost:Connect(function()
         Notify("Invalid Webhook URL")
     end
 end)
-CreateToggle(SettingsPage, "Webhook Error Report", true, function(s) State.WebhookReport = s end)
-CreateToggle(SettingsPage, "Noti Profile", false, function(s) State.NotiProfile = s end)
-CreateToggle(SettingsPage, "Ping Discord", false, function(s) State.PingDiscord = s end)
+CreateToggle(MiscPage, "Webhook Error Report", true, function(s) State.WebhookReport = s end)
+CreateToggle(MiscPage, "Noti Profile", false, function(s) State.NotiProfile = s end)
+CreateToggle(MiscPage, "Ping Discord", false, function(s) State.PingDiscord = s end)
 
-CreateLabel(SettingsPage, "Screen", 26)
-CreateSlider(SettingsPage, "FPS Cap", 15, 240, 60, function(v)
+CreateLabel(MiscPage, "Local Player", 26)
+CreateSlider(MiscPage, "WalkSpeed", 16, 300, 16, function(v)
+    State.WalkSpeed = v
+    local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+    if hum then hum.WalkSpeed = v end
+end)
+CreateSlider(MiscPage, "JumpPower", 50, 500, 50, function(v)
+    State.JumpPower = v
+    local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+    if hum then hum.JumpPower = v end
+end)
+CreateToggle(MiscPage, "Infinite Jump", false, function(s) State.InfiniteJump = s end)
+CreateToggle(MiscPage, "Walk On Water", false, function(s)
+    State.WalkOnWater = s
+    local water = Workspace:FindFirstChild("Map") and Workspace.Map:FindFirstChild("WaterBase-Plane")
+    if water then water.Size = s and Vector3.new(1000,113,1000) or Vector3.new(1000,80,1000) end
+end)
+CreateToggle(MiscPage, "No Clip", false, function(s) State.NoClip = s end)
+CreateToggle(MiscPage, "Anti-AFK", true, function(s) State.AntiAFK = s end)
+CreateToggle(MiscPage, "Auto Reset Character", false, function(s) State.AutoResetChar = s end)
+CreateToggle(MiscPage, "Fast Attack", true, function(s) State.FastAttackMisc = s end)
+
+CreateLabel(MiscPage, "Screen", 26)
+CreateSlider(MiscPage, "FPS Cap", 15, 240, 60, function(v)
     State.FPScap = v
     pcall(function() if setfpscap then setfpscap(v) end end)
 end)
-CreateToggle(SettingsPage, "White Screen", false, function(s)
+CreateToggle(MiscPage, "White Screen", false, function(s)
     pcall(function() RunService:Set3dRenderingEnabled(not s) end)
 end)
-CreateToggle(SettingsPage, "Black Screen", false, function(s)
+CreateToggle(MiscPage, "Black Screen", false, function(s)
     local bs = playerGui:FindFirstChild("SX_BlackScreen")
     if s then
         if not bs then
@@ -3347,40 +3241,6 @@ CreateToggle(SettingsPage, "Black Screen", false, function(s)
         end
     elseif bs then bs:Destroy() end
 end)
-
---================================================================
--- MISC
---================================================================
-CreateLabel(MiscPage, "Server & Hop", 26)
-CreateToggle(MiscPage, "Auto Hop (after 1h)", false, function(s) State.AutoHop1h = s end)
-CreateToggle(MiscPage, "Hop When Idle", false, function(s) State.HopWhenIdle = s end)
-CreateButton(MiscPage, "Rejoin Server", function()
-    TeleportService:Teleport(game.PlaceId, player)
-end)
-CreateLabel(MiscPage, "JobId: " .. game.JobId, 30)
-
-CreateLabel(MiscPage, "Local Player", 26)
-CreateSlider(MiscPage, "WalkSpeed", 16, 300, 16, function(v)
-    State.WalkSpeed = v
-    local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-    if hum then hum.WalkSpeed = v end
-end)
-CreateSlider(MiscPage, "JumpPower", 50, 500, 50, function(v)
-    State.JumpPower = v
-    local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-    if hum then hum.JumpPower = v end
-end)
-CreateToggle(MiscPage, "Infinite Jump", false, function(s) State.InfiniteJump = s end)
-CreateToggle(MiscPage, "Fly", false, function(s) State.Fly = s end)
-CreateToggle(MiscPage, "Walk On Water", false, function(s)
-    State.WalkOnWater = s
-    local water = Workspace:FindFirstChild("Map") and Workspace.Map:FindFirstChild("WaterBase-Plane")
-    if water then water.Size = s and Vector3.new(1000,113,1000) or Vector3.new(1000,80,1000) end
-end)
-CreateToggle(MiscPage, "No Clip", false, function(s) State.NoClip = s end)
-CreateToggle(MiscPage, "Anti-AFK", true, function(s) State.AntiAFK = s end)
-CreateToggle(MiscPage, "Auto Reset Character", false, function(s) State.AutoResetChar = s end)
-CreateToggle(MiscPage, "Fast Attack", true, function(s) State.FastAttackMisc = s end)
 
 CreateLabel(MiscPage, "Utility", 26)
 CreateToggle(MiscPage, "Anti-Flag", false, function(s) State.AntiFlag = s end)
@@ -3405,8 +3265,20 @@ CreateButton(MiscPage, "Open Haki Color", function()
 end)
 
 --================================================================
--- AUTO FARM LEVEL LOOP (Kaitun-style fix)
+-- MAIN LOOPS
 --================================================================
+task.spawn(function()
+    while task.wait(0.05) do
+        if State.FastAttackMisc and IsAlive() then pcall(AttackNoCoolDown) end
+    end
+end)
+
+task.spawn(function()
+    while task.wait(0.5) do
+        pcall(function() if State.AutoHaki then AutoHaki() end end)
+    end
+end)
+
 task.spawn(function()
     while task.wait(0.25) do
         if State.AutoFarm then
@@ -3418,78 +3290,70 @@ task.spawn(function()
                 local hum = char and char:FindFirstChildOfClass("Humanoid")
                 if not hum or hum.Health <= 0 then return end
 
-                -- Get quest info
                 local hasQuest = false
                 local questMob = nil
-                local questNpc = nil
-                local questId = nil
-                local questName = nil
 
-                -- Try from HUD
                 local mainGui = playerGui:FindFirstChild("Main")
                 if mainGui and mainGui:FindFirstChild("Quest") and mainGui.Quest.Visible then
                     local questTitle = mainGui.Quest.Container.QuestTitle.Title.Text or ""
                     local m = questTitle:match("Defeat%s*%d*%s*(.-)%s*%b()")
                     if m then
                         hasQuest = true
-                        questMob = m:gsub("Military ", "Mil. ")
+                        questMob = m:gsub("Military ", "Mil. "):gsub("%s+$", "")
                     end
                 end
 
-                -- If no quest, get best quest for level
-                if not questMob then
-                    local level = player.Data.Level.Value
-                    local okQ, Quests = pcall(function() return require(RS.Quests) end)
-                    local okG, GuideModule = pcall(function() return require(RS.GuideModule) end)
-                    if not okQ or not okG then return end
+                if hasQuest and questMob and questMob ~= "" then
+                    local enemy = FindEnemy({questMob}, 99999)
+                    if enemy then
+                        CombatController.Attack({questMob})
+                    else
+                        local sp = FindSpawnPart(questMob, true)
+                        if sp then
+                            FarmTeleport(sp.CFrame * CFrame.new(0, 60, 0), getgenv().FarmSpeed, 25)
+                        end
+                    end
+                    return
+                end
 
-                    local best, lastLvl = nil, 0
-                    local ignored = {BartiloQuest=true, Trainees=true, MarineQuest=true, CitizenQuest=true}
+                local level = player.Data.Level.Value
+                local okQ, Quests = pcall(function() return require(RS.Quests) end)
+                local okG, GuideModule = pcall(function() return require(RS.GuideModule) end)
+                if not okQ or not okG then return end
 
-                    for npcName, npcData in pairs(GuideModule.Data.NPCList or {}) do
-                        local internal = npcData.InternalQuestName
-                        if internal and not ignored[internal] and Quests[internal] and npcData.Levels then
-                            for id, req in pairs(npcData.Levels) do
-                                if Quests[internal][id] and req <= level and req >= lastLvl then
-                                    local mob, amt = next(Quests[internal][id].Task)
-                                    if amt and amt > 1 then
-                                        best = {
-                                            Id=id, QuestName=internal,
-                                            Pos=npcData.Position, Mob=mob, Level=req
-                                        }
-                                        lastLvl = req
-                                    end
+                local best, lastLvl = nil, 0
+                local ignored = {BartiloQuest=true, Trainees=true, MarineQuest=true, CitizenQuest=true}
+
+                for npcName, npcData in pairs(GuideModule.Data.NPCList or {}) do
+                    local internal = npcData.InternalQuestName
+                    if internal and not ignored[internal] and Quests[internal] and npcData.Levels then
+                        for id, req in pairs(npcData.Levels) do
+                            if Quests[internal][id] and req <= level and req >= lastLvl then
+                                local mob, amt = next(Quests[internal][id].Task)
+                                if amt and amt > 1 then
+                                    best = {Id=id, QuestName=internal, Pos=npcData.Position, Mob=mob, Level=req}
+                                    lastLvl = req
                                 end
                             end
                         end
                     end
+                end
 
-                    if not best then return end
-                    local npcPos = typeof(best.Pos) == "CFrame" and best.Pos.Position or best.Pos
-                    if Dist(hrp.Position, npcPos) > 8 then
-                        FarmTeleport(CFrame.new(npcPos) * CFrame.new(0, 4, 2), getgenv().FarmSpeed, 25)
-                        return
-                    end
-                    CommF_:InvokeServer("StartQuest", tostring(best.QuestName), best.Id)
+                if not best then return end
+
+                local npcPos = typeof(best.Pos) == "CFrame" and best.Pos.Position or best.Pos
+
+                if Dist(hrp.Position, npcPos) > 8 then
+                    FarmTeleport(CFrame.new(npcPos) * CFrame.new(0, 4, 2), getgenv().FarmSpeed, 25)
                     return
                 end
 
-                -- Attack mob
-                local enemy = FindEnemy({questMob}, 99999)
-                if not enemy then
-                    local sp = FindSpawnPart(questMob, true)
-                    if sp then
-                        FarmTeleport(sp.CFrame * CFrame.new(0, 60, 0), getgenv().FarmSpeed, 25)
-                    end
-                    return
-                end
-                CombatController.Attack({questMob})
+                CommF_:InvokeServer("StartQuest", tostring(best.QuestName), best.Id)
             end)
         end
     end
 end)
 
--- Auto Farm Nearest
 task.spawn(function()
     while task.wait(0.35) do
         if State.AutoFarmNearest then
@@ -3501,7 +3365,6 @@ task.spawn(function()
     end
 end)
 
--- Auto Farm Bones
 task.spawn(function()
     while task.wait(0.3) do
         if State.AutoFarmBones then
@@ -3512,7 +3375,6 @@ task.spawn(function()
     end
 end)
 
--- Auto Farm Material
 task.spawn(function()
     while task.wait(0.3) do
         if State.AutoFarmMaterial and State.SelectedMaterial then
@@ -3530,7 +3392,6 @@ task.spawn(function()
     end
 end)
 
--- Auto Kill Boss
 task.spawn(function()
     while task.wait(0.4) do
         if State.AutoAttackBoss and State.SelectedBoss then
@@ -3567,7 +3428,6 @@ task.spawn(function()
     end
 end)
 
--- Noclip
 RunService.Stepped:Connect(function()
     if State.NoClip and player.Character then
         pcall(function()
@@ -3578,14 +3438,12 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- Auto Ken
 task.spawn(function()
     while task.wait(1) do
         if State.AutoKen then pcall(function() CommF_:InvokeServer("Ken", true) end) end
     end
 end)
 
--- Remove UI
 task.spawn(function()
     while task.wait(0.5) do
         if State.RemoveDamage then pcall(function() RS.Assets.GUI.DamageCounter.Enabled = false end) end
@@ -3593,7 +3451,6 @@ task.spawn(function()
     end
 end)
 
--- Auto Stat
 task.spawn(function()
     while task.wait(3) do
         if State.AutoStatPoint then
@@ -3614,21 +3471,6 @@ task.spawn(function()
     end
 end)
 
--- Fast Attack
-task.spawn(function()
-    while task.wait(0.05) do
-        if State.FastAttackMisc and IsAlive() then pcall(AttackNoCoolDown) end
-    end
-end)
-
--- Auto Haki
-task.spawn(function()
-    while task.wait(0.5) do
-        pcall(function() if State.AutoHaki then AutoHaki() end end)
-    end
-end)
-
--- Infinite Jump
 UserInputService.JumpRequest:Connect(function()
     if State.InfiniteJump then
         local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
@@ -3671,7 +3513,7 @@ close.Activated:Connect(function()
 end)
 
 --================================================================
--- FLOATING BUTTON (Logo Open/Close UI)
+-- FLOATING BUTTON (Logo)
 --================================================================
 local floatingButton = Instance.new("ScreenGui")
 floatingButton.Name = "SYSX_FloatingButton"
@@ -3685,7 +3527,7 @@ local btnHolder = Instance.new("Frame")
 btnHolder.Name = "ButtonHolder"
 btnHolder.Size = UDim2.fromOffset(56, 56)
 btnHolder.Position = UDim2.new(1, -80, 0, 120)
-btnHolder.BackgroundColor3 = Color3.fromRGB(16, 22, 40)
+btnHolder.BackgroundColor3 = THEME.BG_Secondary
 btnHolder.BackgroundTransparency = 0.1
 btnHolder.BorderSizePixel = 0
 btnHolder.Active = true
@@ -3696,9 +3538,10 @@ btnCorner.CornerRadius = UDim.new(1, 0)
 btnCorner.Parent = btnHolder
 
 local btnStroke = Instance.new("UIStroke")
-btnStroke.Color = Color3.fromRGB(135, 206, 250)
-btnStroke.Thickness = 1.5
-btnStroke.Transparency = 0.2
+btnStroke.Color = THEME.Outline
+btnStroke.Thickness = 1.8
+btnStroke.Transparency = 0.15
+btnStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 btnStroke.Parent = btnHolder
 
 local logoText = Instance.new("TextLabel")
@@ -3706,10 +3549,10 @@ logoText.Name = "LogoText"
 logoText.Text = "SYSX"
 logoText.Size = UDim2.fromScale(1, 1)
 logoText.BackgroundTransparency = 1
-logoText.TextColor3 = Color3.fromRGB(180, 220, 255)
+logoText.TextColor3 = THEME.Accent_Bright
 logoText.TextSize = 14
 logoText.Font = Enum.Font.GothamBlack
-logoText.TextStrokeColor3 = Color3.fromRGB(60, 130, 220)
+logoText.TextStrokeColor3 = THEME.Outline
 logoText.TextStrokeTransparency = 0.3
 logoText.Parent = btnHolder
 
@@ -3728,12 +3571,12 @@ local function ToggleUI()
     gui.Enabled = uiVisible
     local ti = TweenInfo.new(0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
     if uiVisible then
-        TweenService:Create(btnHolder, ti, {BackgroundColor3 = Color3.fromRGB(16, 22, 40)}):Play()
-        TweenService:Create(btnStroke, ti, {Color = Color3.fromRGB(135, 206, 250)}):Play()
-        TweenService:Create(logoText, ti, {TextColor3 = Color3.fromRGB(180, 220, 255)}):Play()
+        TweenService:Create(btnHolder, ti, {BackgroundColor3 = THEME.BG_Secondary}):Play()
+        TweenService:Create(btnStroke, ti, {Color = THEME.Outline}):Play()
+        TweenService:Create(logoText, ti, {TextColor3 = THEME.Accent_Bright}):Play()
     else
-        TweenService:Create(btnHolder, ti, {BackgroundColor3 = Color3.fromRGB(60, 130, 220)}):Play()
-        TweenService:Create(btnStroke, ti, {Color = Color3.fromRGB(180, 220, 255)}):Play()
+        TweenService:Create(btnHolder, ti, {BackgroundColor3 = THEME.Static_Blue}):Play()
+        TweenService:Create(btnStroke, ti, {Color = THEME.Accent_Bright}):Play()
         TweenService:Create(logoText, ti, {TextColor3 = Color3.fromRGB(255, 255, 255)}):Play()
     end
 end
@@ -3747,10 +3590,9 @@ end)
 
 btnClick.MouseLeave:Connect(function()
     TweenService:Create(btnHolder, TweenInfo.new(0.15), {Size = UDim2.fromOffset(56, 56)}):Play()
-    TweenService:Create(btnStroke, TweenInfo.new(0.15), {Transparency = 0.2}):Play()
+    TweenService:Create(btnStroke, TweenInfo.new(0.15), {Transparency = 0.15}):Play()
 end)
 
--- Drag floating button
 local fbDragging = false
 local fbStart, fbPos
 btnHolder.InputBegan:Connect(function(input)
@@ -3778,7 +3620,6 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 
--- LeftControl toggle
 UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
     if input.KeyCode == Enum.KeyCode.LeftControl then ToggleUI() end
@@ -3788,4 +3629,4 @@ end)
 -- STARTUP
 --================================================================
 ShowTab("Farm")
-Notify("SysxHub v2.5 Loaded — Logo + 14 Tabs ✅")
+Notify("SYSX HUB v1.0 Loaded — Outline GUI + 13 Tabs ✅")
