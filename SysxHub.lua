@@ -180,6 +180,9 @@ local State = {
     FlyBoat=false, DriveBoatTiki=false, DriveBoatHydra=false,
     TeleportBoatRough=false, TweenUntilEvent=false,
 
+    -- Sea to Sea (baru)
+    AutoTravelSea1=false, AutoTravelSea2=false, AutoTravelSea3=false,
+
     -- Fishing
     AutoEquipRod=false, AutoFishing=false, AutoSellFish=false, AutoSellCorruptedFish=false,
     SelectedBait="Basic Bait",
@@ -189,6 +192,9 @@ local State = {
     AutoTrialDraco=false, FullyTrialDraco=false,
     AutoBuyGearV4=false, AutoChooseGears=false, SelectedGearV4="Omega",
     AutoGetCyborg=false, AutoGetGhoul=false, AutoRaceDraco=false,
+
+    -- Race V4 (baru)
+    AutoPullLeverV4=false, AutoTrialV4=false, AutoFinishTrainV4=false,
 
     -- Fruit & Raid
     AutoStoreFruit=false, AutoBuyFruit=false, AutoBuySniper=false,
@@ -2895,6 +2901,55 @@ CreateDropdown(SeaPage, "Combat Weapon",
     {"Melee","Blox Fruit","Gun","Sword","Random"},
     function(o) State.CombatWeapon = o end)
 
+-- Sea to Sea (baru)
+CreateLabel(SeaPage, "Sea to Sea", 26)
+CreateToggle(SeaPage, "Auto Travel to Sea 1", false, function(s)
+    State.AutoTravelSea1 = s
+    if s then
+        pcall(function()
+            if GetCurrentSea() ~= 1 then
+                CommF_:InvokeServer("TravelMain")
+                Notify("Traveling to Sea 1")
+            else
+                Notify("Already in Sea 1")
+                State.AutoTravelSea1 = false
+            end
+        end)
+    end
+end)
+CreateToggle(SeaPage, "Auto Travel to Sea 2", false, function(s)
+    State.AutoTravelSea2 = s
+    if s then
+        pcall(function()
+            if GetCurrentSea() ~= 2 then
+                CommF_:InvokeServer("TravelDressrosa")
+                Notify("Traveling to Sea 2")
+            else
+                Notify("Already in Sea 2")
+                State.AutoTravelSea2 = false
+            end
+        end)
+    end
+end)
+CreateToggle(SeaPage, "Auto Travel to Sea 3", false, function(s)
+    State.AutoTravelSea3 = s
+    if s then
+        pcall(function()
+            if GetCurrentSea() ~= 3 then
+                CommF_:InvokeServer("TravelZou")
+                Notify("Traveling to Sea 3")
+            else
+                Notify("Already in Sea 3")
+                State.AutoTravelSea3 = false
+            end
+        end)
+    end
+end)
+CreateButton(SeaPage, "Refresh Sea Detection", function()
+    local s = GetCurrentSea()
+    Notify("Current Sea: " .. s)
+end)
+
 CreateLabel(SeaPage, "Sea Event", 26)
 CreateToggle(SeaPage, "Auto Farm Sea", false, function(s) State.AutoFarmSea = s end)
 CreateToggle(SeaPage, "Attack Sea Beasts", false, function(s) State.AttackSeaBeasts = s end)
@@ -2995,6 +3050,67 @@ CreateToggle(RacePage, "No Frog", false, function(s)
         for _, d in pairs(Lighting:GetDescendants()) do
             if d:IsA("Atmosphere") then d:Destroy() end
         end
+    end
+end)
+
+-- Race V4 (baru)
+CreateLabel(RacePage, "Race V4 Options", 26)
+CreateToggle(RacePage, "Auto Pull Lever V4", false, function(s)
+    State.AutoPullLeverV4 = s
+    if s then
+        task.spawn(function()
+            while State.AutoPullLeverV4 do
+                task.wait(1)
+                pcall(function()
+                    for _, d in pairs(Workspace.Map["Temple of Time"]:GetDescendants()) do
+                        if d.Name == "ProximityPrompt" then
+                            pcall(function() fireproximityprompt(d, math.huge) end)
+                        end
+                    end
+                end)
+            end
+        end)
+    end
+end)
+CreateToggle(RacePage, "Auto Trial V4", false, function(s)
+    State.AutoTrialV4 = s
+    if s then
+        task.spawn(function()
+            while State.AutoTrialV4 do
+                task.wait(1)
+                pcall(function()
+                    local hrp = GetHRP()
+                    if hrp then
+                        hrp.CFrame = CFrame.new(28286.35, 14895.30, 102.62)
+                        local ms = RS:FindFirstChild("MapStash")
+                        local tot = ms and ms:FindFirstChild("Temple of Time")
+                        if tot then tot.Parent = Workspace.Map end
+                    end
+                end)
+            end
+        end)
+    end
+end)
+CreateToggle(RacePage, "Auto Finish Train V4", false, function(s)
+    State.AutoFinishTrainV4 = s
+    if s then
+        task.spawn(function()
+            while State.AutoFinishTrainV4 do
+                task.wait(1)
+                pcall(function()
+                    local mobs = {"Reborn Skeleton","Living Zombie","Demonic Soul","Posessed Mummy"}
+                    local enemy = FindEnemy(mobs, 99999)
+                    if enemy then
+                        CombatController.Attack({enemy.Name})
+                    else
+                        local sp = FindSpawnPart(mobs[1], true)
+                        if sp then
+                            FarmTeleport(sp.CFrame * CFrame.new(0, 60, 0), getgenv().FarmSpeed, 25)
+                        end
+                    end
+                end)
+            end
+        end)
     end
 end)
 
@@ -3448,6 +3564,18 @@ end)
 task.spawn(function()
     while task.wait(0.35) do
         if State.AutoFarmNearest then
+            pcall(function()
+                local list = GetMonAsSortedRange()
+                if list[1] then CombatController.Attack({list[1].Name}) end
+            end)
+        end
+    end
+end)
+
+-- Auto Farm Mastery (tambahan fix)
+task.spawn(function()
+    while task.wait(0.35) do
+        if State.AutoFarmMastery then
             pcall(function()
                 local list = GetMonAsSortedRange()
                 if list[1] then CombatController.Attack({list[1].Name}) end
