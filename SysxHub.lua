@@ -1,6 +1,6 @@
 --[[
 ================================================================
-    SYSX HUB v1.1 — Blox Fruits
+    SYSX HUB v1.1 — Blox Fruits (FIXED FARM + AUTO EQUIP)
 ================================================================
 ]]
 
@@ -308,16 +308,62 @@ function AutoHaki()
     end
 end
 
+-- ============================================================
+-- FIX: AUTO EQUIP WEAPON (SESUAI KATEGORI)
+-- ============================================================
 getgenv().EquipTime = 0
 function EquipWeapon(n)
-    if tick() - getgenv().EquipTime < 0.3 then return end
+    if tick() - getgenv().EquipTime < 0.25 then return end
     getgenv().EquipTime = tick()
     if not n then return end
-    local bp = player:FindFirstChild("Backpack"); if not bp then return end
-    local t = bp:FindFirstChild(n)
-    if t and t:IsA("Tool") then player.Character.Humanoid:EquipTool(t); return end
+    local char = player.Character
+    if not char then return end
+    local bp = player:FindFirstChild("Backpack")
+    if not bp then return end
+
+    local function IsInCategory(tool, cat)
+        if not tool then return false end
+        local tip = tool.ToolTip
+        local wtype = tool:GetAttribute("WeaponType")
+        if cat == "Melee" then
+            return tip == "Melee" or wtype == "Melee"
+                or tool.Name:match("Combat") or tool.Name:match("Superhuman")
+                or tool.Name:match("Black Leg") or tool.Name:match("Electro")
+                or tool.Name:match("Fishman") or tool.Name:match("Dragon")
+                or tool.Name:match("Sharkman") or tool.Name:match("Godhuman")
+                or tool.Name:match("Sanguine") or tool.Name:match("Death Step")
+                or tool.Name:match("Electric Claw") or tool.Name:match("Dragon Talon")
+        elseif cat == "Sword" then
+            return tip == "Sword" or wtype == "Sword"
+        elseif cat == "Gun" then
+            return tip == "Gun" or wtype == "Gun"
+        elseif cat == "Blox Fruit" then
+            return tip == "Blox Fruit" or wtype == "Blox Fruit"
+                or tool.Name:match("Fruit")
+        end
+        return false
+    end
+
+    local equipped = char:FindFirstChildOfClass("Tool")
+    if equipped and IsInCategory(equipped, n) then return end
+
     for _, x in ipairs(bp:GetChildren()) do
-        if x:IsA("Tool") and x.ToolTip == n then player.Character.Humanoid:EquipTool(x); return end
+        if x:IsA("Tool") and IsInCategory(x, n) then
+            pcall(function() char.Humanoid:EquipTool(x) end)
+            return
+        end
+    end
+
+    local t = bp:FindFirstChild(n)
+    if t and t:IsA("Tool") then
+        pcall(function() char.Humanoid:EquipTool(t) end)
+        return
+    end
+    for _, x in ipairs(bp:GetChildren()) do
+        if x:IsA("Tool") and x.ToolTip == n then
+            pcall(function() char.Humanoid:EquipTool(x) end)
+            return
+        end
     end
 end
 
@@ -821,13 +867,15 @@ task.spawn(function()
     end
 end)
 
--- =============================================================
--- AUTO FARM LEVEL — Alur: Take Quest → Kill NPC → Quest Done → Repeat
--- =============================================================
-local FarmState = { QuestTaken=false, LastQuestCheck=0 }
+-- ============================================================
+-- FIXED: AUTO FARM LEVEL
+-- Take quest SEKALI -> Kill mob sampai quest selesai -> Take quest baru
+-- Auto equip weapon tiap tick
+-- ============================================================
+local FarmState = { QuestTaken=false, QuestMob=nil, LastQuestCheck=0, LastQuestName=nil, LastQuestId=nil }
 
 task.spawn(function()
-    while task.wait(0.3) do
+    while task.wait(0.25) do
         if State.AutoFarm then
             pcall(function()
                 local hrp = GetHRP()
@@ -836,31 +884,53 @@ task.spawn(function()
                 local hum = char and char:FindFirstChildOfClass("Humanoid")
                 if not hum or hum.Health <= 0 then return end
 
+                -- EQUIP WEAPON + HAKI tiap tick
+                AutoHaki()
+                EquipWeapon(State.SelectedWeapon)
+
                 -- STEP 1: CEK QUEST AKTIF
                 local hasQuest = false
                 local questMob = nil
                 local mainGui = playerGui:FindFirstChild("Main")
                 if mainGui and mainGui:FindFirstChild("Quest") and mainGui.Quest.Visible then
-                    local questTitle = mainGui.Quest.Container.QuestTitle.Title.Text or ""
-                    local m = questTitle:match("Defeat%s*%d*%s*(.-)%s*%b()")
-                    if m then
-                        hasQuest = true
-                        questMob = m:gsub("Military ", "Mil. "):gsub("%s+$", "")
+                    local ok, qText = pcall(function()
+                        return mainGui.Quest.Container.QuestTitle.Title.Text
+                    end)
+                    if ok and qText and qText ~= "" then
+                        local m = qText:match("Defeat%s*%d*%s*(.-)%s*%b()")
+                        if m then
+                            hasQuest = true
+                            questMob = m:gsub("Military ", "Mil. "):gsub("%s+$", "")
+                        end
                     end
                 end
 
-                -- STEP 2: KILL QUEST MOB
+                -- STEP 2: KILL QUEST MOB SAMPAI QUEST SELESAI
                 if hasQuest and questMob and questMob ~= "" then
                     FarmState.QuestTaken = true
+                    FarmState.QuestMob = questMob
+
                     local enemy = FindEnemy({questMob}, 99999)
                     if enemy then
-                        CombatController.Attack({questMob})
+                        local target = enemy
+                        local trp = target:FindFirstChild("HumanoidRootPart")
+                        local thum = target:FindFirstChildOfClass("Humanoid")
+                        if trp and thum and thum.Health > 0 then
+                            local farmDist = getgenv().FarmDistance or 20
+                            FarmTeleport(trp.CFrame + Vector3.new(0, farmDist, 0), getgenv().FarmSpeed, 15)
+                            if Dist(trp.Position, GetHRP().Position) < 150 then
+                                CombatController.Grab(target.Name)
+                                AutoHaki()
+                                EquipWeapon(State.SelectedWeapon)
+                                AttackNoCoolDown()
+                            end
+                        end
                     else
                         local sp = FindSpawnPart(questMob, true)
                         if sp then
-                            FarmTeleport(sp.CFrame * CFrame.new(0, 60, 0), getgenv().FarmSpeed, 25)
+                            FarmTeleport(sp.CFrame * CFrame.new(0, 60, 0), getgenv().FarmSpeed, 20)
                         else
-                            task.wait(1)
+                            task.wait(0.4)
                         end
                     end
                     return
@@ -869,7 +939,8 @@ task.spawn(function()
                 -- STEP 3: QUEST SELESAI
                 if FarmState.QuestTaken then
                     FarmState.QuestTaken = false
-                    task.wait(0.3)
+                    FarmState.QuestMob = nil
+                    task.wait(0.4)
                 end
 
                 -- STEP 4: CARI QUEST BARU
@@ -885,15 +956,19 @@ task.spawn(function()
                     local internal = npcData.InternalQuestName
                     if internal and not ignored[internal] and Quests[internal] and npcData.Levels then
                         for id, req in pairs(npcData.Levels) do
-                            if Quests[internal][id] and req <= level and Quests[internal][id].Task then
-                                local mob, amt = next(Quests[internal][id].Task)
+                            local questData = Quests[internal][id]
+                            if questData and req <= level and questData.Task then
+                                local mob, amt = next(questData.Task)
                                 if amt and amt > 1 then
                                     local pos = npcData.Position
                                     local npcPos = typeof(pos) == "CFrame" and pos.Position or pos
                                     if npcPos then
                                         table.insert(candidates, {
-                                            Id = id, QuestName = internal,
-                                            NpcPos = npcPos, Mob = mob, Level = req,
+                                            Id = id,
+                                            QuestName = internal,
+                                            NpcPos = npcPos,
+                                            Mob = mob,
+                                            Level = req,
                                         })
                                     end
                                 end
@@ -909,29 +984,32 @@ task.spawn(function()
                 if not best then return end
 
                 -- STEP 5: TWEEN KE NPC
-                if Dist(hrp.Position, best.NpcPos) > 8 then
-                    FarmTeleport(CFrame.new(best.NpcPos) * CFrame.new(0, 4, 2), getgenv().FarmSpeed, 25)
+                if Dist(hrp.Position, best.NpcPos) > 10 then
+                    FarmTeleport(CFrame.new(best.NpcPos) * CFrame.new(0, 4, 3), getgenv().FarmSpeed, 25)
                     return
                 end
 
-                -- STEP 6: TAKE QUEST
+                -- STEP 6: TAKE QUEST (dengan guard anti-double)
+                if FarmState.LastQuestName == best.QuestName and FarmState.LastQuestId == best.Id
+                   and (tick() - FarmState.LastQuestCheck) < 2 then
+                    return
+                end
+                FarmState.LastQuestName = best.QuestName
+                FarmState.LastQuestId = best.Id
+                FarmState.LastQuestCheck = tick()
+
                 CommF_:InvokeServer("StartQuest", tostring(best.QuestName), best.Id)
 
-                -- STEP 7: LANGSUNG KILL MOB (tanpa nunggu loop)
-                task.wait(0.5)
-                local mobCheck = best.Mob
-                if mobCheck then
-                    local enemy = FindEnemy({mobCheck}, 99999)
-                    if enemy then
-                        CombatController.Attack({mobCheck})
-                    else
-                        local sp = FindSpawnPart(mobCheck, true)
-                        if sp then
-                            FarmTeleport(sp.CFrame * CFrame.new(0, 60, 0), getgenv().FarmSpeed, 25)
-                        end
-                    end
-                end
+                -- STEP 7: tunggu quest muncul, lalu loop balik (step 2 akan kill mob)
+                task.wait(1.2)
+                FarmState.QuestTaken = true
+                FarmState.QuestMob = best.Mob
             end)
+        else
+            FarmState.QuestTaken = false
+            FarmState.QuestMob = nil
+            FarmState.LastQuestName = nil
+            FarmState.LastQuestId = nil
         end
     end
 end)
@@ -1135,11 +1213,7 @@ task.spawn(function()
     end
 end)
 
--- =============================================================
--- QUEST HANDLERS — Semua pakai CombatController.Attack
--- =============================================================
-
--- Saber Quest
+-- QUEST HANDLERS
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoSaber then
@@ -1180,7 +1254,6 @@ task.spawn(function()
     end
 end)
 
--- Yama Quest
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoYama then
@@ -1208,7 +1281,6 @@ task.spawn(function()
     end
 end)
 
--- Tushita Quest
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoTushita then
@@ -1232,7 +1304,6 @@ task.spawn(function()
     end
 end)
 
--- Shark Anchor Quest
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoSharkAnchor then
@@ -1258,7 +1329,6 @@ task.spawn(function()
     end
 end)
 
--- Soul Guitar Quest
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoSoulGuitar then
@@ -1282,7 +1352,6 @@ task.spawn(function()
     end
 end)
 
--- Bartilo Quest
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoBartilo then
@@ -1311,7 +1380,6 @@ task.spawn(function()
     end
 end)
 
--- Second Sea Puzzle
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoSecondSea then
@@ -1336,7 +1404,6 @@ task.spawn(function()
     end
 end)
 
--- Third Sea Puzzle
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoThirdSea then
@@ -1354,7 +1421,6 @@ task.spawn(function()
     end
 end)
 
--- Cake Prince
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoCakePrince then
@@ -1372,7 +1438,6 @@ task.spawn(function()
     end
 end)
 
--- Dough King
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoDoughKing then
@@ -1391,7 +1456,6 @@ task.spawn(function()
     end
 end)
 
--- Elite Hunter
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoEliteHunter then
@@ -1405,7 +1469,6 @@ task.spawn(function()
     end
 end)
 
--- Soul Reaper
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoSoulReaper then
@@ -1424,7 +1487,6 @@ task.spawn(function()
     end
 end)
 
--- Kill Rip Indra
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoKillRipIndra then
@@ -1437,7 +1499,6 @@ task.spawn(function()
     end
 end)
 
--- Factory
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoFactory then
@@ -1451,7 +1512,6 @@ task.spawn(function()
     end
 end)
 
--- Pirates Sea
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoPiratesSea then
@@ -1465,7 +1525,6 @@ task.spawn(function()
     end
 end)
 
--- Dragon Hunter
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoDragonHunter then
@@ -1484,7 +1543,6 @@ task.spawn(function()
     end
 end)
 
--- Collect Berry
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoCollectBerry then
@@ -1507,7 +1565,6 @@ task.spawn(function()
     end
 end)
 
--- Auto Train V4
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoTrain then
@@ -1586,7 +1643,6 @@ task.spawn(function()
     end
 end)
 
--- AUTO STATS
 task.spawn(function()
     while task.wait(1) do
         if State.AutoStatPoint then
@@ -1620,7 +1676,6 @@ task.spawn(function()
     end
 end)
 
--- SEA HANDLERS
 task.spawn(function()
     while task.wait(0.3) do
         if State.AutoFarmSea then
@@ -1649,7 +1704,6 @@ task.spawn(function()
     end
 end)
 
--- AUTO STORE FRUIT
 task.spawn(function()
     while task.wait(1) do
         if State.AutoStoreFruit then
@@ -1671,7 +1725,6 @@ task.spawn(function()
     end
 end)
 
--- MISC
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoResetChar and IsAlive() then player.Character.Humanoid.Health = 0 end
