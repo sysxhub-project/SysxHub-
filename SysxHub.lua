@@ -1,6 +1,13 @@
 --[[
 ================================================================
-    SYSX HUB v1.1 — Blox Fruits (FIXED FARM + AUTO EQUIP)
+    SYSX HUB v1.3 — Blox Fruits
+    - Header dengan Logo + Banner (asset image)
+    - FIX Farm Level (kill mob sampai quest selesai)
+    - Auto Equip Weapon
+    - Attack Boss Remote (dari jauh)
+    - Farm Mastery Weapon Selector
+    - Random Fruit (single)
+    - Tween Fruit
 ================================================================
 ]]
 
@@ -15,6 +22,7 @@ local TeleportService     = game:GetService("TeleportService")
 local Lighting            = game:GetService("Lighting")
 local HttpService         = game:GetService("HttpService")
 local GuiService          = game:GetService("GuiService")
+local MarketplaceService  = game:GetService("MarketplaceService")
 
 local player    = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -31,6 +39,10 @@ local World2 = (placeId == 4442272183 or placeId == 79091703265657)
 local World3 = (placeId == 7449423635 or placeId == 100117331123089)
 
 local DISCORD_INVITE = "https://discord.gg/xWa9NpFRr"
+
+-- [[ LOGO / BANNER ASSET ]] --
+local LOGO_ID = 132940055932948
+local BANNER_ID = 110899503462686
 
 local BLUE_PALETTE = {
     Color3.fromRGB(135, 206, 250), Color3.fromRGB(100, 149, 237),
@@ -91,6 +103,7 @@ end
 local State = {
     SelectedWeapon="Melee",
     AutoFarm=false, AutoFarmNearest=false, AutoFarmMastery=false,
+    FarmMasteryWeapon="Melee",
     AutoFarmMaterial=false, AutoFarmBones=false, AutoFarmWoodPlanks=false,
     AutoCollectChest=false, AutoAttackBoss=false, AutoAttackAllBoss=false,
     AutoTyrant=false, AutoCitizenQuest=false, AutoDarkFragment=false,
@@ -142,7 +155,7 @@ local State = {
     AutoPullLeverV4=false, SelectedTrainMethod="Bone", AutoTrain=false,
     TweenGreatTree=false, TeleportTempleOffTime=false,
 
-    AutoStoreFruit=false, AutoBuySniper=false, AutoFindFruit=false,
+    AutoStoreFruit=false, AutoBuySniper=false, TweenFruit=false,
     SelectedSniperFruit="Flame", AutoRaid=false, AutoBuyChip=false,
     AutoAwakenFruit=false, SelectedChip="Flame",
 
@@ -308,9 +321,6 @@ function AutoHaki()
     end
 end
 
--- ============================================================
--- FIX: AUTO EQUIP WEAPON (SESUAI KATEGORI)
--- ============================================================
 getgenv().EquipTime = 0
 function EquipWeapon(n)
     if tick() - getgenv().EquipTime < 0.25 then return end
@@ -404,6 +414,44 @@ function AttackNoCoolDown()
     end
 end
 
+function AttackBossRemote(bossName)
+    if not bossName then return end
+    local char = player.Character; if not char then return end
+    local hrp = GetHRP(); if not hrp then return end
+    local enemies = Workspace:FindFirstChild("Enemies"); if not enemies then return end
+
+    for _, e in ipairs(enemies:GetChildren()) do
+        local h = e:FindFirstChild("Humanoid")
+        local trp = e:FindFirstChild("HumanoidRootPart")
+        if h and trp and h.Health > 0 then
+            local match = false
+            if e.Name == bossName then match = true
+            elseif e.Name:find(bossName, 1, true) then match = true
+            elseif bossName:find(e.Name, 1, true) then match = true end
+
+            if match then
+                local head = e:FindFirstChild("Head") or trp
+                local tool = char:FindFirstChildOfClass("Tool")
+                if tool and tool:FindFirstChild("LeftClickRemote") then
+                    pcall(function()
+                        tool.LeftClickRemote:FireServer((trp.Position - hrp.Position).Unit, 1)
+                    end)
+                end
+                if Net then
+                    local RA = Net:FindFirstChild("RE/RegisterAttack")
+                    local RH = Net:FindFirstChild("RE/RegisterHit")
+                    if RA and RH then
+                        pcall(function()
+                            RA:FireServer(0.1)
+                            RH:FireServer(head, {{e, head}})
+                        end)
+                    end
+                end
+            end
+        end
+    end
+end
+
 local FarmNoclipConn = nil
 local function SetFarmNoclip(on)
     if on then
@@ -427,7 +475,7 @@ local function AnyFarm()
         or State.AutoFarmMaterial or State.AutoFarmBones or State.AutoFarmSea
         or State.AutoAttackBoss or State.AutoCakePrince or State.AutoDoughKing
         or State.AutoEliteHunter or State.AutoSoulReaper or State.AutoFactory
-        or State.AutoPiratesSea or State.AutoFindFruit or State.AutoTyrant
+        or State.AutoPiratesSea or State.TweenFruit or State.AutoTyrant
         or State.AutoCitizenQuest or State.AutoDragonHunter or State.AutoEventPre
         or State.AutoTrain or State.AutoFinishTrainV4
 end
@@ -869,10 +917,22 @@ end)
 
 -- ============================================================
 -- FIXED: AUTO FARM LEVEL
--- Take quest SEKALI -> Kill mob sampai quest selesai -> Take quest baru
--- Auto equip weapon tiap tick
 -- ============================================================
-local FarmState = { QuestTaken=false, QuestMob=nil, LastQuestCheck=0, LastQuestName=nil, LastQuestId=nil }
+local FarmState = {
+    QuestTaken = false,
+    QuestMob = nil,
+    QuestEndTime = nil,
+    LastQuestName = nil,
+    LastQuestId = nil,
+    LastQuestCheck = 0,
+}
+
+local function IsQuestGuiVisible()
+    local mainGui = playerGui:FindFirstChild("Main")
+    if not mainGui then return false end
+    local q = mainGui:FindFirstChild("Quest")
+    return q and q.Visible
+end
 
 task.spawn(function()
     while task.wait(0.25) do
@@ -884,66 +944,65 @@ task.spawn(function()
                 local hum = char and char:FindFirstChildOfClass("Humanoid")
                 if not hum or hum.Health <= 0 then return end
 
-                -- EQUIP WEAPON + HAKI tiap tick
                 AutoHaki()
                 EquipWeapon(State.SelectedWeapon)
 
-                -- STEP 1: CEK QUEST AKTIF
-                local hasQuest = false
-                local questMob = nil
-                local mainGui = playerGui:FindFirstChild("Main")
-                if mainGui and mainGui:FindFirstChild("Quest") and mainGui.Quest.Visible then
-                    local ok, qText = pcall(function()
-                        return mainGui.Quest.Container.QuestTitle.Title.Text
-                    end)
-                    if ok and qText and qText ~= "" then
-                        local m = qText:match("Defeat%s*%d*%s*(.-)%s*%b()")
-                        if m then
-                            hasQuest = true
-                            questMob = m:gsub("Military ", "Mil. "):gsub("%s+$", "")
-                        end
-                    end
-                end
+                if FarmState.QuestTaken and FarmState.QuestMob then
+                    local questVisible = IsQuestGuiVisible()
 
-                -- STEP 2: KILL QUEST MOB SAMPAI QUEST SELESAI
-                if hasQuest and questMob and questMob ~= "" then
-                    FarmState.QuestTaken = true
-                    FarmState.QuestMob = questMob
-
-                    local enemy = FindEnemy({questMob}, 99999)
-                    if enemy then
-                        local target = enemy
-                        local trp = target:FindFirstChild("HumanoidRootPart")
-                        local thum = target:FindFirstChildOfClass("Humanoid")
-                        if trp and thum and thum.Health > 0 then
-                            local farmDist = getgenv().FarmDistance or 20
-                            FarmTeleport(trp.CFrame + Vector3.new(0, farmDist, 0), getgenv().FarmSpeed, 15)
-                            if Dist(trp.Position, GetHRP().Position) < 150 then
-                                CombatController.Grab(target.Name)
-                                AutoHaki()
-                                EquipWeapon(State.SelectedWeapon)
-                                AttackNoCoolDown()
+                    if questVisible then
+                        FarmState.QuestEndTime = nil
+                        local mobName = FarmState.QuestMob
+                        local enemy = FindEnemy({mobName}, 99999)
+                        if enemy then
+                            local trp = enemy:FindFirstChild("HumanoidRootPart")
+                            local thum = enemy:FindFirstChildOfClass("Humanoid")
+                            if trp and thum and thum.Health > 0 then
+                                local farmDist = getgenv().FarmDistance or 20
+                                FarmTeleport(trp.CFrame + Vector3.new(0, farmDist, 0), getgenv().FarmSpeed, 15)
+                                if Dist(trp.Position, GetHRP().Position) < 150 then
+                                    CombatController.Grab(enemy.Name)
+                                    AutoHaki()
+                                    EquipWeapon(State.SelectedWeapon)
+                                    AttackNoCoolDown()
+                                end
+                            end
+                        else
+                            local sp = FindSpawnPart(mobName, true)
+                            if sp then
+                                FarmTeleport(sp.CFrame * CFrame.new(0, 60, 0), getgenv().FarmSpeed, 20)
+                            else
+                                task.wait(0.4)
                             end
                         end
+                        return
                     else
-                        local sp = FindSpawnPart(questMob, true)
-                        if sp then
-                            FarmTeleport(sp.CFrame * CFrame.new(0, 60, 0), getgenv().FarmSpeed, 20)
+                        if not FarmState.QuestEndTime then
+                            FarmState.QuestEndTime = tick()
+                        end
+                        if tick() - FarmState.QuestEndTime > 3 then
+                            FarmState.QuestTaken = false
+                            FarmState.QuestMob = nil
+                            FarmState.QuestEndTime = nil
                         else
-                            task.wait(0.4)
+                            local mobName = FarmState.QuestMob
+                            local enemy = FindEnemy({mobName}, 99999)
+                            if enemy then
+                                local trp = enemy:FindFirstChild("HumanoidRootPart")
+                                if trp then
+                                    local farmDist = getgenv().FarmDistance or 20
+                                    FarmTeleport(trp.CFrame + Vector3.new(0, farmDist, 0), getgenv().FarmSpeed, 15)
+                                    if Dist(trp.Position, GetHRP().Position) < 150 then
+                                        CombatController.Grab(enemy.Name)
+                                        AttackNoCoolDown()
+                                    end
+                                end
+                            end
+                            return
                         end
                     end
-                    return
                 end
 
-                -- STEP 3: QUEST SELESAI
-                if FarmState.QuestTaken then
-                    FarmState.QuestTaken = false
-                    FarmState.QuestMob = nil
-                    task.wait(0.4)
-                end
-
-                -- STEP 4: CARI QUEST BARU
                 local level = player.Data.Level.Value
                 local okQ, Quests = pcall(function() return require(RS.Quests) end)
                 local okG, GuideModule = pcall(function() return require(RS.GuideModule) end)
@@ -959,7 +1018,7 @@ task.spawn(function()
                             local questData = Quests[internal][id]
                             if questData and req <= level and questData.Task then
                                 local mob, amt = next(questData.Task)
-                                if amt and amt > 1 then
+                                if mob and amt and amt > 1 then
                                     local pos = npcData.Position
                                     local npcPos = typeof(pos) == "CFrame" and pos.Position or pos
                                     if npcPos then
@@ -983,15 +1042,13 @@ task.spawn(function()
                 local best = candidates[1]
                 if not best then return end
 
-                -- STEP 5: TWEEN KE NPC
                 if Dist(hrp.Position, best.NpcPos) > 10 then
                     FarmTeleport(CFrame.new(best.NpcPos) * CFrame.new(0, 4, 3), getgenv().FarmSpeed, 25)
                     return
                 end
 
-                -- STEP 6: TAKE QUEST (dengan guard anti-double)
                 if FarmState.LastQuestName == best.QuestName and FarmState.LastQuestId == best.Id
-                   and (tick() - FarmState.LastQuestCheck) < 2 then
+                   and (tick() - FarmState.LastQuestCheck) < 3 then
                     return
                 end
                 FarmState.LastQuestName = best.QuestName
@@ -999,15 +1056,17 @@ task.spawn(function()
                 FarmState.LastQuestCheck = tick()
 
                 CommF_:InvokeServer("StartQuest", tostring(best.QuestName), best.Id)
+                Notify("Take Quest: " .. best.Mob)
 
-                -- STEP 7: tunggu quest muncul, lalu loop balik (step 2 akan kill mob)
-                task.wait(1.2)
+                task.wait(0.8)
                 FarmState.QuestTaken = true
                 FarmState.QuestMob = best.Mob
+                FarmState.QuestEndTime = nil
             end)
         else
             FarmState.QuestTaken = false
             FarmState.QuestMob = nil
+            FarmState.QuestEndTime = nil
             FarmState.LastQuestName = nil
             FarmState.LastQuestId = nil
         end
@@ -1019,7 +1078,11 @@ task.spawn(function()
         if State.AutoFarmNearest then
             pcall(function()
                 local list = GetMonAsSortedRange()
-                if list[1] then CombatController.Attack({list[1].Name}) end
+                if list[1] then
+                    AutoHaki()
+                    EquipWeapon(State.SelectedWeapon)
+                    CombatController.Attack({list[1].Name})
+                end
             end)
         end
     end
@@ -1030,7 +1093,11 @@ task.spawn(function()
         if State.AutoFarmMastery then
             pcall(function()
                 local list = GetMonAsSortedRange()
-                if list[1] then CombatController.Attack({list[1].Name}) end
+                if list[1] then
+                    AutoHaki()
+                    EquipWeapon(State.FarmMasteryWeapon or "Melee")
+                    CombatController.Attack({list[1].Name})
+                end
             end)
         end
     end
@@ -1095,35 +1162,75 @@ task.spawn(function()
 end)
 
 task.spawn(function()
-    while task.wait(0.4) do
+    while task.wait(0.15) do
         if State.AutoAttackBoss and State.SelectedBoss then
-            pcall(function() CombatController.Attack({State.SelectedBoss}) end)
+            pcall(function()
+                AttackBossRemote(State.SelectedBoss)
+                local boss = FindEnemy({State.SelectedBoss}, 200)
+                if boss then
+                    local trp = boss:FindFirstChild("HumanoidRootPart")
+                    if trp and Dist(trp.Position, GetHRP().Position) < 150 then
+                        AutoHaki()
+                        EquipWeapon(State.SelectedWeapon)
+                        AttackNoCoolDown()
+                    end
+                end
+            end)
         end
         if State.AutoAttackAllBoss then
             pcall(function()
-                local allBoss = {}
-                for _, list in pairs(BossList) do
-                    for _, name in ipairs(list) do table.insert(allBoss, name) end
+                local enemies = Workspace:FindFirstChild("Enemies")
+                if not enemies then return end
+                for _, e in ipairs(enemies:GetChildren()) do
+                    local h = e:FindFirstChild("Humanoid")
+                    local trp = e:FindFirstChild("HumanoidRootPart")
+                    if h and trp and h.Health > 0 then
+                        local head = e:FindFirstChild("Head") or trp
+                        local tool = player.Character and player.Character:FindFirstChildOfClass("Tool")
+                        if tool and tool:FindFirstChild("LeftClickRemote") then
+                            pcall(function()
+                                tool.LeftClickRemote:FireServer((trp.Position - GetHRP().Position).Unit, 1)
+                            end)
+                        end
+                        if Net then
+                            local RA = Net:FindFirstChild("RE/RegisterAttack")
+                            local RH = Net:FindFirstChild("RE/RegisterHit")
+                            if RA and RH then
+                                pcall(function()
+                                    RA:FireServer(0.1)
+                                    RH:FireServer(head, {{e, head}})
+                                end)
+                            end
+                        end
+                    end
                 end
-                CombatController.Attack(allBoss)
+                AutoHaki()
+                EquipWeapon(State.SelectedWeapon)
             end)
         end
         if State.AutoTyrant then
             pcall(function()
                 if Workspace.Enemies:FindFirstChild("Tyrant of the Skies") then
-                    CombatController.Attack("Tyrant of the Skies")
+                    AttackBossRemote("Tyrant of the Skies")
+                    AutoHaki()
+                    EquipWeapon(State.SelectedWeapon)
                 end
             end)
         end
         if State.AutoCitizenQuest then
             pcall(function()
-                CombatController.Attack({"Stone","Island Empress","Kilo Admiral","Captain Elephant","Beautiful Pirate"})
+                local mobs = {"Stone","Island Empress","Kilo Admiral","Captain Elephant","Beautiful Pirate"}
+                for _, m in ipairs(mobs) do AttackBossRemote(m) end
+                AutoHaki()
+                EquipWeapon(State.SelectedWeapon)
             end)
         end
         if State.AutoDarkFragment then
             pcall(function()
                 if Workspace.Enemies:FindFirstChild("Darkbeard") then
-                    CombatController.Attack("Darkbeard")
+                    AttackBossRemote("Darkbeard")
+                    AutoHaki()
+                    EquipWeapon(State.SelectedWeapon)
                 end
             end)
         end
@@ -1726,6 +1833,29 @@ task.spawn(function()
 end)
 
 task.spawn(function()
+    while task.wait(0.4) do
+        if State.TweenFruit then
+            pcall(function()
+                local hrp = GetHRP(); if not hrp then return end
+                local closest, bestDist = nil, math.huge
+                for _, c in ipairs(Workspace:GetChildren()) do
+                    if (c:IsA("Tool") or c:IsA("Model")) and string.find(c.Name, "Fruit") then
+                        local h = c:FindFirstChild("Handle") or c.PrimaryPart
+                        if h then
+                            local d = (h.Position - hrp.Position).Magnitude
+                            if d < bestDist then closest, bestDist = h, d end
+                        end
+                    end
+                end
+                if closest then
+                    FarmTeleport(closest.CFrame, getgenv().FarmSpeed, 20)
+                end
+            end)
+        end
+    end
+end)
+
+task.spawn(function()
     while task.wait(0.5) do
         if State.AutoResetChar and IsAlive() then player.Character.Humanoid.Health = 0 end
     end
@@ -1786,6 +1916,18 @@ gui.DisplayOrder = 999999
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
 gui.Parent = playerGui
 
+-- IMAGE LOADER FUNCTION
+local function loadImageAsset(imageLabel, assetId)
+    local success, info = pcall(function()
+        return MarketplaceService:GetProductInfo(assetId, Enum.InfoType.Asset)
+    end)
+    if success and info and info.AssetTypeId == 13 then
+        imageLabel.Image = "rbxassetid://" .. info.AssetId
+    else
+        imageLabel.Image = "https://www.roblox.com/asset/?id=" .. assetId
+    end
+end
+
 local Notif = Create("TextLabel", {
     Parent = gui, AnchorPoint = Vector2.new(0.5, 1),
     Position = UDim2.new(0.5, 0, 1, -20), Size = UDim2.fromOffset(360, 44),
@@ -1805,41 +1947,84 @@ local main = Create("Frame", {
 Corner(main, 18)
 RegisterAccent(Stroke(main, THEME.Outline, 2, 0.1))
 
+-- HEADER dengan LOGO + BANNER
 local header = Create("Frame", {
-    Parent = main, Size = UDim2.new(1, 0, 0, 60),
-    BackgroundTransparency = 1, ZIndex = 20,
+    Parent = main, Size = UDim2.new(1, 0, 0, 110),
+    BackgroundTransparency = 1, ZIndex = 20, ClipsDescendants = true,
 })
-Create("TextLabel", {
+
+local banner = Create("ImageLabel", {
+    Parent = header, Size = UDim2.new(1, 0, 1, 0),
+    Position = UDim2.fromOffset(0, 0),
+    BackgroundTransparency = 1, ImageTransparency = 0.15,
+    ScaleType = Enum.ScaleType.Crop,
+    Image = "rbxassetid://" .. BANNER_ID,
+    ZIndex = 20,
+})
+Corner(banner, 18)
+loadImageAsset(banner, BANNER_ID)
+
+local bannerOverlay = Create("Frame", {
+    Parent = header, Size = UDim2.new(1, 0, 1, 0),
+    BackgroundColor3 = THEME.BG_Main, BackgroundTransparency = 0.35,
+    BorderSizePixel = 0, ZIndex = 21,
+})
+Corner(bannerOverlay, 18)
+
+local logo = Create("ImageLabel", {
+    Parent = header, Size = UDim2.fromOffset(52, 52),
+    Position = UDim2.fromOffset(14, 12),
+    BackgroundColor3 = THEME.BG_Secondary, BackgroundTransparency = 0.1,
+    Image = "rbxassetid://" .. LOGO_ID,
+    ScaleType = Enum.ScaleType.Fit,
+    ZIndex = 24,
+})
+Corner(logo, 12)
+Stroke(logo, THEME.Outline, 1.5, 0.15)
+loadImageAsset(logo, LOGO_ID)
+
+local titleLbl = Create("TextLabel", {
     Parent = header, BackgroundTransparency = 1,
-    Position = UDim2.fromOffset(16, 8), Size = UDim2.fromOffset(300, 20),
+    Position = UDim2.fromOffset(78, 14), Size = UDim2.new(1, -140, 0, 22),
     Text = "SysxHub", TextColor3 = THEME.Accent_Bright,
-    TextSize = 18, Font = Enum.Font.GothamBold,
-    TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 22,
+    TextSize = 20, Font = Enum.Font.GothamBold,
+    TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 25,
 })
-Create("TextLabel", {
+local subLbl = Create("TextLabel", {
     Parent = header, BackgroundTransparency = 1,
-    Position = UDim2.fromOffset(16, 28), Size = UDim2.fromOffset(300, 12),
-    Text = "v1.1  •  13 Tabs", TextColor3 = THEME.Text_Secondary,
-    TextSize = 9, Font = Enum.Font.GothamMedium,
-    TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 22,
+    Position = UDim2.fromOffset(78, 36), Size = UDim2.new(1, -140, 0, 14),
+    Text = "v1.3  •  13 Tabs  •  Logo + Banner", TextColor3 = Color3.fromRGB(220,232,250),
+    TextSize = 10, Font = Enum.Font.GothamMedium,
+    TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 25,
 })
+local sub2Lbl = Create("TextLabel", {
+    Parent = header, BackgroundTransparency = 1,
+    Position = UDim2.fromOffset(78, 54), Size = UDim2.new(1, -140, 0, 12),
+    Text = "Farm • PvP • Quest • Sea • Race • Fruit • Boss Remote",
+    TextColor3 = THEME.Text_Secondary,
+    TextSize = 9, Font = Enum.Font.GothamMedium,
+    TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 25,
+})
+
 local close = Create("TextButton", {
     Parent = header, Size = UDim2.fromOffset(32, 32),
     Position = UDim2.new(1, -44, 0, 10),
-    BackgroundColor3 = THEME.BG_Secondary, BackgroundTransparency = 0.1,
+    BackgroundColor3 = THEME.BG_Secondary, BackgroundTransparency = 0.2,
     Text = "×", TextColor3 = THEME.Accent_Bright, TextSize = 20,
-    Font = Enum.Font.GothamBold, AutoButtonColor = false, ZIndex = 25,
+    Font = Enum.Font.GothamBold, AutoButtonColor = false, ZIndex = 26,
 })
 Corner(close, 9)
 RegisterAccent(Stroke(close, THEME.Outline, 1.5, 0.15))
+
 Create("Frame", {
     Parent = header, Size = UDim2.new(1, -24, 0, 1),
-    Position = UDim2.new(0, 12, 1, -2), BackgroundColor3 = THEME.Outline,
-    BackgroundTransparency = 0.4, BorderSizePixel = 0, ZIndex = 22,
+    Position = UDim2.new(0, 12, 1, -1), BackgroundColor3 = THEME.Outline,
+    BackgroundTransparency = 0.4, BorderSizePixel = 0, ZIndex = 26,
 })
+
 local content = Create("Frame", {
-    Parent = main, Size = UDim2.new(1, -24, 1, -72),
-    Position = UDim2.fromOffset(12, 64), BackgroundTransparency = 1, ZIndex = 14,
+    Parent = main, Size = UDim2.new(1, -24, 1, -122),
+    Position = UDim2.fromOffset(12, 114), BackgroundTransparency = 1, ZIndex = 14,
 })
 local sidebar = Create("Frame", {
     Parent = content, BackgroundColor3 = THEME.BG_Secondary,
@@ -2255,7 +2440,7 @@ local VisualPage    = CreatePage("Visual")
 local MiscPage      = CreatePage("MISC")
 
 -- HOME
-CreateLabel(HomePage, "SYSX HUB v1.1", 28)
+CreateLabel(HomePage, "SYSX HUB v1.3", 28)
 CreateLabel(HomePage,
     "13 Tabs | All Setting in MISC\n" ..
     "Home • Farm • Pvp • Quest\n" ..
@@ -2280,6 +2465,9 @@ CreateDropdown(FarmPage, "Select Weapon",
 CreateLabel(FarmPage, "Level Farming", 24)
 CreateToggle(FarmPage, "Auto Farm Level", false, function(s) State.AutoFarm = s end)
 CreateToggle(FarmPage, "Auto Farm Nearest", false, function(s) State.AutoFarmNearest = s end)
+CreateDropdown(FarmPage, "Select Farm Mastery",
+    {"Melee","Gun","Sword","Blox Fruit"},
+    function(o) State.FarmMasteryWeapon = o end)
 CreateToggle(FarmPage, "Auto Farm Mastery", false, function(s) State.AutoFarmMastery = s end)
 
 CreateLabel(FarmPage, "Collection", 24)
@@ -2548,7 +2736,7 @@ CreateToggle(RacePage, "Teleport Temple Off Time", false, function(s) State.Tele
 -- FRUIT & RAID
 CreateLabel(FruitRaidPage, "Fruit", 24)
 CreateToggle(FruitRaidPage, "Auto Store Fruit", false, function(s) State.AutoStoreFruit = s end)
-CreateButton(FruitRaidPage, "Random Fruit (Roll 1x)", function()
+CreateButton(FruitRaidPage, "Random Fruit", function()
     local res = CommF_:InvokeServer("Cousin", "Buy")
     if res then
         Notify("Rolled: " .. tostring(res))
@@ -2563,30 +2751,11 @@ CreateButton(FruitRaidPage, "Random Fruit (Roll 1x)", function()
         end
     else Notify("Random Fruit failed") end
 end)
-CreateButton(FruitRaidPage, "Random Fruit (Roll 10x)", function()
-    for i = 1, 10 do
-        local res = CommF_:InvokeServer("Cousin", "Buy")
-        if res then
-            Notify("Rolled " .. i .. "/10: " .. tostring(res))
-            if State.AutoStoreFruit then
-                task.wait(0.5)
-                for _, tool in ipairs(player.Backpack:GetChildren()) do
-                    if tool:IsA("Tool") and string.find(tool.Name, "Fruit") then
-                        CommF_:InvokeServer("StoreFruit", tool:GetAttribute("OriginalName") or tool.Name, tool)
-                        task.wait(0.3)
-                    end
-                end
-            end
-        end
-        task.wait(1)
-    end
-    Notify("Finished rolling 10x")
-end)
 CreateDropdown(FruitRaidPage, "Select Sniper Fruit",
     {"Flame","Ice","Quake","Light","Dark"},
     function(o) State.SelectedSniperFruit = o end)
 CreateToggle(FruitRaidPage, "Auto Buy Sniper Fruit", false, function(s) State.AutoBuySniper = s end)
-CreateToggle(FruitRaidPage, "Auto Find Fruit", false, function(s) State.AutoFindFruit = s end)
+CreateToggle(FruitRaidPage, "Tween Fruit", false, function(s) State.TweenFruit = s end)
 
 CreateLabel(FruitRaidPage, "Raid", 24)
 CreateDropdown(FruitRaidPage, "Select Chip",
@@ -2926,13 +3095,14 @@ btnStroke.Parent = btnHolder
 
 local logoImage = Instance.new("ImageLabel")
 logoImage.Name = "LogoImage"
-logoImage.Image = "rbxassetid://1962037745"
+logoImage.Image = "rbxassetid://" .. LOGO_ID
 logoImage.Size = UDim2.fromScale(0.7, 0.7)
 logoImage.Position = UDim2.fromScale(0.5, 0.5)
 logoImage.AnchorPoint = Vector2.new(0.5, 0.5)
 logoImage.BackgroundTransparency = 1
 logoImage.ZIndex = 2
 logoImage.Parent = btnHolder
+loadImageAsset(logoImage, LOGO_ID)
 
 local btnClick = Instance.new("TextButton")
 btnClick.Name = "ClickArea"
@@ -3003,4 +3173,4 @@ UserInputService.InputBegan:Connect(function(input, gp)
 end)
 
 ShowTab("Farm")
-Notify("SYSX HUB v1.1 Loaded ✅")
+Notify("SYSX HUB v1.3 Loaded ✅")
