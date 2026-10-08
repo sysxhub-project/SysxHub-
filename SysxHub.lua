@@ -1,9 +1,11 @@
 --[[
 ================================================================
-    SYSX HUB v1.4 — Blox Fruits
+    SYSX HUB v1.5 — Blox Fruits
     - Header: Kotak Logo 52x52 + Logo 48x48 + Banner 420x75
     - Panel: 460 x 320
     - FIX Farm Level (kill mob sampai quest selesai)
+    - FIX Tween Island (pakai FarmTeleport)
+    - FIX ESP Fruit auto hilang setelah diambil
     - Auto Equip Weapon
     - Attack Boss Remote (dari jauh)
     - Farm Mastery Weapon Selector
@@ -519,6 +521,36 @@ function FarmTeleport(goal, speed, customTimeout)
     SetFarmNoclip(false)
 end
 
+-- Manual Tween Teleport (untuk island teleport - tidak bergantung AnyFarm)
+local function TweenTeleport(targetCF, speed)
+    if not targetCF or not IsAlive() then return end
+    speed = speed or getgenv().FarmSpeed or 200
+    SetFarmNoclip(true)
+    local timeoutStart = tick()
+    local timeout = 30
+    while true do
+        if not IsAlive() then break end
+        local root = GetHRP(); if not root then break end
+        local dist = (root.Position - targetCF.Position).Magnitude
+        if dist < 2 then break end
+        if tick() - timeoutStart > timeout then break end
+        local dt = RunService.Heartbeat:Wait()
+        if dt <= 0 then dt = 0.016 end
+        local dir = (targetCF.Position - root.Position).Unit
+        local move = math.min(speed * dt, dist)
+        root.CFrame = root.CFrame + dir * move
+        root.AssemblyLinearVelocity = Vector3.zero
+        root.AssemblyAngularVelocity = Vector3.zero
+    end
+    if IsAlive() then
+        local root = GetHRP()
+        if root and (root.Position - targetCF.Position).Magnitude < 10 then
+            root.CFrame = targetCF
+        end
+    end
+    SetFarmNoclip(false)
+end
+
 local ChestData = { MaxSpeed = 300, Unchecked = {}, FirstRun = true }
 local function GetCharacter()
     if not player.Character then player.CharacterAdded:Wait() end
@@ -845,18 +877,34 @@ task.spawn(function()
     end
 end)
 
+-- FIX: ESP Devil Fruit dengan auto-hilang setelah diambil
 task.spawn(function()
     while task.wait(0.3) do
         if State.ESPDevilFruit then
             local hrp = GetHRP()
             if hrp then
+                local seen = {}
                 for _, c in ipairs(Workspace:GetChildren()) do
                     if (c:IsA("Tool") or c:IsA("Model")) and string.find(c.Name, "Fruit") then
                         local h = c:FindFirstChild("Handle") or c.PrimaryPart
-                        if h then
-                            local d = math.floor((h.Position - hrp.Position).Magnitude)
-                            CreateESP(h, c.Name .. " [" .. d .. "m]", Color3.fromRGB(255, 100, 100))
-                            if ESPObjects[h] then ESPObjects[h]:SetAttribute("Kind", "Fruit") end
+                        if h and h.Parent then
+                            -- skip fruit milik player sendiri
+                            local isOurs = (c:IsA("Tool") and (c.Parent == player.Character or c.Parent == player:FindFirstChild("Backpack")))
+                            local taken = c:GetAttribute("PickedUp") or c:GetAttribute("Taken") or c:GetAttribute("Consumed")
+                            if not isOurs and not taken then
+                                local d = math.floor((h.Position - hrp.Position).Magnitude)
+                                CreateESP(h, c.Name .. " [" .. d .. "m]", Color3.fromRGB(255, 100, 100))
+                                if ESPObjects[h] then ESPObjects[h]:SetAttribute("Kind", "Fruit") end
+                                seen[h] = true
+                            end
+                        end
+                    end
+                end
+                -- hapus ESP fruit yang sudah hilang/diambil
+                for k, v in pairs(ESPObjects) do
+                    if v:GetAttribute("Kind") == "Fruit" then
+                        if not seen[k] or not k.Parent then
+                            v:Destroy(); ESPObjects[k] = nil
                         end
                     end
                 end
@@ -916,12 +964,12 @@ task.spawn(function()
 end)
 
 -- ============================================================
--- FIXED: AUTO FARM LEVEL
+-- FIXED: AUTO FARM LEVEL (KILL MOB TERUS SAMPAI QUEST SELESAI)
 -- ============================================================
 local FarmState = {
     QuestTaken = false,
     QuestMob = nil,
-    QuestEndTime = nil,
+    LastQuestVisible = 0,
     TakeConfirmUntil = 0,
     LastQuestName = nil,
     LastQuestId = nil,
@@ -953,45 +1001,41 @@ task.spawn(function()
 
                 -- PRIORITAS 1: KILL MOB SAMPAI QUEST SELESAI
                 if FarmState.QuestTaken and FarmState.QuestMob then
-                    if questVisible then
-                        FarmState.QuestEndTime = nil
-                    else
-                        if not FarmState.QuestEndTime then
-                            FarmState.QuestEndTime = now
+                    local mobName = FarmState.QuestMob
+
+                    local enemy = FindEnemy({mobName}, 99999)
+                    if enemy then
+                        local trp = enemy:FindFirstChild("HumanoidRootPart")
+                        local thum = enemy:FindFirstChildOfClass("Humanoid")
+                        if trp and thum and thum.Health > 0 then
+                            local farmDist = getgenv().FarmDistance or 20
+                            FarmTeleport(trp.CFrame + Vector3.new(0, farmDist, 0), getgenv().FarmSpeed, 15)
+                            if Dist(trp.Position, GetHRP().Position) < 150 then
+                                CombatController.Grab(enemy.Name)
+                                AutoHaki()
+                                EquipWeapon(State.SelectedWeapon)
+                                AttackNoCoolDown()
+                            end
                         end
-                        if now - FarmState.QuestEndTime > 5 then
-                            FarmState.QuestTaken = false
-                            FarmState.QuestMob = nil
-                            FarmState.QuestEndTime = nil
+                    else
+                        local sp = FindSpawnPart(mobName, true)
+                        if sp then
+                            FarmTeleport(sp.CFrame * CFrame.new(0, 60, 0), getgenv().FarmSpeed, 20)
+                        else
+                            task.wait(0.2)
                         end
                     end
 
-                    if FarmState.QuestTaken and FarmState.QuestMob then
-                        local mobName = FarmState.QuestMob
-                        local enemy = FindEnemy({mobName}, 99999)
-                        if enemy then
-                            local trp = enemy:FindFirstChild("HumanoidRootPart")
-                            local thum = enemy:FindFirstChildOfClass("Humanoid")
-                            if trp and thum and thum.Health > 0 then
-                                local farmDist = getgenv().FarmDistance or 20
-                                FarmTeleport(trp.CFrame + Vector3.new(0, farmDist, 0), getgenv().FarmSpeed, 15)
-                                if Dist(trp.Position, GetHRP().Position) < 150 then
-                                    CombatController.Grab(enemy.Name)
-                                    AutoHaki()
-                                    EquipWeapon(State.SelectedWeapon)
-                                    AttackNoCoolDown()
-                                end
-                            end
-                        else
-                            local sp = FindSpawnPart(mobName, true)
-                            if sp then
-                                FarmTeleport(sp.CFrame * CFrame.new(0, 60, 0), getgenv().FarmSpeed, 20)
-                            else
-                                task.wait(0.3)
-                            end
+                    if questVisible then
+                        FarmState.LastQuestVisible = now
+                    else
+                        if now - FarmState.LastQuestVisible > 5 then
+                            FarmState.QuestTaken = false
+                            FarmState.QuestMob = nil
+                            FarmState.LastQuestVisible = 0
                         end
-                        return
                     end
+                    return
                 end
 
                 if now < FarmState.TakeConfirmUntil then
@@ -1057,13 +1101,13 @@ task.spawn(function()
 
                 FarmState.QuestTaken = true
                 FarmState.QuestMob = best.Mob
-                FarmState.QuestEndTime = nil
+                FarmState.LastQuestVisible = now
                 FarmState.TakeConfirmUntil = now + 3
             end)
         else
             FarmState.QuestTaken = false
             FarmState.QuestMob = nil
-            FarmState.QuestEndTime = nil
+            FarmState.LastQuestVisible = 0
             FarmState.TakeConfirmUntil = 0
             FarmState.LastQuestName = nil
             FarmState.LastQuestId = nil
@@ -1940,7 +1984,7 @@ local header = Create("Frame", {
     BackgroundTransparency = 1, ZIndex = 20, ClipsDescendants = true,
 })
 
--- BANNER 420 x 75 (kanan header, di belakang logo)
+-- BANNER 420 x 75
 local banner = Create("ImageLabel", {
     Parent = header, Size = UDim2.fromOffset(420, 75),
     Position = UDim2.fromOffset(28, 8),
@@ -1951,7 +1995,6 @@ local banner = Create("ImageLabel", {
 })
 Corner(banner, 12)
 
--- Overlay gelap biar logo kebaca
 local bannerOverlay = Create("Frame", {
     Parent = banner, Size = UDim2.new(1, 0, 1, 0),
     BackgroundColor3 = THEME.BG_Main, BackgroundTransparency = 0.35,
@@ -1969,7 +2012,7 @@ local logoBox = Create("Frame", {
 Corner(logoBox, 12)
 Stroke(logoBox, THEME.Outline, 1.5, 0.15)
 
--- LOGO GAMBAR 48 x 48 (di dalam kotak)
+-- LOGO GAMBAR 48 x 48
 local logo = Create("ImageLabel", {
     Parent = logoBox, Size = UDim2.fromOffset(48, 48),
     Position = UDim2.fromScale(0.5, 0.5), AnchorPoint = Vector2.new(0.5, 0.5),
@@ -1990,7 +2033,6 @@ local close = Create("TextButton", {
 Corner(close, 9)
 RegisterAccent(Stroke(close, THEME.Outline, 1.5, 0.15))
 
--- Divider bawah header
 Create("Frame", {
     Parent = header, Size = UDim2.new(1, -24, 0, 1),
     Position = UDim2.new(0, 12, 1, -1), BackgroundColor3 = THEME.Outline,
@@ -2416,7 +2458,7 @@ local VisualPage    = CreatePage("Visual")
 local MiscPage      = CreatePage("MISC")
 
 -- HOME
-CreateLabel(HomePage, "SYSX HUB v1.4", 28)
+CreateLabel(HomePage, "SYSX HUB v1.5", 28)
 CreateLabel(HomePage,
     "13 Tabs | All Setting in MISC\n" ..
     "Home • Farm • Pvp • Quest\n" ..
@@ -2893,15 +2935,23 @@ local CurrentSea = GetCurrentSeaNum()
 CreateDropdown(TeleportPage, "Select Island",
     GetIslandListForSea(CurrentSea),
     function(o) State.SelectedIsland = o end)
+
+-- FIX: Tween Island pakai TweenTeleport langsung
 CreateButton(TeleportPage, "Tween To Island", function()
     local sel = State.SelectedIsland
     if not sel then Notify("Select island first") return end
     local sea = GetCurrentSeaNum()
     local pos = IslandPositions[sea] and IslandPositions[sea][sel]
     if not pos then Notify("Island not found in this sea") return end
-    CommF_:InvokeServer("requestEntrance", pos)
     Notify("Traveling to " .. sel)
+    task.spawn(function()
+        pcall(function()
+            TweenTeleport(CFrame.new(pos) * CFrame.new(0, 5, 0), getgenv().FarmSpeed or 200)
+        end)
+        Notify("Arrived at " .. sel)
+    end)
 end)
+
 CreateButton(TeleportPage, "Refresh Island List", function()
     CurrentSea = GetCurrentSeaNum()
     Notify("Refreshed island list for Sea " .. CurrentSea)
@@ -3148,4 +3198,4 @@ UserInputService.InputBegan:Connect(function(input, gp)
 end)
 
 ShowTab("Farm")
-Notify("SYSX HUB v1.4 Loaded ✅")
+Notify("SYSX HUB v1.5 Loaded ✅")
