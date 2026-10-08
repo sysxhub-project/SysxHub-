@@ -1,7 +1,8 @@
 --[[
 ================================================================
-    SYSX HUB v1.3 — Blox Fruits
-    - Header dengan Logo + Banner (asset image)
+    SYSX HUB v1.4 — Blox Fruits
+    - Header: Kotak Logo 52x52 + Logo 48x48 + Banner 420x75
+    - Panel: 460 x 320
     - FIX Farm Level (kill mob sampai quest selesai)
     - Auto Equip Weapon
     - Attack Boss Remote (dari jauh)
@@ -22,7 +23,6 @@ local TeleportService     = game:GetService("TeleportService")
 local Lighting            = game:GetService("Lighting")
 local HttpService         = game:GetService("HttpService")
 local GuiService          = game:GetService("GuiService")
-local MarketplaceService  = game:GetService("MarketplaceService")
 
 local player    = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -922,6 +922,7 @@ local FarmState = {
     QuestTaken = false,
     QuestMob = nil,
     QuestEndTime = nil,
+    TakeConfirmUntil = 0,
     LastQuestName = nil,
     LastQuestId = nil,
     LastQuestCheck = 0,
@@ -947,11 +948,25 @@ task.spawn(function()
                 AutoHaki()
                 EquipWeapon(State.SelectedWeapon)
 
-                if FarmState.QuestTaken and FarmState.QuestMob then
-                    local questVisible = IsQuestGuiVisible()
+                local questVisible = IsQuestGuiVisible()
+                local now = tick()
 
+                -- PRIORITAS 1: KILL MOB SAMPAI QUEST SELESAI
+                if FarmState.QuestTaken and FarmState.QuestMob then
                     if questVisible then
                         FarmState.QuestEndTime = nil
+                    else
+                        if not FarmState.QuestEndTime then
+                            FarmState.QuestEndTime = now
+                        end
+                        if now - FarmState.QuestEndTime > 5 then
+                            FarmState.QuestTaken = false
+                            FarmState.QuestMob = nil
+                            FarmState.QuestEndTime = nil
+                        end
+                    end
+
+                    if FarmState.QuestTaken and FarmState.QuestMob then
                         local mobName = FarmState.QuestMob
                         local enemy = FindEnemy({mobName}, 99999)
                         if enemy then
@@ -972,35 +987,15 @@ task.spawn(function()
                             if sp then
                                 FarmTeleport(sp.CFrame * CFrame.new(0, 60, 0), getgenv().FarmSpeed, 20)
                             else
-                                task.wait(0.4)
+                                task.wait(0.3)
                             end
                         end
                         return
-                    else
-                        if not FarmState.QuestEndTime then
-                            FarmState.QuestEndTime = tick()
-                        end
-                        if tick() - FarmState.QuestEndTime > 3 then
-                            FarmState.QuestTaken = false
-                            FarmState.QuestMob = nil
-                            FarmState.QuestEndTime = nil
-                        else
-                            local mobName = FarmState.QuestMob
-                            local enemy = FindEnemy({mobName}, 99999)
-                            if enemy then
-                                local trp = enemy:FindFirstChild("HumanoidRootPart")
-                                if trp then
-                                    local farmDist = getgenv().FarmDistance or 20
-                                    FarmTeleport(trp.CFrame + Vector3.new(0, farmDist, 0), getgenv().FarmSpeed, 15)
-                                    if Dist(trp.Position, GetHRP().Position) < 150 then
-                                        CombatController.Grab(enemy.Name)
-                                        AttackNoCoolDown()
-                                    end
-                                end
-                            end
-                            return
-                        end
                     end
+                end
+
+                if now < FarmState.TakeConfirmUntil then
+                    return
                 end
 
                 local level = player.Data.Level.Value
@@ -1047,26 +1042,29 @@ task.spawn(function()
                     return
                 end
 
-                if FarmState.LastQuestName == best.QuestName and FarmState.LastQuestId == best.Id
-                   and (tick() - FarmState.LastQuestCheck) < 3 then
+                if FarmState.LastQuestName == best.QuestName
+                   and FarmState.LastQuestId == best.Id
+                   and (now - FarmState.LastQuestCheck) < 5 then
                     return
                 end
+
                 FarmState.LastQuestName = best.QuestName
                 FarmState.LastQuestId = best.Id
-                FarmState.LastQuestCheck = tick()
+                FarmState.LastQuestCheck = now
 
                 CommF_:InvokeServer("StartQuest", tostring(best.QuestName), best.Id)
                 Notify("Take Quest: " .. best.Mob)
 
-                task.wait(0.8)
                 FarmState.QuestTaken = true
                 FarmState.QuestMob = best.Mob
                 FarmState.QuestEndTime = nil
+                FarmState.TakeConfirmUntil = now + 3
             end)
         else
             FarmState.QuestTaken = false
             FarmState.QuestMob = nil
             FarmState.QuestEndTime = nil
+            FarmState.TakeConfirmUntil = 0
             FarmState.LastQuestName = nil
             FarmState.LastQuestId = nil
         end
@@ -1916,18 +1914,6 @@ gui.DisplayOrder = 999999
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
 gui.Parent = playerGui
 
--- IMAGE LOADER FUNCTION
-local function loadImageAsset(imageLabel, assetId)
-    local success, info = pcall(function()
-        return MarketplaceService:GetProductInfo(assetId, Enum.InfoType.Asset)
-    end)
-    if success and info and info.AssetTypeId == 13 then
-        imageLabel.Image = "rbxassetid://" .. info.AssetId
-    else
-        imageLabel.Image = "https://www.roblox.com/asset/?id=" .. assetId
-    end
-end
-
 local Notif = Create("TextLabel", {
     Parent = gui, AnchorPoint = Vector2.new(0.5, 1),
     Position = UDim2.new(0.5, 0, 1, -20), Size = UDim2.fromOffset(360, 44),
@@ -1938,8 +1924,9 @@ local Notif = Create("TextLabel", {
 Corner(Notif, 12)
 RegisterAccent(Stroke(Notif, THEME.Outline, 1.5, 0.15))
 
+-- MAIN PANEL 460 x 320
 local main = Create("Frame", {
-    Parent = gui, Size = UDim2.fromScale(0.42, 0.58),
+    Parent = gui, Size = UDim2.fromOffset(460, 320),
     Position = UDim2.fromScale(0.5, 0.5), AnchorPoint = Vector2.new(0.5, 0.5),
     BackgroundColor3 = THEME.BG_Main, BackgroundTransparency = 0.05,
     BorderSizePixel = 0, Visible = true, ClipsDescendants = true, ZIndex = 10,
@@ -1947,84 +1934,73 @@ local main = Create("Frame", {
 Corner(main, 18)
 RegisterAccent(Stroke(main, THEME.Outline, 2, 0.1))
 
--- HEADER dengan LOGO + BANNER
+-- HEADER 90px
 local header = Create("Frame", {
-    Parent = main, Size = UDim2.new(1, 0, 0, 110),
+    Parent = main, Size = UDim2.new(1, 0, 0, 90),
     BackgroundTransparency = 1, ZIndex = 20, ClipsDescendants = true,
 })
 
+-- BANNER 420 x 75 (kanan header, di belakang logo)
 local banner = Create("ImageLabel", {
-    Parent = header, Size = UDim2.new(1, 0, 1, 0),
-    Position = UDim2.fromOffset(0, 0),
-    BackgroundTransparency = 1, ImageTransparency = 0.15,
+    Parent = header, Size = UDim2.fromOffset(420, 75),
+    Position = UDim2.fromOffset(28, 8),
+    BackgroundTransparency = 1, ImageTransparency = 0.2,
     ScaleType = Enum.ScaleType.Crop,
     Image = "rbxassetid://" .. BANNER_ID,
     ZIndex = 20,
 })
-Corner(banner, 18)
-loadImageAsset(banner, BANNER_ID)
+Corner(banner, 12)
 
+-- Overlay gelap biar logo kebaca
 local bannerOverlay = Create("Frame", {
-    Parent = header, Size = UDim2.new(1, 0, 1, 0),
+    Parent = banner, Size = UDim2.new(1, 0, 1, 0),
     BackgroundColor3 = THEME.BG_Main, BackgroundTransparency = 0.35,
     BorderSizePixel = 0, ZIndex = 21,
 })
-Corner(bannerOverlay, 18)
+Corner(bannerOverlay, 12)
 
-local logo = Create("ImageLabel", {
+-- KOTAK LOGO 52 x 52
+local logoBox = Create("Frame", {
     Parent = header, Size = UDim2.fromOffset(52, 52),
-    Position = UDim2.fromOffset(14, 12),
+    Position = UDim2.fromOffset(14, 19),
     BackgroundColor3 = THEME.BG_Secondary, BackgroundTransparency = 0.1,
+    BorderSizePixel = 0, ZIndex = 26,
+})
+Corner(logoBox, 12)
+Stroke(logoBox, THEME.Outline, 1.5, 0.15)
+
+-- LOGO GAMBAR 48 x 48 (di dalam kotak)
+local logo = Create("ImageLabel", {
+    Parent = logoBox, Size = UDim2.fromOffset(48, 48),
+    Position = UDim2.fromScale(0.5, 0.5), AnchorPoint = Vector2.new(0.5, 0.5),
+    BackgroundTransparency = 1,
     Image = "rbxassetid://" .. LOGO_ID,
     ScaleType = Enum.ScaleType.Fit,
-    ZIndex = 24,
-})
-Corner(logo, 12)
-Stroke(logo, THEME.Outline, 1.5, 0.15)
-loadImageAsset(logo, LOGO_ID)
-
-local titleLbl = Create("TextLabel", {
-    Parent = header, BackgroundTransparency = 1,
-    Position = UDim2.fromOffset(78, 14), Size = UDim2.new(1, -140, 0, 22),
-    Text = "SysxHub", TextColor3 = THEME.Accent_Bright,
-    TextSize = 20, Font = Enum.Font.GothamBold,
-    TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 25,
-})
-local subLbl = Create("TextLabel", {
-    Parent = header, BackgroundTransparency = 1,
-    Position = UDim2.fromOffset(78, 36), Size = UDim2.new(1, -140, 0, 14),
-    Text = "v1.3  •  13 Tabs  •  Logo + Banner", TextColor3 = Color3.fromRGB(220,232,250),
-    TextSize = 10, Font = Enum.Font.GothamMedium,
-    TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 25,
-})
-local sub2Lbl = Create("TextLabel", {
-    Parent = header, BackgroundTransparency = 1,
-    Position = UDim2.fromOffset(78, 54), Size = UDim2.new(1, -140, 0, 12),
-    Text = "Farm • PvP • Quest • Sea • Race • Fruit • Boss Remote",
-    TextColor3 = THEME.Text_Secondary,
-    TextSize = 9, Font = Enum.Font.GothamMedium,
-    TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 25,
+    ZIndex = 27,
 })
 
+-- Close button
 local close = Create("TextButton", {
     Parent = header, Size = UDim2.fromOffset(32, 32),
-    Position = UDim2.new(1, -44, 0, 10),
+    Position = UDim2.new(1, -42, 0, 8),
     BackgroundColor3 = THEME.BG_Secondary, BackgroundTransparency = 0.2,
     Text = "×", TextColor3 = THEME.Accent_Bright, TextSize = 20,
-    Font = Enum.Font.GothamBold, AutoButtonColor = false, ZIndex = 26,
+    Font = Enum.Font.GothamBold, AutoButtonColor = false, ZIndex = 30,
 })
 Corner(close, 9)
 RegisterAccent(Stroke(close, THEME.Outline, 1.5, 0.15))
 
+-- Divider bawah header
 Create("Frame", {
     Parent = header, Size = UDim2.new(1, -24, 0, 1),
     Position = UDim2.new(0, 12, 1, -1), BackgroundColor3 = THEME.Outline,
     BackgroundTransparency = 0.4, BorderSizePixel = 0, ZIndex = 26,
 })
 
+-- CONTENT
 local content = Create("Frame", {
-    Parent = main, Size = UDim2.new(1, -24, 1, -122),
-    Position = UDim2.fromOffset(12, 114), BackgroundTransparency = 1, ZIndex = 14,
+    Parent = main, Size = UDim2.new(1, -24, 1, -102),
+    Position = UDim2.fromOffset(12, 94), BackgroundTransparency = 1, ZIndex = 14,
 })
 local sidebar = Create("Frame", {
     Parent = content, BackgroundColor3 = THEME.BG_Secondary,
@@ -2440,7 +2416,7 @@ local VisualPage    = CreatePage("Visual")
 local MiscPage      = CreatePage("MISC")
 
 -- HOME
-CreateLabel(HomePage, "SYSX HUB v1.3", 28)
+CreateLabel(HomePage, "SYSX HUB v1.4", 28)
 CreateLabel(HomePage,
     "13 Tabs | All Setting in MISC\n" ..
     "Home • Farm • Pvp • Quest\n" ..
@@ -3102,7 +3078,6 @@ logoImage.AnchorPoint = Vector2.new(0.5, 0.5)
 logoImage.BackgroundTransparency = 1
 logoImage.ZIndex = 2
 logoImage.Parent = btnHolder
-loadImageAsset(logoImage, LOGO_ID)
 
 local btnClick = Instance.new("TextButton")
 btnClick.Name = "ClickArea"
@@ -3173,4 +3148,4 @@ UserInputService.InputBegan:Connect(function(input, gp)
 end)
 
 ShowTab("Farm")
-Notify("SYSX HUB v1.3 Loaded ✅")
+Notify("SYSX HUB v1.4 Loaded ✅")
