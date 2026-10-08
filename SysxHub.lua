@@ -323,7 +323,7 @@ function BringMob(target)
     if not target:FindFirstChild("Ignored") then table.insert(gathered, target) end
 
     local maxCount = State.BringCount or 2
-    local radius = (maxCount > 2) and 350 or 200
+    local radius = State.BringRange or 300
 
     for _, m in ipairs(enemies:GetChildren()) do
         if m ~= target and m.Name == target.Name and not m:FindFirstChild("Ignored") then
@@ -682,7 +682,8 @@ function CombatController.Attack(mobNames)
                 while task.wait() do
                     if not mon.Parent or not hum.Parent or hum.Health <= 0 then break end
                     if not AnyFarm() then break end
-                    local targetCF = hrp.CFrame + Vector3.new(0, 35, 0)
+                    local farmDist = getgenv().FarmDistance or 20
+                    local targetCF = hrp.CFrame + Vector3.new(0, farmDist, 0)
                     FarmTeleport(targetCF, getgenv().FarmSpeed, 20)
                     if Dist(hrp.Position, GetHRP() and GetHRP().Position) < 150 then
                         CombatController.Grab(mon.Name)
@@ -822,8 +823,8 @@ task.spawn(function()
 end)
 
 task.spawn(function()
-    while task.wait(0.5) do
-        if State.AutoRaceV3 then            pcall(function()
+    while task.wait(0.5) do        if State.AutoRaceV3 then
+            pcall(function()
                 if GetCurrentSea() ~= 2 then CommF_:InvokeServer("TravelDressrosa"); return end
                 local res = CommF_:InvokeServer("Wenlocktoad", "1")
                 if res == 0 then CommF_:InvokeServer("Wenlocktoad", "2")
@@ -1258,8 +1259,9 @@ RegisterAccent(Stroke(Notif, THEME.Outline, 1.5, 0.15))
 
 local main = Create("Frame", {
     Parent = gui,
-    Size = UDim2.fromOffset(700, 540),
-    Position = UDim2.new(0.5, -350, 0.5, -270),
+    Size = UDim2.fromScale(0.42, 0.58),
+    Position = UDim2.fromScale(0.5, 0.5),
+    AnchorPoint = Vector2.new(0.5, 0.5),
     BackgroundColor3 = THEME.BG_Main,
     BackgroundTransparency = 0.05,
     BorderSizePixel = 0,
@@ -1272,48 +1274,48 @@ RegisterAccent(Stroke(main, THEME.Outline, 2, 0.1))
 
 local header = Create("Frame", {
     Parent = main,
-    Size = UDim2.new(1, 0, 0, 74),
+    Size = UDim2.new(1, 0, 0, 60),
     BackgroundTransparency = 1,
     ZIndex = 20,
 })
 Create("TextLabel", {
     Parent = header, BackgroundTransparency = 1,
-    Position = UDim2.fromOffset(20, 10),
-    Size = UDim2.fromOffset(340, 22),
+    Position = UDim2.fromOffset(16, 8),
+    Size = UDim2.fromOffset(300, 20),
     Text = "SysxHub",
     TextColor3 = THEME.Accent_Bright,
-    TextSize = 20, Font = Enum.Font.GothamBold,
+    TextSize = 18, Font = Enum.Font.GothamBold,
     TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 22,
 })
 Create("TextLabel", {
     Parent = header, BackgroundTransparency = 1,
-    Position = UDim2.fromOffset(20, 32),
-    Size = UDim2.fromOffset(340, 15),
+    Position = UDim2.fromOffset(16, 28),
+    Size = UDim2.fromOffset(300, 12),
     Text = "v1.1  •  13 Tabs",
     TextColor3 = THEME.Text_Secondary,
-    TextSize = 10, Font = Enum.Font.GothamMedium,
+    TextSize = 9, Font = Enum.Font.GothamMedium,
     TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 22,
 })
 
 local close = Create("TextButton", {
     Parent = header,
-    Size = UDim2.fromOffset(36, 36),
-    Position = UDim2.new(1, -52, 0, 12),
+    Size = UDim2.fromOffset(32, 32),
+    Position = UDim2.new(1, -44, 0, 10),
     BackgroundColor3 = THEME.BG_Secondary,
     BackgroundTransparency = 0.1,
     Text = "×",
     TextColor3 = THEME.Accent_Bright,
-    TextSize = 22,
+    TextSize = 20,
     Font = Enum.Font.GothamBold,
     AutoButtonColor = false, ZIndex = 25,
 })
-Corner(close, 10)
+Corner(close, 9)
 RegisterAccent(Stroke(close, THEME.Outline, 1.5, 0.15))
 
 Create("Frame", {
     Parent = header,
-    Size = UDim2.new(1, -32, 0, 1),
-    Position = UDim2.new(0, 16, 1, -2),
+    Size = UDim2.new(1, -24, 0, 1),
+    Position = UDim2.new(0, 12, 1, -2),
     BackgroundColor3 = THEME.Outline,
     BackgroundTransparency = 0.4,
     BorderSizePixel = 0, ZIndex = 22,
@@ -1321,8 +1323,8 @@ Create("Frame", {
 
 local content = Create("Frame", {
     Parent = main,
-    Size = UDim2.new(1, -32, 1, -90),
-    Position = UDim2.fromOffset(16, 80),
+    Size = UDim2.new(1, -24, 1, -72),
+    Position = UDim2.fromOffset(12, 64),
     BackgroundTransparency = 1,
     ZIndex = 14,
 })
@@ -1331,17 +1333,17 @@ local sidebar = Create("Frame", {
     Parent = content,
     BackgroundColor3 = THEME.BG_Secondary,
     BackgroundTransparency = 0.2,
-    Size = UDim2.new(0, 145, 1, 0),
+    Size = UDim2.new(0, 120, 1, 0),
     BorderSizePixel = 0, ZIndex = 15,
 })
-Corner(sidebar, 12)
+Corner(sidebar, 10)
 RegisterAccent(Stroke(sidebar, THEME.Outline, 1.5, 0.2))
 
 local tabList = Create("ScrollingFrame", {
     Parent = sidebar,
     BackgroundTransparency = 1,
-    Position = UDim2.new(0, 6, 0, 6),
-    Size = UDim2.new(1, -12, 1, -12),
+    Position = UDim2.new(0, 5, 0, 5),
+    Size = UDim2.new(1, -10, 1, -10),
     CanvasSize = UDim2.new(0, 0, 0, 0),
     AutomaticCanvasSize = Enum.AutomaticSize.Y,
     ScrollBarThickness = 2,
@@ -1349,15 +1351,15 @@ local tabList = Create("ScrollingFrame", {
     BorderSizePixel = 0, ZIndex = 16,
 })
 local TL = Instance.new("UIListLayout")
-TL.Padding = UDim.new(0, 4)
+TL.Padding = UDim.new(0, 3)
 TL.SortOrder = Enum.SortOrder.LayoutOrder
 TL.Parent = tabList
 
 local contentScroll = Create("ScrollingFrame", {
     Parent = content,
     BackgroundTransparency = 1,
-    Position = UDim2.new(0, 155, 0, 0),
-    Size = UDim2.new(1, -155, 1, 0),
+    Position = UDim2.new(0, 128, 0, 0),
+    Size = UDim2.new(1, -128, 1, 0),
     CanvasSize = UDim2.new(0, 0, 0, 0),
     AutomaticCanvasSize = Enum.AutomaticSize.Y,
     ScrollBarThickness = 3,
@@ -1371,8 +1373,8 @@ local function CreatePage(name)
     local P = Create("ScrollingFrame", {
         Name = name, Parent = contentScroll,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 4, 0, 4),
-        Size = UDim2.new(1, -8, 1, -8),
+        Position = UDim2.new(0, 3, 0, 3),
+        Size = UDim2.new(1, -6, 1, -6),
         CanvasSize = UDim2.new(0, 0, 0, 0),
         AutomaticCanvasSize = Enum.AutomaticSize.Y,
         ScrollBarThickness = 3,
@@ -1380,7 +1382,7 @@ local function CreatePage(name)
         BorderSizePixel = 0, Visible = false, ZIndex = 12,
     })
     local L = Instance.new("UIListLayout")
-    L.Padding = UDim.new(0, 6)
+    L.Padding = UDim.new(0, 5)
     L.SortOrder = Enum.SortOrder.LayoutOrder
     L.Parent = P
     Pages[name] = P
@@ -1392,17 +1394,17 @@ local function CreateTab(name, order)
         Parent = tabList,
         BackgroundColor3 = THEME.BG_Secondary,
         BackgroundTransparency = 0.3,
-        Size = UDim2.new(1, 0, 0, 30),
+        Size = UDim2.new(1, 0, 0, 26),
         Text = "", AutoButtonColor = false,
         BorderSizePixel = 0, LayoutOrder = order, ZIndex = 17,
     })
-    Corner(B, 8)
+    Corner(B, 7)
     local L = Create("TextLabel", {
         Parent = B, BackgroundTransparency = 1,
-        Position = UDim2.new(0, 10, 0, 0),
-        Size = UDim2.new(1, -14, 1, 0),
+        Position = UDim2.new(0, 8, 0, 0),
+        Size = UDim2.new(1, -12, 1, 0),
         Text = name, TextColor3 = THEME.Text_Secondary,
-        TextSize = 10, Font = Enum.Font.GothamMedium,
+        TextSize = 9, Font = Enum.Font.GothamMedium,
         TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 18,
     })
     Tabs[name] = { Button = B, Label = L, Stroke = nil }
@@ -1446,30 +1448,30 @@ local function CreateToggle(parent, text, default, cb)
     local B = Create("TextButton", {
         Parent = parent, BackgroundColor3 = THEME.BG_Secondary,
         BackgroundTransparency = 0.15,
-        Size = UDim2.new(1, 0, 0, 38), Text = "",
+        Size = UDim2.new(1, 0, 0, 32), Text = "",
         AutoButtonColor = false, BorderSizePixel = 0, ZIndex = 100,
     })
-    Corner(B, 9)
+    Corner(B, 8)
     RegisterAccent(Stroke(B, THEME.Outline, 1.2, 0.25))
     Create("TextLabel", {
         Parent = B, BackgroundTransparency = 1,
-        Position = UDim2.new(0, 12, 0, 0),
-        Size = UDim2.new(1, -58, 1, 0),
+        Position = UDim2.new(0, 10, 0, 0),
+        Size = UDim2.new(1, -50, 1, 0),
         Text = text, TextColor3 = THEME.Text_Primary,
-        TextSize = 11, Font = Enum.Font.GothamMedium,
+        TextSize = 10, Font = Enum.Font.GothamMedium,
         TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 101,
     })
     local Ind = Create("Frame", {
         Parent = B, BackgroundColor3 = THEME.Toggle_Off,
-        Size = UDim2.fromOffset(36, 20),
-        Position = UDim2.new(1, -48, 0.5, -10), ZIndex = 101,
+        Size = UDim2.fromOffset(30, 16),
+        Position = UDim2.new(1, -40, 0.5, -8), ZIndex = 101,
     })
     Corner(Ind, 20)
     Stroke(Ind, THEME.Outline, 1, 0.4)
     local Dot = Create("Frame", {
         Parent = Ind, BackgroundColor3 = THEME.Toggle_DotOff,
-        Size = UDim2.fromOffset(14, 14),
-        Position = UDim2.new(0, 3, 0.5, -7), ZIndex = 102,
+        Size = UDim2.fromOffset(12, 12),
+        Position = UDim2.new(0, 2, 0.5, -6), ZIndex = 102,
     })
     Corner(Dot, 20)
 
@@ -1477,11 +1479,11 @@ local function CreateToggle(parent, text, default, cb)
         if st then
             Ind.BackgroundColor3 = THEME.Toggle_On
             Dot.BackgroundColor3 = THEME.Toggle_DotOn
-            Dot.Position = UDim2.new(1, -17, 0.5, -7)
+            Dot.Position = UDim2.new(1, -14, 0.5, -6)
         else
             Ind.BackgroundColor3 = THEME.Toggle_Off
             Dot.BackgroundColor3 = THEME.Toggle_DotOff
-            Dot.Position = UDim2.new(0, 3, 0.5, -7)
+            Dot.Position = UDim2.new(0, 2, 0.5, -6)
         end
     end
 
@@ -1498,12 +1500,12 @@ local function CreateButton(parent, text, cb)
     local B = Create("TextButton", {
         Parent = parent, BackgroundColor3 = THEME.BG_Secondary,
         BackgroundTransparency = 0.15,
-        Size = UDim2.new(1, 0, 0, 38), Text = text,
-        TextColor3 = THEME.Text_Primary, TextSize = 11,
+        Size = UDim2.new(1, 0, 0, 32), Text = text,
+        TextColor3 = THEME.Text_Primary, TextSize = 10,
         Font = Enum.Font.GothamMedium, AutoButtonColor = false,
         BorderSizePixel = 0, ZIndex = 100,
     })
-    Corner(B, 9)
+    Corner(B, 8)
     RegisterAccent(Stroke(B, THEME.Outline, 1.2, 0.25))
     B.MouseEnter:Connect(function() TW(B, {BackgroundColor3 = THEME.BG_Hover, BackgroundTransparency = 0.05}, 0.15) end)
     B.MouseLeave:Connect(function() TW(B, {BackgroundColor3 = THEME.BG_Secondary, BackgroundTransparency = 0.15}, 0.15) end)
@@ -1520,27 +1522,27 @@ local function CreateDropdown(parent, title, options, cb)
     local Hold = Create("Frame", {
         Parent = parent, BackgroundColor3 = THEME.BG_Secondary,
         BackgroundTransparency = 0.15,
-        Size = UDim2.new(1, 0, 0, 38),
+        Size = UDim2.new(1, 0, 0, 32),
         BorderSizePixel = 0, ZIndex = 100,
     })
-    Corner(Hold, 9)
+    Corner(Hold, 8)
     RegisterAccent(Stroke(Hold, THEME.Outline, 1.2, 0.25))
     local Sel = options[1] or "-"
     local Lbl = Create("TextLabel", {
         Parent = Hold, BackgroundTransparency = 1,
-        Position = UDim2.new(0, 12, 0, 0),
-        Size = UDim2.new(1, -32, 1, 0),
+        Position = UDim2.new(0, 10, 0, 0),
+        Size = UDim2.new(1, -28, 1, 0),
         Text = title .. ": " .. Sel,
-        TextColor3 = THEME.Text_Primary, TextSize = 11,
+        TextColor3 = THEME.Text_Primary, TextSize = 10,
         Font = Enum.Font.GothamMedium,
         TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 101,
     })
     Create("TextLabel", {
         Parent = Hold, BackgroundTransparency = 1,
-        Position = UDim2.new(1, -22, 0, 0),
-        Size = UDim2.new(0, 16, 1, 0),
+        Position = UDim2.new(1, -20, 0, 0),
+        Size = UDim2.new(0, 14, 1, 0),
         Text = "v", TextColor3 = THEME.Static_BlueSoft,
-        TextSize = 11, Font = Enum.Font.GothamBold, ZIndex = 101,
+        TextSize = 10, Font = Enum.Font.GothamBold, ZIndex = 101,
     })
     local click = Create("TextButton", {
         Parent = Hold, BackgroundTransparency = 1,
@@ -1552,33 +1554,33 @@ local function CreateDropdown(parent, title, options, cb)
             Parent = gui,
             AnchorPoint = Vector2.new(0.5, 0.5),
             Position = UDim2.new(0.5, 0, 0.5, 0),
-            Size = UDim2.fromOffset(300, math.min(#options*38+80, 420)),
+            Size = UDim2.fromOffset(260, math.min(#options*32+70, 380)),
             BackgroundColor3 = THEME.BG_Secondary,
             BackgroundTransparency = 0.05,
             BorderSizePixel = 0, ZIndex = 999990,
         })
-        Corner(Pop, 14)
+        Corner(Pop, 12)
         RegisterAccent(Stroke(Pop, THEME.Outline, 2, 0.1))
         Create("TextLabel", {
             Parent = Pop, BackgroundTransparency = 1,
-            Position = UDim2.fromOffset(18, 10),
-            Size = UDim2.new(1, -60, 0, 22),
+            Position = UDim2.fromOffset(14, 8),
+            Size = UDim2.new(1, -50, 0, 20),
             Text = title, TextColor3 = THEME.Accent_Bright,
-            TextSize = 14, Font = Enum.Font.GothamBold,
+            TextSize = 12, Font = Enum.Font.GothamBold,
             TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 999991,
         })
         local xBtn = Create("TextButton", {
-            Parent = Pop, Position = UDim2.new(1, -40, 0, 10),
-            Size = UDim2.fromOffset(28, 22), Text = "x",
-            TextColor3 = THEME.Text_Muted, TextSize = 14,
+            Parent = Pop, Position = UDim2.new(1, -34, 0, 8),
+            Size = UDim2.fromOffset(26, 20), Text = "x",
+            TextColor3 = THEME.Text_Muted, TextSize = 12,
             BackgroundTransparency = 1, Font = Enum.Font.GothamBold,
             AutoButtonColor = false, ZIndex = 999992,
         })
         xBtn.Activated:Connect(function() Pop:Destroy() end)
         local LS = Create("ScrollingFrame", {
             Parent = Pop, BackgroundTransparency = 1,
-            Position = UDim2.fromOffset(12, 42),
-            Size = UDim2.new(1, -24, 1, -54),
+            Position = UDim2.fromOffset(10, 36),
+            Size = UDim2.new(1, -20, 1, -46),
             CanvasSize = UDim2.new(0, 0, 0, 0),
             AutomaticCanvasSize = Enum.AutomaticSize.Y,
             ScrollBarThickness = 3,
@@ -1586,25 +1588,25 @@ local function CreateDropdown(parent, title, options, cb)
             BorderSizePixel = 0, ZIndex = 999991,
         })
         local LL = Instance.new("UIListLayout")
-        LL.Padding = UDim.new(0, 4)
+        LL.Padding = UDim.new(0, 3)
         LL.SortOrder = Enum.SortOrder.LayoutOrder
         LL.Parent = LS
         for i, opt in ipairs(options) do
             local OB = Create("TextButton", {
                 Parent = LS, BackgroundColor3 = THEME.BG_Tertiary,
                 BackgroundTransparency = 0.15,
-                Size = UDim2.new(1, -8, 0, 34),
-                Position = UDim2.new(0, 4, 0, 0),
+                Size = UDim2.new(1, -6, 0, 28),
+                Position = UDim2.new(0, 3, 0, 0),
                 Text = opt, TextColor3 = THEME.Text_Primary,
-                TextSize = 12, Font = Enum.Font.GothamMedium,
+                TextSize = 10, Font = Enum.Font.GothamMedium,
                 AutoButtonColor = false, BorderSizePixel = 0,
                 LayoutOrder = i, ZIndex = 999992,
                 TextXAlignment = Enum.TextXAlignment.Left,
             })
-            Corner(OB, 7)
+            Corner(OB, 6)
             Stroke(OB, THEME.Outline, 1, 0.3)
             local pad = Instance.new("UIPadding")
-            pad.PaddingLeft = UDim.new(0, 12); pad.Parent = OB
+            pad.PaddingLeft = UDim.new(0, 10); pad.Parent = OB
             OB.MouseEnter:Connect(function() TW(OB, {BackgroundColor3 = THEME.BG_Hover, BackgroundTransparency = 0.05}, 0.1) end)
             OB.MouseLeave:Connect(function() TW(OB, {BackgroundColor3 = THEME.BG_Tertiary, BackgroundTransparency = 0.15}, 0.1) end)
             OB.Activated:Connect(function()
@@ -1623,23 +1625,23 @@ local function CreateSlider(parent, title, minV, maxV, defV, cb)
     local Hold = Create("Frame", {
         Parent = parent, BackgroundColor3 = THEME.BG_Secondary,
         BackgroundTransparency = 0.15,
-        Size = UDim2.new(1, 0, 0, 58),
+        Size = UDim2.new(1, 0, 0, 50),
         BorderSizePixel = 0, ZIndex = 100,
     })
-    Corner(Hold, 9)
+    Corner(Hold, 8)
     RegisterAccent(Stroke(Hold, THEME.Outline, 1.2, 0.25))
     Create("TextLabel", {
         Parent = Hold, BackgroundTransparency = 1,
-        Position = UDim2.new(0, 14, 0, 8),
-        Size = UDim2.new(1, -90, 0, 16),
+        Position = UDim2.new(0, 12, 0, 6),
+        Size = UDim2.new(1, -80, 0, 14),
         Text = title, TextColor3 = THEME.Text_Secondary,
-        TextSize = 10, Font = Enum.Font.GothamMedium,
+        TextSize = 9, Font = Enum.Font.GothamMedium,
         TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 101,
     })
     local VH = Create("Frame", {
         Parent = Hold, BackgroundColor3 = THEME.BG_Tertiary,
-        Position = UDim2.new(1, -74, 0, 6),
-        Size = UDim2.fromOffset(60, 20), ZIndex = 101,
+        Position = UDim2.new(1, -64, 0, 4),
+        Size = UDim2.fromOffset(54, 18), ZIndex = 101,
     })
     Corner(VH, 6)
     Stroke(VH, THEME.Outline, 1, 0.3)
@@ -1647,12 +1649,12 @@ local function CreateSlider(parent, title, minV, maxV, defV, cb)
         Parent = VH, BackgroundTransparency = 1,
         Size = UDim2.fromScale(1, 1),
         Text = tostring(val), TextColor3 = THEME.Static_BlueSoft,
-        TextSize = 11, Font = Enum.Font.GothamBold, ZIndex = 102,
+        TextSize = 10, Font = Enum.Font.GothamBold, ZIndex = 102,
     })
     local TB = Create("Frame", {
         Parent = Hold, BackgroundColor3 = THEME.BG_Tertiary,
-        Position = UDim2.new(0, 14, 0, 36),
-        Size = UDim2.new(1, -28, 0, 6),
+        Position = UDim2.new(0, 12, 0, 32),
+        Size = UDim2.new(1, -24, 0, 6),
         BorderSizePixel = 0, ZIndex = 101,
     })
     Corner(TB, 4)
@@ -1666,16 +1668,16 @@ local function CreateSlider(parent, title, minV, maxV, defV, cb)
     Corner(Fill, 4)
     local Knob = Create("Frame", {
         Parent = TB, BackgroundColor3 = Color3.new(1,1,1),
-        Size = UDim2.fromOffset(14, 14),
-        Position = UDim2.new(fr, -7, 0.5, -7),
+        Size = UDim2.fromOffset(12, 12),
+        Position = UDim2.new(fr, -6, 0.5, -6),
         BorderSizePixel = 0, ZIndex = 103,
     })
     Corner(Knob, 20)
     Stroke(Knob, THEME.Outline, 1.5, 0)
     local Btn = Create("TextButton", {
         Parent = Hold, BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 34),
-        Position = UDim2.new(0, 0, 0, 22),
+        Size = UDim2.new(1, 0, 0, 30),
+        Position = UDim2.new(0, 0, 0, 20),
         Text = "", AutoButtonColor = false, ZIndex = 110,
     })
     local drag = false
@@ -1686,7 +1688,7 @@ local function CreateSlider(parent, title, minV, maxV, defV, cb)
         local r = math.clamp((mx - abs.X) / sz.X, 0, 1)
         val = math.floor(minV + (maxV - minV) * r + 0.5)
         Fill.Size = UDim2.new(r, 0, 1, 0)
-        Knob.Position = UDim2.new(r, -7, 0.5, -7)
+        Knob.Position = UDim2.new(r, -6, 0.5, -6)
         VL.Text = tostring(val)
         if cb then pcall(cb, val) end
     end
@@ -1712,17 +1714,17 @@ local function CreateLabel(parent, text, sz)
     local L = Create("TextLabel", {
         Parent = parent, BackgroundColor3 = THEME.BG_Secondary,
         BackgroundTransparency = 0.3,
-        Size = UDim2.new(1, 0, 0, sz or 28),
+        Size = UDim2.new(1, 0, 0, sz or 24),
         Text = text, TextColor3 = THEME.Accent_Bright,
-        TextSize = 10, Font = Enum.Font.GothamBold,
+        TextSize = 9, Font = Enum.Font.GothamBold,
         TextXAlignment = Enum.TextXAlignment.Left,
         TextYAlignment = Enum.TextYAlignment.Center,
         BorderSizePixel = 0, ZIndex = 100,
     })
-    Corner(L, 9)
+    Corner(L, 8)
     RegisterAccent(Stroke(L, THEME.Outline, 1.2, 0.2))
     local pad = Instance.new("UIPadding")
-    pad.PaddingLeft = UDim.new(0, 12)
+    pad.PaddingLeft = UDim.new(0, 10)
     pad.Parent = L
     return L
 end
@@ -1805,42 +1807,31 @@ local MiscPage      = CreatePage("MISC")
 --================================================================
 -- HOME & STATUS
 --================================================================
-CreateLabel(HomePage, "SYSX HUB v1.1", 32)
+CreateLabel(HomePage, "SYSX HUB v1.1", 28)
 CreateLabel(HomePage,
     "13 Tabs | All Setting in MISC\n" ..
-    "Home & Status • Farm • Pvp [Combat]\n" ..
-    "Quest & Item • Stats • Sea • Fishing\n" ..
-    "Race • Fruit & Raid • Shop • Teleport\n" ..
-    "Visual • MISC", 180)
+    "Home • Farm • Pvp • Quest\n" ..
+    "Stats • Sea • Fishing • Race\n" ..
+    "Fruit • Shop • Teleport\n" ..
+    "Visual • MISC", 140)
 CreateButton(HomePage, "Join Discord Server", function()
     if setclipboard then setclipboard(DISCORD_INVITE) end
     pcall(function() GuiService:OpenBrowserWindow(DISCORD_INVITE) end)
     Notify("Discord link copied & opening...")
 end)
-CreateLabel(HomePage, "Player: " .. player.Name, 30)
-CreateLabel(HomePage, "JobId: " .. game.JobId, 30)
-CreateLabel(HomePage, "PlaceId: " .. game.PlaceId, 30)
+CreateLabel(HomePage, "Player: " .. player.Name, 24)
+CreateLabel(HomePage, "JobId: " .. game.JobId, 24)
+CreateLabel(HomePage, "PlaceId: " .. game.PlaceId, 24)
 
 --================================================================
 -- FARM
 --================================================================
-CreateLabel(FarmPage, "Farm Config", 26)
-CreateDropdown(FarmPage, "Select Weapon",
-    {"Melee","Sword","Blox Fruit","Gun"},
-    function(o) State.SelectedWeapon = o end)
-CreateToggle(FarmPage, "Bring Mob", true, function(s) State.BringMob = s end)
-CreateSlider(FarmPage, "Bring Mob Radius", 50, 1000, 300, function(v) State.BringRange = v end)
-CreateSlider(FarmPage, "Bring Mob Count", 1, 10, 2, function(v) State.BringCount = v end)
-CreateSlider(FarmPage, "Farm Speed", 50, 500, 200, function(v) getgenv().FarmSpeed = v end)
-CreateToggle(FarmPage, "Auto Haki", true, function(s) State.AutoHaki = s end)
-CreateToggle(FarmPage, "Auto Ken", false, function(s) State.AutoKen = s end)
-
-CreateLabel(FarmPage, "Level Farming", 26)
+CreateLabel(FarmPage, "Level Farming", 24)
 CreateToggle(FarmPage, "Auto Farm Level", false, function(s) State.AutoFarm = s end)
 CreateToggle(FarmPage, "Auto Farm Nearest", false, function(s) State.AutoFarmNearest = s end)
 CreateToggle(FarmPage, "Auto Farm Mastery", false, function(s) State.AutoFarmMastery = s end)
 
-CreateLabel(FarmPage, "Collection", 26)
+CreateLabel(FarmPage, "Collection", 24)
 CreateToggle(FarmPage, "Auto Collect Chest", false, function(s)
     State.AutoCollectChest = s
     if s then ChestData.FirstRun = true; ChestData.Unchecked = {} end
@@ -1848,7 +1839,7 @@ end)
 CreateToggle(FarmPage, "Auto Farm Bones", false, function(s) State.AutoFarmBones = s end)
 CreateToggle(FarmPage, "Auto Farm Wood Planks", false, function(s) State.AutoFarmWoodPlanks = s end)
 
-CreateLabel(FarmPage, "Material Farm", 26)
+CreateLabel(FarmPage, "Material Farm", 24)
 local MaterialList = {
     [1] = {"Angel Wings","Leather + Scrap Metal","Magma Ore","Fish Tail"},
     [2] = {"Leather + Scrap Metal","Magma Ore","Mystic Droplet","Radioactive Material","Vampire Fang","Ectoplasm"},
@@ -1870,7 +1861,7 @@ CreateDropdown(FarmPage, "Select Material",
     function(o) State.SelectedMaterial = o end)
 CreateToggle(FarmPage, "Auto Farm Material", false, function(s) State.AutoFarmMaterial = s end)
 
-CreateLabel(FarmPage, "Boss Farm", 26)
+CreateLabel(FarmPage, "Boss Farm", 24)
 local BossList = {
     [1] = {"Greybeard","The Saw","Saber Expert","The Gorilla King","Bobby","Yeti","Vice Admiral","Warden","Chief Warden","Swan","Magma Admiral","Fishman Lord","Wysper","Thunder God","Cyborg"},
     [2] = {"Darkbeard","Cursed Captain","Order","Don Swan","Diamond","Jeremy","Fajita","Smoke Admiral","Awakened Ice Admiral","Tide Keeper"},
@@ -1889,7 +1880,7 @@ CreateToggle(FarmPage, "Auto Sweet Chalice", false, function(s) State.AutoSweetC
 --================================================================
 -- PVP [COMBAT]
 --================================================================
-CreateLabel(PvpPage, "PvP Combat", 26)
+CreateLabel(PvpPage, "PvP Combat", 24)
 CreateToggle(PvpPage, "Auto Aimbot / Lock Aim", false, function(s) State.AutoAimbot = s end)
 CreateToggle(PvpPage, "Auto Dodge Skill", false, function(s) State.AutoDodgeSkill = s end)
 
@@ -1899,17 +1890,16 @@ for _, p in ipairs(Players:GetPlayers()) do
 end
 CreateDropdown(PvpPage, "Select Player PVP", pvpPlayers, function(o) State.SelectedPlayer = o end)
 CreateToggle(PvpPage, "Teleport Player", false, function(s) State.TeleportPlayer = s end)
-
 CreateButton(PvpPage, "Refresh Player", function() Notify("Rejoin to refresh player list") end)
 
 --================================================================
 -- QUEST & ITEM
 --================================================================
-CreateLabel(QuestPage, "Auto Get Race", 26)
+CreateLabel(QuestPage, "Auto Get Race", 24)
 CreateToggle(QuestPage, "Auto Get Ghoul", false, function(s) State.AutoGetGhoul = s end)
 CreateToggle(QuestPage, "Auto Get Cyborg", false, function(s) State.AutoGetCyborg = s end)
 
-CreateLabel(QuestPage, "Sword Quest", 26)
+CreateLabel(QuestPage, "Sword Quest", 24)
 CreateToggle(QuestPage, "Auto Saber Quest", false, function(s) State.AutoSaber = s end)
 CreateToggle(QuestPage, "Auto Yama Quest", false, function(s) State.AutoYama = s end)
 CreateToggle(QuestPage, "Auto Tushita Quest", false, function(s) State.AutoTushita = s end)
@@ -1922,26 +1912,26 @@ CreateToggle(QuestPage, "Auto Buddy Sword Quest", false, function(s) State.AutoB
 CreateToggle(QuestPage, "Auto Hallow Scythe Quest", false, function(s) State.AutoHallowScythe = s end)
 CreateToggle(QuestPage, "Auto CDK Quest", false, function(s) State.AutoCDK = s end)
 
-CreateLabel(QuestPage, "Gun Quest", 26)
+CreateLabel(QuestPage, "Gun Quest", 24)
 CreateToggle(QuestPage, "Auto Acidum Rifle Quest", false, function(s) State.AutoAcidumRifle = s end)
 CreateToggle(QuestPage, "Auto Venom Bow Quest", false, function(s) State.AutoVenomBow = s end)
 CreateToggle(QuestPage, "Auto Soul Guitar Quest", false, function(s) State.AutoSoulGuitar = s end)
 CreateToggle(QuestPage, "Auto Dragon Storm Quest", false, function(s) State.AutoDragonStorm = s end)
 
-CreateLabel(QuestPage, "Special Item Quest", 26)
+CreateLabel(QuestPage, "Special Item Quest", 24)
 CreateToggle(QuestPage, "Auto Rengoku Quest", false, function(s) State.AutoRengoku = s end)
 CreateToggle(QuestPage, "Auto Insict V2 Quest", false, function(s) State.AutoInsictV2 = s end)
 CreateToggle(QuestPage, "Auto Rainbow Saviour Quest", false, function(s) State.AutoRainbowSaviour = s end)
 CreateToggle(QuestPage, "Auto Dark Blade V2 Quest", false, function(s) State.AutoDarkBladeV2 = s end)
 CreateToggle(QuestPage, "Auto Dark Blade V3 Quest", false, function(s) State.AutoDarkBladeV3 = s end)
 
-CreateLabel(QuestPage, "Puzzle Quest", 26)
+CreateLabel(QuestPage, "Puzzle Quest", 24)
 CreateToggle(QuestPage, "Auto Bartilo Quest", false, function(s) State.AutoBartilo = s end)
 CreateToggle(QuestPage, "Auto Second Sea Puzzle", false, function(s) State.AutoSecondSea = s end)
 CreateToggle(QuestPage, "Auto Third Sea Puzzle", false, function(s) State.AutoThirdSea = s end)
 CreateToggle(QuestPage, "Auto Dojo Quest", false, function(s) State.AutoDojo = s end)
 
-CreateLabel(QuestPage, "Boss Item Quest", 26)
+CreateLabel(QuestPage, "Boss Item Quest", 24)
 CreateToggle(QuestPage, "Auto Cake Prince", false, function(s) State.AutoCakePrince = s end)
 CreateToggle(QuestPage, "Auto Dough King", false, function(s) State.AutoDoughKing = s end)
 CreateToggle(QuestPage, "Auto Kill Elite Hunter", false, function(s) State.AutoEliteHunter = s end)
@@ -1951,13 +1941,13 @@ CreateToggle(QuestPage, "Auto Factory", false, function(s) State.AutoFactory = s
 CreateToggle(QuestPage, "Auto Pirates Sea", false, function(s) State.AutoPiratesSea = s end)
 CreateToggle(QuestPage, "Auto Dragon Hunter Quest", false, function(s) State.AutoDragonHunter = s end)
 
-CreateLabel(QuestPage, "Collection Quest", 26)
+CreateLabel(QuestPage, "Collection Quest", 24)
 CreateToggle(QuestPage, "Auto Collect Berry", false, function(s) State.AutoCollectBerry = s end)
 
 --================================================================
 -- STATS
 --================================================================
-CreateLabel(StatsPage, "Auto Stats", 26)
+CreateLabel(StatsPage, "Auto Stats", 24)
 CreateDropdown(StatsPage, "Select Stat Priority",
     {"Melee","Defense","Sword","Gun","Blox Fruit"},
     function(o) State.SelectedStat = o end)
@@ -1972,7 +1962,7 @@ CreateToggle(StatsPage, "Auto Blox Fruit", false, function(s) State.StatFruit = 
 --================================================================
 -- SEA
 --================================================================
-CreateLabel(SeaPage, "Sea Config", 26)
+CreateLabel(SeaPage, "Sea Config", 24)
 CreateDropdown(SeaPage, "Select Boat",
     {"PirateBrigade","PirateGrandBrigade","Beast Hunter"},
     function(o) State.SelectedBoat = o end)
@@ -1983,7 +1973,7 @@ CreateDropdown(SeaPage, "Combat Weapon",
     {"Melee","Blox Fruit","Gun","Sword","Random"},
     function(o) State.CombatWeapon = o end)
 
-CreateLabel(SeaPage, "Sea to Sea", 26)
+CreateLabel(SeaPage, "Sea to Sea", 24)
 CreateToggle(SeaPage, "Auto Travel to Sea 1", false, function(s)
     State.AutoTravelSea1 = s
     if s then
@@ -2027,7 +2017,7 @@ CreateToggle(SeaPage, "Auto Travel to Sea 3", false, function(s)
     end
 end)
 
-CreateLabel(SeaPage, "Sea Event", 26)
+CreateLabel(SeaPage, "Sea Event", 24)
 CreateToggle(SeaPage, "Auto Farm Sea", false, function(s) State.AutoFarmSea = s end)
 CreateToggle(SeaPage, "Attack Sea Beasts", false, function(s) State.AttackSeaBeasts = s end)
 CreateToggle(SeaPage, "Dodge Sea Beasts Skill", false, function(s) State.DodgeSeaBeasts = s end)
@@ -2043,13 +2033,13 @@ CreateToggle(SeaPage, "Auto Dodge Rough Sea", false, function(s) State.AutoDodge
 CreateToggle(SeaPage, "No Clip Rock", false, function(s) State.NoClipRock = s end)
 CreateToggle(SeaPage, "No Fog", false, function(s) State.NoFog = s end)
 
-CreateLabel(SeaPage, "Kitsune Island", 26)
+CreateLabel(SeaPage, "Kitsune Island", 24)
 CreateToggle(SeaPage, "Auto Summon Kitsune Island", false, function(s) State.AutoSummonKitsune = s end)
 CreateToggle(SeaPage, "Tween to Kitsune Island", false, function(s) State.TweenKitsune = s end)
 CreateToggle(SeaPage, "Auto Collect Azure Ember", false, function(s) State.AutoCollectEmber = s end)
 CreateToggle(SeaPage, "Auto Trade Azure Ember", false, function(s) State.AutoTradeEmber = s end)
 
-CreateLabel(SeaPage, "Leviathan / Frozen", 26)
+CreateLabel(SeaPage, "Leviathan / Frozen", 24)
 CreateToggle(SeaPage, "Tween to Frozen Dimension", false, function(s) State.TweenFrozenDimension = s end)
 CreateToggle(SeaPage, "Auto Find Leviathan", false, function(s) State.AutoFindLevi = s end)
 CreateToggle(SeaPage, "Auto Attack Leviathan", false, function(s) State.AutoAttackLevi = s end)
@@ -2060,12 +2050,12 @@ CreateToggle(SeaPage, "Auto Start Leviathan", false, function(s) State.AutoStart
 CreateToggle(SeaPage, "Auto Buy Spy", false, function(s) State.AutoBuySpy = s end)
 CreateToggle(SeaPage, "Auto Destroy IDK", false, function(s) State.AutoDestroyIDK = s end)
 
-CreateLabel(SeaPage, "Mirage Island", 26)
+CreateLabel(SeaPage, "Mirage Island", 24)
 CreateToggle(SeaPage, "Auto Summon Mirage Island", false, function(s) State.AutoSummonMirage = s end)
 CreateToggle(SeaPage, "Tween to Mirage Island", false, function(s) State.TweenMirage = s end)
 CreateToggle(SeaPage, "Auto Find Mirage", false, function(s) State.AutoFindMirage = s end)
 
-CreateLabel(SeaPage, "Prehistoric Island", 26)
+CreateLabel(SeaPage, "Prehistoric Island", 24)
 CreateToggle(SeaPage, "Auto Summon Prehistoric Island", false, function(s) State.AutoSummonPre = s end)
 CreateToggle(SeaPage, "Tween To Prehistoric Island", false, function(s) State.TweenPre = s end)
 CreateToggle(SeaPage, "Auto Find Prehistoric Island", false, function(s) State.AutoFindPre = s end)
@@ -2074,14 +2064,14 @@ CreateToggle(SeaPage, "Fully Event Prehistoric Island", false, function(s) State
 CreateToggle(SeaPage, "Auto Collect Bone", false, function(s) State.AutoCollectBone = s end)
 CreateToggle(SeaPage, "Auto Collect Egg", false, function(s) State.AutoCollectEgg = s end)
 
-CreateLabel(SeaPage, "Sea Craft", 26)
+CreateLabel(SeaPage, "Sea Craft", 24)
 CreateToggle(SeaPage, "Auto Shark Tooth Necklace", false, function(s) State.AutoToothNecklace = s end)
 CreateToggle(SeaPage, "Auto Terror Jaw", false, function(s) State.AutoTerrorJaw = s end)
 CreateToggle(SeaPage, "Auto Monster Magnet", false, function(s) State.AutoMonsterMagnet = s end)
 CreateToggle(SeaPage, "Auto Shark Anchor Craft", false, function(s) State.AutoSharkAnchorCraft = s end)
 CreateToggle(SeaPage, "Auto Crafting Volcanic Magnet", false, function(s) State.AutoCraftVolcanic = s end)
 
-CreateLabel(SeaPage, "Boat Setting", 26)
+CreateLabel(SeaPage, "Boat Setting", 24)
 CreateToggle(SeaPage, "Fly Boat", false, function(s) State.FlyBoat = s end)
 CreateToggle(SeaPage, "Drive Boat To Tiki", false, function(s) State.DriveBoatTiki = s end)
 CreateToggle(SeaPage, "Drive Boat To Hydra", false, function(s) State.DriveBoatHydra = s end)
@@ -2092,7 +2082,7 @@ CreateSlider(SeaPage, "Value Speed Fly Boat", 0, 10, 3, function(v) State.SpeedF
 --================================================================
 -- FISHING
 --================================================================
-CreateLabel(FishingPage, "Fishing", 26)
+CreateLabel(FishingPage, "Fishing", 24)
 CreateDropdown(FishingPage, "Select Bait",
     {"Basic Bait","Good Bait","Excellent Bait"},
     function(o) State.SelectedBait = o end)
@@ -2110,30 +2100,30 @@ end)
 --================================================================
 -- RACE
 --================================================================
-CreateLabel(RacePage, "Auto Upgrade Race", 26)
+CreateLabel(RacePage, "Auto Upgrade Race", 24)
 CreateToggle(RacePage, "Auto Race V2", false, function(s) State.AutoRaceV2 = s end)
 CreateToggle(RacePage, "Auto Race V3", false, function(s) State.AutoRaceV3 = s end)
 
-CreateLabel(RacePage, "Race V4 Trial", 26)
+CreateLabel(RacePage, "Race V4 Trial", 24)
 CreateToggle(RacePage, "Auto Trial", false, function(s) State.AutoTrial = s end)
 CreateToggle(RacePage, "Auto Finish Train", false, function(s) State.AutoFinishTrainV4 = s end)
 CreateToggle(RacePage, "Auto Kill Player Trial", false, function(s) State.AutoKillAfterTrialRace = s end)
 
-CreateLabel(RacePage, "Race V4 Train", 26)
+CreateLabel(RacePage, "Race V4 Train", 24)
 CreateDropdown(RacePage, "Select Method Train",
     {"Bone","Cake"},
     function(o) State.SelectedTrainMethod = o end)
 CreateToggle(RacePage, "Auto Train", false, function(s) State.AutoTrain = s end)
 CreateToggle(RacePage, "Pull Lever", false, function(s) State.AutoPullLeverV4 = s end)
 
-CreateLabel(RacePage, "Race V4 Teleport", 26)
+CreateLabel(RacePage, "Race V4 Teleport", 24)
 CreateToggle(RacePage, "Tween Great Tree", false, function(s) State.TweenGreatTree = s end)
 CreateToggle(RacePage, "Teleport Temple Off Time", false, function(s) State.TeleportTempleOffTime = s end)
 
 --================================================================
 -- FRUIT & RAID
 --================================================================
-CreateLabel(FruitRaidPage, "Fruit", 26)
+CreateLabel(FruitRaidPage, "Fruit", 24)
 CreateToggle(FruitRaidPage, "Auto Store Fruit", false, function(s) State.AutoStoreFruit = s end)
 
 CreateButton(FruitRaidPage, "Random Fruit (Roll 1x)", function()
@@ -2181,7 +2171,7 @@ CreateToggle(FruitRaidPage, "Auto Buy Sniper Fruit", false, function(s) State.Au
 
 CreateToggle(FruitRaidPage, "Auto Find Fruit", false, function(s) State.AutoFindFruit = s end)
 
-CreateLabel(FruitRaidPage, "Raid", 26)
+CreateLabel(FruitRaidPage, "Raid", 24)
 CreateDropdown(FruitRaidPage, "Select Chip",
     {"Flame","Ice","Sand","Dark","Light","Magma","Quake","Buddha","Love","Spider","Sound","Phoenix","Portal","Rumble","Pain","Blizzard","Gravity"},
     function(o) State.SelectedChip = o end)
@@ -2192,7 +2182,7 @@ CreateToggle(FruitRaidPage, "Auto Awaken Fruit", false, function(s) State.AutoAw
 --================================================================
 -- SHOP
 --================================================================
-CreateLabel(ShopPage, "Fighting Styles", 26)
+CreateLabel(ShopPage, "Fighting Styles", 24)
 CreateDropdown(ShopPage, "Select Melee",
     {"Black Leg","Electro","Fishman Karate","Dragon Claw","Superhuman","Death Step","Sharkman Karate","Electric Claw","Dragon Talon","Godhuman","Sanguine Art"},
     function(o) State.SelectedMelee = o end)
@@ -2203,18 +2193,18 @@ CreateToggle(ShopPage, "Auto Buy Melee", false, function(s)
 end)
 CreateToggle(ShopPage, "Auto Fully Melees", false, function(s) State.AutoFullyMelees = s end)
 
-CreateLabel(ShopPage, "Abilities", 26)
+CreateLabel(ShopPage, "Abilities", 24)
 CreateButton(ShopPage, "Buy Geppo", function() CommF_:InvokeServer("BuyHaki", "Geppo") Notify("Buy Geppo") end)
 CreateButton(ShopPage, "Buy Buso", function() CommF_:InvokeServer("BuyHaki", "Buso") Notify("Buy Buso") end)
 CreateButton(ShopPage, "Buy Soru", function() CommF_:InvokeServer("BuyHaki", "Soru") Notify("Buy Soru") end)
 CreateButton(ShopPage, "Buy Ken", function() CommF_:InvokeServer("KenTalk", "Buy") Notify("Buy Ken") end)
 
-CreateLabel(ShopPage, "Sword", 26)
+CreateLabel(ShopPage, "Sword", 24)
 for _, sw in ipairs({"Katana","Cutlass","Dual Katana","Iron Mace","Triple Katana","Pipe","Dual-Headed Blade","Soul Cane","Bisento"}) do
     CreateButton(ShopPage, "Buy " .. sw, function() TryBuy("BuyItem", sw) end)
 end
 
-CreateLabel(ShopPage, "Gun", 26)
+CreateLabel(ShopPage, "Gun", 24)
 for _, gn in ipairs({"Musket","Slingshot","Flintlock","Refined Slingshot","Refined Flintlock","Cannon"}) do
     CreateButton(ShopPage, "Buy " .. gn, function() TryBuy("BuyItem", gn) end)
 end
@@ -2224,12 +2214,12 @@ CreateButton(ShopPage, "Buy Kabucha", function()
     TryBuy("BlackbeardReward", "Slingshot", "2")
 end)
 
-CreateLabel(ShopPage, "Accessory", 26)
+CreateLabel(ShopPage, "Accessory", 24)
 for _, ac in ipairs({"Black Cape","Swordsman Hat","Tomoe Ring"}) do
     CreateButton(ShopPage, "Buy " .. ac, function() TryBuy("BuyItem", ac) end)
 end
 
-CreateLabel(ShopPage, "Race", 26)
+CreateLabel(ShopPage, "Race", 24)
 CreateButton(ShopPage, "Buy Ghoul Race", function()
     TryBuy("Ectoplasm", "BuyCheck", 4)
     task.wait(0.3)
@@ -2237,7 +2227,7 @@ CreateButton(ShopPage, "Buy Ghoul Race", function()
 end)
 CreateButton(ShopPage, "Buy Cyborg Race", function() TryBuy("CyborgTrainer", "Buy") end)
 
-CreateLabel(ShopPage, "Misc", 26)
+CreateLabel(ShopPage, "Misc", 24)
 CreateButton(ShopPage, "Buy Stat Refund", function()
     TryBuy("BlackbeardReward", "Refund", "1") task.wait(0.3)
     TryBuy("BlackbeardReward", "Refund", "2")
@@ -2259,12 +2249,12 @@ end)
 --================================================================
 -- TELEPORT
 --================================================================
-CreateLabel(TeleportPage, "Sea Travel", 26)
+CreateLabel(TeleportPage, "Sea Travel", 24)
 CreateButton(TeleportPage, "Travel to Sea 1", function() CommF_:InvokeServer("TravelMain") Notify("Traveling Sea 1") end)
 CreateButton(TeleportPage, "Travel to Sea 2", function() CommF_:InvokeServer("TravelDressrosa") Notify("Traveling Sea 2") end)
 CreateButton(TeleportPage, "Travel to Sea 3", function() CommF_:InvokeServer("TravelZou") Notify("Traveling Sea 3") end)
 
-CreateLabel(TeleportPage, "Island Teleport", 26)
+CreateLabel(TeleportPage, "Island Teleport", 24)
 
 local IslandPositions = {
     [1] = {
@@ -2366,7 +2356,7 @@ end)
 --================================================================
 -- VISUAL
 --================================================================
-CreateLabel(VisualPage, "ESP", 26)
+CreateLabel(VisualPage, "ESP", 24)
 CreateToggle(VisualPage, "ESP Player", false, function(s) State.ESPPlayer = s end)
 CreateToggle(VisualPage, "ESP Chest", false, function(s) State.ESPChest = s end)
 CreateToggle(VisualPage, "ESP Devil Fruit", false, function(s) State.ESPDevilFruit = s end)
@@ -2377,31 +2367,31 @@ CreateToggle(VisualPage, "ESP Kitsune Island", false, function(s) State.ESPKitsu
 --================================================================
 -- MISC (All Setting)
 --================================================================
-CreateLabel(MiscPage, "Server & Hop", 26)
+CreateLabel(MiscPage, "Server & Hop", 24)
 CreateToggle(MiscPage, "Auto Hop (after 1h)", false, function(s) State.AutoHop1h = s end)
 CreateToggle(MiscPage, "Hop When Idle", false, function(s) State.HopWhenIdle = s end)
 CreateButton(MiscPage, "Rejoin Server", function()
     TeleportService:Teleport(game.PlaceId, player)
 end)
-CreateLabel(MiscPage, "JobId: " .. game.JobId, 30)
+CreateLabel(MiscPage, "JobId: " .. game.JobId, 24)
 
-CreateLabel(MiscPage, "Webhook", 26)
+CreateLabel(MiscPage, "Webhook", 24)
 local WebhookBox = Create("TextBox", {
     Parent = MiscPage,
     BackgroundColor3 = THEME.BG_Secondary,
     BackgroundTransparency = 0.15,
-    Size = UDim2.new(1, 0, 0, 38),
+    Size = UDim2.new(1, 0, 0, 32),
     Text = "",
     PlaceholderText = "Paste Discord Webhook URL...",
     TextColor3 = THEME.Text_Primary,
     PlaceholderColor3 = THEME.Text_Muted,
-    TextSize = 11,
+    TextSize = 10,
     Font = Enum.Font.GothamMedium,
     TextXAlignment = Enum.TextXAlignment.Left,
     ClearTextOnFocus = false,
     BorderSizePixel = 0, ZIndex = 100,
 })
-Corner(WebhookBox, 9)
+Corner(WebhookBox, 8)
 RegisterAccent(Stroke(WebhookBox, THEME.Outline, 1.2, 0.25))
 WebhookBox.FocusLost:Connect(function()
     if WebhookBox.Text ~= "" and WebhookBox.Text:find("discord.com/api/webhooks") then
@@ -2412,7 +2402,19 @@ WebhookBox.FocusLost:Connect(function()
     end
 end)
 
-CreateLabel(MiscPage, "Local Player", 26)
+CreateLabel(MiscPage, "Farm Setting", 24)
+CreateDropdown(MiscPage, "Select Weapon",
+    {"Melee","Sword","Blox Fruit","Gun"},
+    function(o) State.SelectedWeapon = o end)
+CreateToggle(MiscPage, "Bring Mob", true, function(s) State.BringMob = s end)
+CreateSlider(MiscPage, "Bring Mob Radius", 50, 1000, 300, function(v) State.BringRange = v end)
+CreateSlider(MiscPage, "Bring Mob Count", 1, 10, 2, function(v) State.BringCount = v end)
+CreateSlider(MiscPage, "Farm Speed", 50, 500, 200, function(v) getgenv().FarmSpeed = v end)
+CreateSlider(MiscPage, "Farm Distance", 10, 100, 20, function(v) getgenv().FarmDistance = v end)
+CreateToggle(MiscPage, "Auto Haki", true, function(s) State.AutoHaki = s end)
+CreateToggle(MiscPage, "Auto Ken", false, function(s) State.AutoKen = s end)
+
+CreateLabel(MiscPage, "Local Player", 24)
 CreateSlider(MiscPage, "WalkSpeed", 16, 300, 16, function(v)
     State.WalkSpeed = v
     local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
@@ -2434,13 +2436,13 @@ CreateToggle(MiscPage, "Anti-AFK", true, function(s) State.AntiAFK = s end)
 CreateToggle(MiscPage, "Auto Reset Character", false, function(s) State.AutoResetChar = s end)
 CreateToggle(MiscPage, "Fast Attack", true, function(s) State.FastAttackMisc = s end)
 
-CreateLabel(MiscPage, "Screen", 26)
+CreateLabel(MiscPage, "Screen", 24)
 CreateSlider(MiscPage, "FPS Cap", 15, 240, 60, function(v)
     State.FPScap = v
     pcall(function() if setfpscap then setfpscap(v) end end)
 end)
 
-CreateLabel(MiscPage, "Utility", 26)
+CreateLabel(MiscPage, "Utility", 24)
 CreateToggle(MiscPage, "Anti-Flag", false, function(s) State.AntiFlag = s end)
 CreateToggle(MiscPage, "Anti-Kick", true, function(s) State.AntiKick = s end)
 CreateToggle(MiscPage, "Kick Recovery", true, function(s) State.KickRecovery = s end)
@@ -2448,7 +2450,7 @@ CreateButton(MiscPage, "Join Pirates", function() CommF_:InvokeServer("SetTeam",
 CreateButton(MiscPage, "Join Marines", function() CommF_:InvokeServer("SetTeam", "Marines") Notify("Joined Marines") end)
 CreateToggle(MiscPage, "Auto Exp Redeem", false, function(s) State.AutoExpRedeem = s end)
 
-CreateLabel(MiscPage, "Open UI", 26)
+CreateLabel(MiscPage, "Open UI", 24)
 CreateButton(MiscPage, "Open Fruit Shop", function()
     pcall(function() require(RS.Controllers.UI.FruitShop):Open() end)
 end)
@@ -2477,7 +2479,7 @@ task.spawn(function()
     end
 end)
 
--- Auto Farm Level
+-- Auto Farm Level (Fixed)
 task.spawn(function()
     while task.wait(0.25) do
         if State.AutoFarm then
@@ -2508,6 +2510,11 @@ task.spawn(function()
                         local sp = FindSpawnPart(questMob, true)
                         if sp then
                             FarmTeleport(sp.CFrame * CFrame.new(0, 60, 0), getgenv().FarmSpeed, 25)
+                        else
+                            local sp2 = FindSpawnPart(questMob, true)
+                            if sp2 then
+                                FarmTeleport(sp2.CFrame * CFrame.new(0, 60, 0), getgenv().FarmSpeed, 25)
+                            end
                         end
                     end
                     return
