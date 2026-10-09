@@ -1,16 +1,15 @@
 --[[
 ================================================================
-    SYSX HUB v1.5 — Blox Fruits
+    SYSX HUB v1.6 — Blox Fruits
+    - FIX Farm Level (partial mob match + GUI sync)
     - Header: Kotak Logo 52x52 + Logo 48x48 + Banner 420x75
     - Panel: 460 x 320
-    - FIX Farm Level (kill mob sampai quest selesai)
-    - FIX Tween Island (pakai FarmTeleport)
-    - FIX ESP Fruit auto hilang setelah diambil
+    - FIX Tween Island
+    - FIX ESP Fruit auto hilang
     - Auto Equip Weapon
-    - Attack Boss Remote (dari jauh)
+    - Attack Boss Remote
     - Farm Mastery Weapon Selector
-    - Random Fruit (single)
-    - Tween Fruit
+    - Random Fruit / Tween Fruit
 ================================================================
 ]]
 
@@ -42,7 +41,6 @@ local World3 = (placeId == 7449423635 or placeId == 100117331123089)
 
 local DISCORD_INVITE = "https://discord.gg/xWa9NpFRr"
 
--- [[ LOGO / BANNER ASSET ]] --
 local LOGO_ID = 132940055932948
 local BANNER_ID = 110899503462686
 
@@ -242,6 +240,51 @@ function FindEnemy(names, maxRange)
             local clean = NameCache[e.Name] or e.Name:match("^(.-)%s*%[") or e.Name
             NameCache[e.Name] = clean
             if lookup[clean] or lookup[e.Name] then
+                local trp = e:FindFirstChild("HumanoidRootPart")
+                if trp then
+                    local d = (trp.Position - pos).Magnitude
+                    if d < bestD then best, bestD = e, d end
+                end
+            end
+        end
+    end
+    return best
+end
+
+-- PARTIAL MATCH: cari mob dengan kata kunci
+local function FindEnemyPartial(mobName, maxRange)
+    if not mobName or mobName == "" then return nil end
+    local hrp = GetHRP(); if not hrp then return nil end
+    local enemies = Workspace:FindFirstChild("Enemies"); if not enemies then return nil end
+
+    local mobLower = string.lower(mobName)
+    local keys = {}
+    for k in string.gmatch(mobLower, "%a+") do
+        if #k >= 4 then table.insert(keys, k) end
+    end
+
+    local maxSq = (maxRange or 99999) ^ 2
+    local pos = hrp.Position
+    local best, bestD = nil, maxSq
+
+    for _, e in ipairs(enemies:GetChildren()) do
+        local h = e:FindFirstChild("Humanoid")
+        if h and h.Health > 0 then
+            local eNameLower = string.lower(e.Name)
+            local matched = false
+            if #keys > 0 then
+                matched = true
+                for _, key in ipairs(keys) do
+                    if not string.find(eNameLower, key, 1, true) then
+                        matched = false
+                        break
+                    end
+                end
+            else
+                matched = string.find(eNameLower, mobLower, 1, true) ~= nil
+            end
+
+            if matched then
                 local trp = e:FindFirstChild("HumanoidRootPart")
                 if trp then
                     local d = (trp.Position - pos).Magnitude
@@ -521,7 +564,6 @@ function FarmTeleport(goal, speed, customTimeout)
     SetFarmNoclip(false)
 end
 
--- Manual Tween Teleport (untuk island teleport - tidak bergantung AnyFarm)
 local function TweenTeleport(targetCF, speed)
     if not targetCF or not IsAlive() then return end
     speed = speed or getgenv().FarmSpeed or 200
@@ -732,7 +774,6 @@ function CombatController.Attack(mobNames)
     end
 end
 
--- AIMBOT
 local AimPos = nil
 local AimTarget = nil
 function LockAimPositionTo(cf) AimPos = cf end
@@ -877,7 +918,6 @@ task.spawn(function()
     end
 end)
 
--- FIX: ESP Devil Fruit dengan auto-hilang setelah diambil
 task.spawn(function()
     while task.wait(0.3) do
         if State.ESPDevilFruit then
@@ -888,7 +928,6 @@ task.spawn(function()
                     if (c:IsA("Tool") or c:IsA("Model")) and string.find(c.Name, "Fruit") then
                         local h = c:FindFirstChild("Handle") or c.PrimaryPart
                         if h and h.Parent then
-                            -- skip fruit milik player sendiri
                             local isOurs = (c:IsA("Tool") and (c.Parent == player.Character or c.Parent == player:FindFirstChild("Backpack")))
                             local taken = c:GetAttribute("PickedUp") or c:GetAttribute("Taken") or c:GetAttribute("Consumed")
                             if not isOurs and not taken then
@@ -900,7 +939,6 @@ task.spawn(function()
                         end
                     end
                 end
-                -- hapus ESP fruit yang sudah hilang/diambil
                 for k, v in pairs(ESPObjects) do
                     if v:GetAttribute("Kind") == "Fruit" then
                         if not seen[k] or not k.Parent then
@@ -964,12 +1002,12 @@ task.spawn(function()
 end)
 
 -- ============================================================
--- FIXED: AUTO FARM LEVEL (KILL MOB TERUS SAMPAI QUEST SELESAI)
+-- FARM LEVEL VERSI FINAL (PARTIAL MATCH + GUI SYNC)
 -- ============================================================
 local FarmState = {
     QuestTaken = false,
     QuestMob = nil,
-    LastQuestVisible = 0,
+    KillStartTime = 0,
     TakeConfirmUntil = 0,
     LastQuestName = nil,
     LastQuestId = nil,
@@ -981,6 +1019,27 @@ local function IsQuestGuiVisible()
     if not mainGui then return false end
     local q = mainGui:FindFirstChild("Quest")
     return q and q.Visible
+end
+
+local function GetQuestMobFromGui()
+    local mainGui = playerGui:FindFirstChild("Main")
+    if not mainGui then return nil end
+    local q = mainGui:FindFirstChild("Quest")
+    if not q or not q.Visible then return nil end
+
+    local ok, qText = pcall(function()
+        return q.Container.QuestTitle.Title.Text
+    end)
+    if not ok or not qText or qText == "" then return nil end
+
+    local mob = qText:match("Defeat%s*%d+%s*(.-)%s+in%s+")
+        or qText:match("Defeat%s*%d+%s*(.-)%s*$")
+        or qText:match("Defeat%s+(.-)%s+%(")
+
+    if mob then
+        mob = mob:gsub("^%s+", ""):gsub("%s+$", "")
+    end
+    return mob
 end
 
 task.spawn(function()
@@ -996,14 +1055,27 @@ task.spawn(function()
                 AutoHaki()
                 EquipWeapon(State.SelectedWeapon)
 
-                local questVisible = IsQuestGuiVisible()
                 local now = tick()
+                local questVisible = IsQuestGuiVisible()
+                local guiMob = GetQuestMobFromGui()
 
-                -- PRIORITAS 1: KILL MOB SAMPAI QUEST SELESAI
-                if FarmState.QuestTaken and FarmState.QuestMob then
+                -- PRIORITAS 1: KILL MOB
+                if FarmState.QuestTaken and (FarmState.QuestMob or guiMob) then
+                    if guiMob and guiMob ~= "" then
+                        FarmState.QuestMob = guiMob
+                    end
                     local mobName = FarmState.QuestMob
+                    if not mobName or mobName == "" then
+                        FarmState.QuestTaken = false
+                        return
+                    end
 
-                    local enemy = FindEnemy({mobName}, 99999)
+                    if questVisible then
+                        FarmState.KillStartTime = 0
+                    end
+
+                    local enemy = FindEnemy({mobName}, 99999) or FindEnemyPartial(mobName, 99999)
+
                     if enemy then
                         local trp = enemy:FindFirstChild("HumanoidRootPart")
                         local thum = enemy:FindFirstChildOfClass("Humanoid")
@@ -1019,29 +1091,58 @@ task.spawn(function()
                         end
                     else
                         local sp = FindSpawnPart(mobName, true)
+                        if not sp then
+                            for _, part in pairs(TableMobSpawn) do
+                                if part:IsA("Part") then
+                                    local pName = string.lower(part.Name)
+                                    local mobLower = string.lower(mobName)
+                                    local keys = {}
+                                    for k in string.gmatch(mobLower, "%a+") do
+                                        if #k >= 4 then table.insert(keys, k) end
+                                    end
+                                    local ok = #keys > 0
+                                    for _, key in ipairs(keys) do
+                                        if not string.find(pName, key, 1, true) then ok = false break end
+                                    end
+                                    if ok then sp = part break end
+                                end
+                            end
+                        end
                         if sp then
                             FarmTeleport(sp.CFrame * CFrame.new(0, 60, 0), getgenv().FarmSpeed, 20)
                         else
-                            task.wait(0.2)
+                            task.wait(0.3)
                         end
                     end
 
-                    if questVisible then
-                        FarmState.LastQuestVisible = now
-                    else
-                        if now - FarmState.LastQuestVisible > 5 then
+                    if not questVisible then
+                        if FarmState.KillStartTime == 0 then
+                            FarmState.KillStartTime = now
+                        elseif now - FarmState.KillStartTime > 5 then
                             FarmState.QuestTaken = false
                             FarmState.QuestMob = nil
-                            FarmState.LastQuestVisible = 0
+                            FarmState.KillStartTime = 0
                         end
+                    else
+                        FarmState.KillStartTime = 0
                     end
                     return
                 end
 
+                -- PRIORITAS 2: kalau ada quest visible tapi state belum set
+                if questVisible and guiMob and guiMob ~= "" then
+                    FarmState.QuestTaken = true
+                    FarmState.QuestMob = guiMob
+                    FarmState.KillStartTime = 0
+                    return
+                end
+
+                -- PRIORITAS 3: CONFIRM WINDOW
                 if now < FarmState.TakeConfirmUntil then
                     return
                 end
 
+                -- PRIORITAS 4: TAKE QUEST BARU
                 local level = player.Data.Level.Value
                 local okQ, Quests = pcall(function() return require(RS.Quests) end)
                 local okG, GuideModule = pcall(function() return require(RS.GuideModule) end)
@@ -1101,13 +1202,13 @@ task.spawn(function()
 
                 FarmState.QuestTaken = true
                 FarmState.QuestMob = best.Mob
-                FarmState.LastQuestVisible = now
+                FarmState.KillStartTime = 0
                 FarmState.TakeConfirmUntil = now + 3
             end)
         else
             FarmState.QuestTaken = false
             FarmState.QuestMob = nil
-            FarmState.LastQuestVisible = 0
+            FarmState.KillStartTime = 0
             FarmState.TakeConfirmUntil = 0
             FarmState.LastQuestName = nil
             FarmState.LastQuestId = nil
@@ -1279,7 +1380,6 @@ task.spawn(function()
     end
 end)
 
--- RACE HANDLERS
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoRaceV2 then
@@ -1362,7 +1462,6 @@ task.spawn(function()
     end
 end)
 
--- QUEST HANDLERS
 task.spawn(function()
     while task.wait(0.5) do
         if State.AutoSaber then
@@ -1968,7 +2067,6 @@ local Notif = Create("TextLabel", {
 Corner(Notif, 12)
 RegisterAccent(Stroke(Notif, THEME.Outline, 1.5, 0.15))
 
--- MAIN PANEL 460 x 320
 local main = Create("Frame", {
     Parent = gui, Size = UDim2.fromOffset(460, 320),
     Position = UDim2.fromScale(0.5, 0.5), AnchorPoint = Vector2.new(0.5, 0.5),
@@ -1978,13 +2076,11 @@ local main = Create("Frame", {
 Corner(main, 18)
 RegisterAccent(Stroke(main, THEME.Outline, 2, 0.1))
 
--- HEADER 90px
 local header = Create("Frame", {
     Parent = main, Size = UDim2.new(1, 0, 0, 90),
     BackgroundTransparency = 1, ZIndex = 20, ClipsDescendants = true,
 })
 
--- BANNER 420 x 75
 local banner = Create("ImageLabel", {
     Parent = header, Size = UDim2.fromOffset(420, 75),
     Position = UDim2.fromOffset(28, 8),
@@ -2002,7 +2098,6 @@ local bannerOverlay = Create("Frame", {
 })
 Corner(bannerOverlay, 12)
 
--- KOTAK LOGO 52 x 52
 local logoBox = Create("Frame", {
     Parent = header, Size = UDim2.fromOffset(52, 52),
     Position = UDim2.fromOffset(14, 19),
@@ -2012,7 +2107,6 @@ local logoBox = Create("Frame", {
 Corner(logoBox, 12)
 Stroke(logoBox, THEME.Outline, 1.5, 0.15)
 
--- LOGO GAMBAR 48 x 48
 local logo = Create("ImageLabel", {
     Parent = logoBox, Size = UDim2.fromOffset(48, 48),
     Position = UDim2.fromScale(0.5, 0.5), AnchorPoint = Vector2.new(0.5, 0.5),
@@ -2022,7 +2116,6 @@ local logo = Create("ImageLabel", {
     ZIndex = 27,
 })
 
--- Close button
 local close = Create("TextButton", {
     Parent = header, Size = UDim2.fromOffset(32, 32),
     Position = UDim2.new(1, -42, 0, 8),
@@ -2039,7 +2132,6 @@ Create("Frame", {
     BackgroundTransparency = 0.4, BorderSizePixel = 0, ZIndex = 26,
 })
 
--- CONTENT
 local content = Create("Frame", {
     Parent = main, Size = UDim2.new(1, -24, 1, -102),
     Position = UDim2.fromOffset(12, 94), BackgroundTransparency = 1, ZIndex = 14,
@@ -2458,7 +2550,7 @@ local VisualPage    = CreatePage("Visual")
 local MiscPage      = CreatePage("MISC")
 
 -- HOME
-CreateLabel(HomePage, "SYSX HUB v1.5", 28)
+CreateLabel(HomePage, "SYSX HUB v1.6", 28)
 CreateLabel(HomePage,
     "13 Tabs | All Setting in MISC\n" ..
     "Home • Farm • Pvp • Quest\n" ..
@@ -2936,7 +3028,6 @@ CreateDropdown(TeleportPage, "Select Island",
     GetIslandListForSea(CurrentSea),
     function(o) State.SelectedIsland = o end)
 
--- FIX: Tween Island pakai TweenTeleport langsung
 CreateButton(TeleportPage, "Tween To Island", function()
     local sel = State.SelectedIsland
     if not sel then Notify("Select island first") return end
@@ -3062,7 +3153,6 @@ task.spawn(function()
     end
 end)
 
--- DRAG
 local function MakeDraggable(obj, handle)
     handle = handle or obj
     local drag = false
@@ -3089,7 +3179,6 @@ end
 MakeDraggable(main, header)
 close.Activated:Connect(function() gui.Enabled = not gui.Enabled end)
 
--- FLOATING BUTTON
 local floatingButton = Instance.new("ScreenGui")
 floatingButton.Name = "SYSX_FloatingButton"
 floatingButton.ResetOnSpawn = false
@@ -3198,4 +3287,4 @@ UserInputService.InputBegan:Connect(function(input, gp)
 end)
 
 ShowTab("Farm")
-Notify("SYSX HUB v1.5 Loaded ✅")
+Notify("SYSX HUB v1.6 Loaded ✅")
