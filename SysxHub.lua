@@ -1,15 +1,13 @@
 --[[
 ================================================================
-    SYSX HUB v1.6 — Blox Fruits
-    - FIX Farm Level (partial mob match + GUI sync)
+    SYSX HUB v1.7 — Blox Fruits
+    - FIX Farm Level (plural strip + multi-source parsing + partial match)
     - Header: Kotak Logo 52x52 + Logo 48x48 + Banner 420x75
     - Panel: 460 x 320
     - FIX Tween Island
     - FIX ESP Fruit auto hilang
-    - Auto Equip Weapon
-    - Attack Boss Remote
-    - Farm Mastery Weapon Selector
-    - Random Fruit / Tween Fruit
+    - Auto Equip Weapon / Attack Boss Remote
+    - Farm Mastery Weapon Selector / Random Fruit / Tween Fruit
 ================================================================
 ]]
 
@@ -40,7 +38,6 @@ local World2 = (placeId == 4442272183 or placeId == 79091703265657)
 local World3 = (placeId == 7449423635 or placeId == 100117331123089)
 
 local DISCORD_INVITE = "https://discord.gg/xWa9NpFRr"
-
 local LOGO_ID = 132940055932948
 local BANNER_ID = 110899503462686
 
@@ -251,44 +248,71 @@ function FindEnemy(names, maxRange)
     return best
 end
 
--- PARTIAL MATCH: cari mob dengan kata kunci
+local function StripPlural(word)
+    if #word <= 3 then return word end
+    if word:sub(-3) == "ies" then return word:sub(1, -4) .. "y" end
+    if word:sub(-3) == "ses" then return word:sub(1, -3) end
+    if word:sub(-1) == "s" then return word:sub(1, -2) end
+    return word
+end
+
 local function FindEnemyPartial(mobName, maxRange)
     if not mobName or mobName == "" then return nil end
     local hrp = GetHRP(); if not hrp then return nil end
     local enemies = Workspace:FindFirstChild("Enemies"); if not enemies then return nil end
 
     local mobLower = string.lower(mobName)
-    local keys = {}
+    local baseKeys = {}
     for k in string.gmatch(mobLower, "%a+") do
-        if #k >= 4 then table.insert(keys, k) end
+        if #k >= 3 then
+            table.insert(baseKeys, StripPlural(k))
+        end
+    end
+
+    if #baseKeys == 0 then
+        local best, bestD
+        local maxSq = (maxRange or 99999) ^ 2
+        local pos = hrp.Position
+        for _, e in ipairs(enemies:GetChildren()) do
+            local h = e:FindFirstChild("Humanoid")
+            if h and h.Health > 0 then
+                if string.find(string.lower(e.Name), mobLower, 1, true) then
+                    local trp = e:FindFirstChild("HumanoidRootPart")
+                    if trp then
+                        local d = (trp.Position - pos).Magnitude
+                        if d < maxSq then best, maxSq = e, d end
+                    end
+                end
+            end
+        end
+        return best
     end
 
     local maxSq = (maxRange or 99999) ^ 2
     local pos = hrp.Position
-    local best, bestD = nil, maxSq
+    local best, bestScore = nil, -math.huge
 
     for _, e in ipairs(enemies:GetChildren()) do
         local h = e:FindFirstChild("Humanoid")
         if h and h.Health > 0 then
             local eNameLower = string.lower(e.Name)
-            local matched = false
-            if #keys > 0 then
-                matched = true
-                for _, key in ipairs(keys) do
-                    if not string.find(eNameLower, key, 1, true) then
-                        matched = false
-                        break
-                    end
+            local matchCount = 0
+            for _, key in ipairs(baseKeys) do
+                if string.find(eNameLower, key, 1, true) then
+                    matchCount = matchCount + 1
                 end
-            else
-                matched = string.find(eNameLower, mobLower, 1, true) ~= nil
             end
 
-            if matched then
+            if matchCount > 0 then
                 local trp = e:FindFirstChild("HumanoidRootPart")
                 if trp then
                     local d = (trp.Position - pos).Magnitude
-                    if d < bestD then best, bestD = e, d end
+                    if d <= maxSq then
+                        local score = matchCount * 100000 - d
+                        if score > bestScore then
+                            best, bestScore = e, score
+                        end
+                    end
                 end
             end
         end
@@ -721,8 +745,7 @@ function CombatController.Grab(mobName)
             bv.Velocity = Vector3.zero
             m:SetAttribute('IsGrabbed', true)
             mr.CFrame = center
-        end
-    end
+        end    end
 end
 
 function GetMonAsSortedRange()
@@ -838,7 +861,6 @@ function GetCurrentSea()
     return 0
 end
 
--- ESP
 local ESPFolder = Instance.new("Folder")
 ESPFolder.Name = "SYSX_ESP"
 pcall(function() ESPFolder.Parent = game:GetService("CoreGui") end)
@@ -1002,11 +1024,12 @@ task.spawn(function()
 end)
 
 -- ============================================================
--- FARM LEVEL VERSI FINAL (PARTIAL MATCH + GUI SYNC)
+-- FARM LEVEL VERSI FINAL v1.7
 -- ============================================================
 local FarmState = {
     QuestTaken = false,
     QuestMob = nil,
+    QuestMobList = nil,
     KillStartTime = 0,
     TakeConfirmUntil = 0,
     LastQuestName = nil,
@@ -1027,19 +1050,33 @@ local function GetQuestMobFromGui()
     local q = mainGui:FindFirstChild("Quest")
     if not q or not q.Visible then return nil end
 
+    local mobs = {}
+
+    -- Parse dari judul: "Defeat 9 Galley Captains"
     local ok, qText = pcall(function()
         return q.Container.QuestTitle.Title.Text
     end)
-    if not ok or not qText or qText == "" then return nil end
-
-    local mob = qText:match("Defeat%s*%d+%s*(.-)%s+in%s+")
-        or qText:match("Defeat%s*%d+%s*(.-)%s*$")
-        or qText:match("Defeat%s+(.-)%s+%(")
-
-    if mob then
-        mob = mob:gsub("^%s+", ""):gsub("%s+$", "")
+    if ok and qText and qText ~= "" then
+        local m = qText:match("Defeat%s*%d+%s*(.-)%s+in%s+")
+            or qText:match("Defeat%s*%d+%s*(.-)%s*$")
+            or qText:match("Defeat%s+(.-)%s+%(")
+        if m then
+            m = m:gsub("^%s+", ""):gsub("%s+$", "")
+            table.insert(mobs, m)
+        end
     end
-    return mob
+
+    -- Parse dari desc: "Kapten Galley"
+    local ok2, descText = pcall(function()
+        return q.Container.QuestInfo.Desc.Text
+    end)
+    if ok2 and descText and descText ~= "" then
+        local d = descText:gsub("^%s+", ""):gsub("%s+$", "")
+        if d ~= "" and d ~= mobs[1] then table.insert(mobs, d) end
+    end
+
+    if #mobs == 0 then return nil end
+    return mobs
 end
 
 task.spawn(function()
@@ -1057,12 +1094,13 @@ task.spawn(function()
 
                 local now = tick()
                 local questVisible = IsQuestGuiVisible()
-                local guiMob = GetQuestMobFromGui()
+                local guiMobList = GetQuestMobFromGui()
 
                 -- PRIORITAS 1: KILL MOB
-                if FarmState.QuestTaken and (FarmState.QuestMob or guiMob) then
-                    if guiMob and guiMob ~= "" then
-                        FarmState.QuestMob = guiMob
+                if FarmState.QuestTaken and (FarmState.QuestMob or guiMobList) then
+                    if guiMobList and #guiMobList > 0 then
+                        FarmState.QuestMob = guiMobList[1]
+                        FarmState.QuestMobList = guiMobList
                     end
                     local mobName = FarmState.QuestMob
                     if not mobName or mobName == "" then
@@ -1074,7 +1112,15 @@ task.spawn(function()
                         FarmState.KillStartTime = 0
                     end
 
-                    local enemy = FindEnemy({mobName}, 99999) or FindEnemyPartial(mobName, 99999)
+                    -- Cari musuh: exact → partial → coba semua variasi
+                    local enemy = FindEnemy({mobName}, 99999)
+                    if not enemy then enemy = FindEnemyPartial(mobName, 99999) end
+                    if not enemy and FarmState.QuestMobList then
+                        for _, altName in ipairs(FarmState.QuestMobList) do
+                            enemy = FindEnemy({altName}, 99999) or FindEnemyPartial(altName, 99999)
+                            if enemy then break end
+                        end
+                    end
 
                     if enemy then
                         local trp = enemy:FindFirstChild("HumanoidRootPart")
@@ -1090,22 +1136,12 @@ task.spawn(function()
                             end
                         end
                     else
+                        -- Cari spawn part
                         local sp = FindSpawnPart(mobName, true)
-                        if not sp then
-                            for _, part in pairs(TableMobSpawn) do
-                                if part:IsA("Part") then
-                                    local pName = string.lower(part.Name)
-                                    local mobLower = string.lower(mobName)
-                                    local keys = {}
-                                    for k in string.gmatch(mobLower, "%a+") do
-                                        if #k >= 4 then table.insert(keys, k) end
-                                    end
-                                    local ok = #keys > 0
-                                    for _, key in ipairs(keys) do
-                                        if not string.find(pName, key, 1, true) then ok = false break end
-                                    end
-                                    if ok then sp = part break end
-                                end
+                        if not sp and FarmState.QuestMobList then
+                            for _, altName in ipairs(FarmState.QuestMobList) do
+                                sp = FindSpawnPart(altName, true)
+                                if sp then break end
                             end
                         end
                         if sp then
@@ -1121,6 +1157,7 @@ task.spawn(function()
                         elseif now - FarmState.KillStartTime > 5 then
                             FarmState.QuestTaken = false
                             FarmState.QuestMob = nil
+                            FarmState.QuestMobList = nil
                             FarmState.KillStartTime = 0
                         end
                     else
@@ -1129,10 +1166,11 @@ task.spawn(function()
                     return
                 end
 
-                -- PRIORITAS 2: kalau ada quest visible tapi state belum set
-                if questVisible and guiMob and guiMob ~= "" then
+                -- PRIORITAS 2: Quest visible tapi state belum set
+                if questVisible and guiMobList and #guiMobList > 0 then
                     FarmState.QuestTaken = true
-                    FarmState.QuestMob = guiMob
+                    FarmState.QuestMob = guiMobList[1]
+                    FarmState.QuestMobList = guiMobList
                     FarmState.KillStartTime = 0
                     return
                 end
@@ -1202,12 +1240,14 @@ task.spawn(function()
 
                 FarmState.QuestTaken = true
                 FarmState.QuestMob = best.Mob
+                FarmState.QuestMobList = {best.Mob}
                 FarmState.KillStartTime = 0
                 FarmState.TakeConfirmUntil = now + 3
             end)
         else
             FarmState.QuestTaken = false
             FarmState.QuestMob = nil
+            FarmState.QuestMobList = nil
             FarmState.KillStartTime = 0
             FarmState.TakeConfirmUntil = 0
             FarmState.LastQuestName = nil
@@ -2549,8 +2589,7 @@ local TeleportPage  = CreatePage("Teleport")
 local VisualPage    = CreatePage("Visual")
 local MiscPage      = CreatePage("MISC")
 
--- HOME
-CreateLabel(HomePage, "SYSX HUB v1.6", 28)
+CreateLabel(HomePage, "SYSX HUB v1.7", 28)
 CreateLabel(HomePage,
     "13 Tabs | All Setting in MISC\n" ..
     "Home • Farm • Pvp • Quest\n" ..
@@ -2566,7 +2605,6 @@ CreateLabel(HomePage, "Player: " .. player.Name, 24)
 CreateLabel(HomePage, "JobId: " .. game.JobId, 24)
 CreateLabel(HomePage, "PlaceId: " .. game.PlaceId, 24)
 
--- FARM
 CreateLabel(FarmPage, "Farm Config", 24)
 CreateDropdown(FarmPage, "Select Weapon",
     {"Melee","Sword","Blox Fruit","Gun"},
@@ -2626,7 +2664,6 @@ CreateToggle(FarmPage, "Auto Citizen Quest", false, function(s) State.AutoCitize
 CreateToggle(FarmPage, "Auto Dark Fragment", false, function(s) State.AutoDarkFragment = s end)
 CreateToggle(FarmPage, "Auto Sweet Chalice", false, function(s) State.AutoSweetChalice = s end)
 
--- PVP
 CreateLabel(PvpPage, "PvP Combat", 24)
 CreateToggle(PvpPage, "Auto Aimbot / Lock Aim", false, function(s) State.AutoAimbot = s end)
 CreateToggle(PvpPage, "Auto Dodge Skill", false, function(s) State.AutoDodgeSkill = s end)
@@ -2638,7 +2675,6 @@ CreateDropdown(PvpPage, "Select Player PVP", pvpPlayers, function(o) State.Selec
 CreateToggle(PvpPage, "Teleport Player", false, function(s) State.TeleportPlayer = s end)
 CreateButton(PvpPage, "Refresh Player", function() Notify("Rejoin to refresh player list") end)
 
--- QUEST & ITEM
 CreateLabel(QuestPage, "Auto Get Race", 24)
 CreateToggle(QuestPage, "Auto Get Ghoul", false, function(s) State.AutoGetGhoul = s end)
 CreateToggle(QuestPage, "Auto Get Cyborg", false, function(s) State.AutoGetCyborg = s end)
@@ -2688,7 +2724,6 @@ CreateToggle(QuestPage, "Auto Dragon Hunter Quest", false, function(s) State.Aut
 CreateLabel(QuestPage, "Collection Quest", 24)
 CreateToggle(QuestPage, "Auto Collect Berry", false, function(s) State.AutoCollectBerry = s end)
 
--- STATS
 CreateLabel(StatsPage, "Auto Stats", 24)
 CreateToggle(StatsPage, "Auto Add Stats", false, function(s) State.AutoStatPoint = s end)
 CreateSlider(StatsPage, "Melee", 0, 3000, 0, function(v) State.MeleePoints = v end)
@@ -2697,7 +2732,6 @@ CreateSlider(StatsPage, "Sword", 0, 3000, 0, function(v) State.SwordPoints = v e
 CreateSlider(StatsPage, "Gun", 0, 3000, 0, function(v) State.GunPoints = v end)
 CreateSlider(StatsPage, "Fruit", 0, 3000, 0, function(v) State.FruitPoints = v end)
 
--- SEA
 CreateLabel(SeaPage, "Sea Config", 24)
 CreateDropdown(SeaPage, "Select Boat",
     {"PirateBrigade","PirateGrandBrigade","Beast Hunter"},
@@ -2806,7 +2840,6 @@ CreateSlider(SeaPage, "Value Speed Boat", 50, 500, 200, function(v) State.SpeedB
 CreateSlider(SeaPage, "Value Speed Tween Boat", 50, 2000, 350, function(v) State.SpeedTweenBoat = v end)
 CreateSlider(SeaPage, "Value Speed Fly Boat", 0, 10, 3, function(v) State.SpeedFlyBoat = v end)
 
--- FISHING
 CreateLabel(FishingPage, "Fishing", 24)
 CreateDropdown(FishingPage, "Select Bait",
     {"Basic Bait","Good Bait","Excellent Bait"},
@@ -2822,7 +2855,6 @@ CreateButton(FishingPage, "Save Position Fishing", function()
     Notify("Fishing position saved")
 end)
 
--- RACE
 CreateLabel(RacePage, "Auto Upgrade Race", 24)
 CreateToggle(RacePage, "Auto Race V2", false, function(s) State.AutoRaceV2 = s end)
 CreateToggle(RacePage, "Auto Race V3", false, function(s) State.AutoRaceV3 = s end)
@@ -2843,7 +2875,6 @@ CreateLabel(RacePage, "Race V4 Teleport", 24)
 CreateToggle(RacePage, "Tween Great Tree", false, function(s) State.TweenGreatTree = s end)
 CreateToggle(RacePage, "Teleport Temple Off Time", false, function(s) State.TeleportTempleOffTime = s end)
 
--- FRUIT & RAID
 CreateLabel(FruitRaidPage, "Fruit", 24)
 CreateToggle(FruitRaidPage, "Auto Store Fruit", false, function(s) State.AutoStoreFruit = s end)
 CreateButton(FruitRaidPage, "Random Fruit", function()
@@ -2875,7 +2906,6 @@ CreateToggle(FruitRaidPage, "Auto Raid", false, function(s) State.AutoRaid = s e
 CreateToggle(FruitRaidPage, "Auto Buy Chip", false, function(s) State.AutoBuyChip = s end)
 CreateToggle(FruitRaidPage, "Auto Awaken Fruit", false, function(s) State.AutoAwakenFruit = s end)
 
--- SHOP
 CreateLabel(ShopPage, "Fighting Styles", 24)
 CreateDropdown(ShopPage, "Select Melee",
     {"Black Leg","Electro","Fishman Karate","Dragon Claw","Superhuman","Death Step","Sharkman Karate","Electric Claw","Dragon Talon","Godhuman","Sanguine Art"},
@@ -2938,7 +2968,6 @@ CreateButton(ShopPage, "Buy True Triple Katana", function()
     TryBuy("MysteriousMan", "2")
 end)
 
--- TELEPORT
 CreateLabel(TeleportPage, "Sea Travel", 24)
 CreateButton(TeleportPage, "Travel to Sea 1", function() CommF_:InvokeServer("TravelMain") Notify("Traveling Sea 1") end)
 CreateButton(TeleportPage, "Travel to Sea 2", function() CommF_:InvokeServer("TravelDressrosa") Notify("Traveling Sea 2") end)
@@ -3048,7 +3077,6 @@ CreateButton(TeleportPage, "Refresh Island List", function()
     Notify("Refreshed island list for Sea " .. CurrentSea)
 end)
 
--- VISUAL
 CreateLabel(VisualPage, "ESP", 24)
 CreateToggle(VisualPage, "ESP Player", false, function(s) State.ESPPlayer = s end)
 CreateToggle(VisualPage, "ESP Chest", false, function(s) State.ESPChest = s end)
@@ -3057,7 +3085,6 @@ CreateToggle(VisualPage, "ESP Island", false, function(s) State.ESPIsland = s en
 CreateToggle(VisualPage, "ESP Mirage Island", false, function(s) State.ESPMirage = s end)
 CreateToggle(VisualPage, "ESP Kitsune Island", false, function(s) State.ESPKitsune = s end)
 
--- MISC
 CreateLabel(MiscPage, "Server & Hop", 24)
 CreateToggle(MiscPage, "Auto Hop (after 1h)", false, function(s) State.AutoHop1h = s end)
 CreateToggle(MiscPage, "Hop When Idle", false, function(s) State.HopWhenIdle = s end)
@@ -3140,7 +3167,6 @@ CreateButton(MiscPage, "Open Haki Color", function()
     pcall(function() playerGui.Main.Colors.Visible = true end)
 end)
 
--- MAIN LOOPS
 task.spawn(function()
     while task.wait(0.05) do
         if State.FastAttackMisc and IsAlive() then pcall(AttackNoCoolDown) end
@@ -3287,4 +3313,4 @@ UserInputService.InputBegan:Connect(function(input, gp)
 end)
 
 ShowTab("Farm")
-Notify("SYSX HUB v1.6 Loaded ✅")
+Notify("SYSX HUB v1.7 Loaded ✅")
