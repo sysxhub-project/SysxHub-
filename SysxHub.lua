@@ -1,16 +1,16 @@
 --[[
-    SYSXHUB TROLL PANEL v2
+    SYSXHUB TROLL PANEL v3
     Developer: OpetxDy
     Layout: Tab | Fitur (Sidebar kiri)
     Mode: FULL SERVER REPLICATED (bukan visual)
     
-    Tab TROLL: Spin, Fling, Drag, Dance, Chaos, TP Sky, Freeze, Random Size,
-               Invisible, Speed Chaos, Gravity Chaos, Rocket Player, Slap,
-               Force Sit, Undress, Strip Tools, Explode, Confuse
-    Tab SAFE ZONE: Auto Safe Zone (anti semua bencana)
+    Tab TROLL: Spin, Fling, Drag, Dance, Chaos, Confuse, TP Sky, Freeze,
+               Random Size, Invisible, Speed Chaos, Gravity Chaos, Rocket,
+               Slap, Force Sit, Undress, Strip Tools, Explode
+    Tab SAFE ZONE: Auto Safe Zone (anti semua bencana lengkap)
     Tab ROCKET: Auto Rocket (TP kursi, start, jalanin)
-    Tab UTILITY: Anti AFK, Auto Rejoin, Server Hop, Copy Job ID, ESP Player,
-                 Fullbright, No Fog, Infinite Jump, Walkspeed, Fly
+    Tab UTILITY: Anti AFK, ESP, Fullbright, No Fog, Infinite Jump, Fly,
+                 Walkspeed, Auto Rejoin, Server Hop, Copy Job ID
 --]]
 
 local Players = game:GetService("Players")
@@ -49,8 +49,8 @@ LogoStroke.Thickness = 2
 
 --// MAIN FRAME
 local Main = Instance.new("Frame")
-Main.Size = UDim2.new(0, 520, 0, 400)
-Main.Position = UDim2.new(0.5, -260, 0.5, -200)
+Main.Size = UDim2.new(0, 520, 0, 420)
+Main.Position = UDim2.new(0.5, -260, 0.5, -210)
 Main.BackgroundColor3 = Color3.fromRGB(20, 10, 25)
 Main.BorderSizePixel = 0
 Main.Active = true
@@ -78,7 +78,7 @@ local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -50, 1, 0)
 Title.Position = UDim2.new(0, 15, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "SYSXHUB TROLL PANEL v2"
+Title.Text = "SYSXHUB TROLL PANEL v3"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 16
@@ -190,9 +190,10 @@ end
 --// STATE
 local TrollSpin, TrollFling, TrollDrag, TrollDance, TrollChaos, TrollConfuse = false, false, false, false, false, false
 local SafeZone, AutoRocketMode = false, false
-local AntiAFK, ESPEnabled, Fullbright, NoFog, InfiniteJump = false, false, false, false, false
+local AntiAFK, ESPEnabled, Fullbright, NoFog, InfiniteJump, FlyUtility = false, false, false, false, false, false
 local ConnSpin, ConnFling, ConnDrag, ConnDance, ConnChaos, ConnConfuse, ConnSafe, ConnRocket = nil, nil, nil, nil, nil, nil, nil, nil
-local ConnAntiAFK, ConnJump, ESPObjects = nil, nil, {}
+local ConnAntiAFK, ConnJump, ConnFlyUtility = nil, nil, nil
+local ESPObjects = {}
 
 local function GetPlayers()
     local list = {}
@@ -204,7 +205,9 @@ local function GetPlayers()
     return list
 end
 
---// ============ TROLL ============
+-- =========================================================
+-- ================  TROLL SECTION  ========================
+-- =========================================================
 
 --// SPIN
 local function ToggleTrollSpin(state)
@@ -222,23 +225,28 @@ local function ToggleTrollSpin(state)
     end)
 end
 
---// FLING
+--// FLING (dengan efek animasi nendang server-replicated)
+--// Ganti SetNetworkOwner(nil) jadi SetNetworkOwner(LocalPlayer) supaya client kita jadi owner
+--// Terus pake BodyVelocity/BodyAngularVelocity, efek visual nendang muncul karena physics
 local function FlingPlayer(plr)
     local char = plr.Character
     if not char then return end
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
-    pcall(function() hrp:SetNetworkOwner(nil) end)
-    local vel = Instance.new("BodyAngularVelocity", hrp)
-    vel.AngularVelocity = Vector3.new(9999, 9999, 9999)
-    vel.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-    vel.P = math.huge
+    -- Ambil ownership supaya physics kita yang dominan
+    pcall(function() hrp:SetNetworkOwner(LocalPlayer) end)
+    -- Body velocity untuk lempar
     local bv = Instance.new("BodyVelocity", hrp)
-    bv.Velocity = Vector3.new(math.random(-9999,9999), 9999, math.random(-9999,9999))
+    bv.Velocity = Vector3.new(math.random(-300,300), 300, math.random(-300,300))
     bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-    task.delay(3, function()
-        if vel then vel:Destroy() end
+    -- Body angular untuk puter
+    local bav = Instance.new("BodyAngularVelocity", hrp)
+    bav.AngularVelocity = Vector3.new(math.random(-50,50), math.random(-50,50), math.random(-50,50))
+    bav.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+    bav.P = math.huge
+    task.delay(2, function()
         if bv then bv:Destroy() end
+        if bav then bav:Destroy() end
     end)
 end
 
@@ -253,15 +261,16 @@ local function ToggleTrollFling(state)
     end)
 end
 
---// DRAG
+--// DRAG (tarik player)
 local function DragPlayer(plr)
-    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
+    local myHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not myHrp then return end
     local theirHrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
     if not theirHrp then return end
-    if (hrp.Position - theirHrp.Position).Magnitude > 5 then
-        pcall(function() theirHrp:SetNetworkOwner(LocalPlayer) end)
-        theirHrp.CFrame = theirHrp.CFrame + (hrp.Position - theirHrp.Position).Unit * 2
+    pcall(function() theirHrp:SetNetworkOwner(LocalPlayer) end)
+    local dist = (myHrp.Position - theirHrp.Position).Magnitude
+    if dist > 5 then
+        theirHrp.CFrame = theirHrp.CFrame + (myHrp.Position - theirHrp.Position).Unit * 4
     end
 end
 
@@ -316,7 +325,7 @@ local function ToggleTrollChaos(state)
     end)
 end
 
---// CONFUSE (bikin player random gerak)
+--// CONFUSE
 local function ToggleTrollConfuse(state)
     TrollConfuse = state
     if ConnConfuse then ConnConfuse:Disconnect() ConnConfuse = nil end
@@ -332,42 +341,42 @@ local function ToggleTrollConfuse(state)
     end)
 end
 
---// ROCKET PLAYER (kirim player ke angkasa)
+--// ROCKET PLAYER (kirim ke angkasa server-replicated)
 local function RocketPlayer(plr)
     local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
-    pcall(function() hrp:SetNetworkOwner(nil) end)
-    local bv = Instance.new("BodyVelocity", hrp)
-    bv.Velocity = Vector3.new(0, 500, 0)
-    bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-    task.delay(5, function() if bv then bv:Destroy() end end)
+    pcall(function() hrp:SetNetworkOwner(LocalPlayer) end)
+    hrp.AssemblyLinearVelocity = Vector3.new(0, 800, 0)
 end
 
---// SLAP (dorong player)
+--// SLAP (dorong + animasi tangan)
 local function SlapPlayer(plr)
     local myHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if not myHrp then return end
     local theirHrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
     if not theirHrp then return end
     local dir = (theirHrp.Position - myHrp.Position).Unit
-    pcall(function() theirHrp:SetNetworkOwner(nil) end)
-    local bv = Instance.new("BodyVelocity", theirHrp)
-    bv.Velocity = dir * 500 + Vector3.new(0, 200, 0)
-    bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-    task.delay(1, function() if bv then bv:Destroy() end end)
-end
-
---// FORCE SIT (paksa player duduk di lantai)
-local function ForceSitAll()
-    for _, plr in pairs(GetPlayers()) do
-        local hum = plr.Character and plr.Character:FindFirstChildOfClass("Humanoid")
-        if hum then
-            pcall(function() hum.Sit = true end)
-        end
+    pcall(function() theirHrp:SetNetworkOwner(LocalPlayer) end)
+    theirHrp.AssemblyLinearVelocity = dir * 300 + Vector3.new(0, 150, 0)
+    -- Mainin animasi wave sebagai slap
+    local animator = LocalPlayer.Character:FindFirstChild("Humanoid"):FindFirstChildOfClass("Animator")
+    if animator then
+        local anim = Instance.new("Animation")
+        anim.AnimationId = "rbxassetid://128777973"
+        local track = animator:LoadAnimation(anim)
+        track:Play()
     end
 end
 
---// UNDRESS (hapus aksesoris + pakaian player)
+--// FORCE SIT ALL
+local function ForceSitAll()
+    for _, plr in pairs(GetPlayers()) do
+        local hum = plr.Character and plr.Character:FindFirstChildOfClass("Humanoid")
+        if hum then pcall(function() hum.Sit = true end) end
+    end
+end
+
+--// UNDRESS
 local function UndressAll()
     for _, plr in pairs(GetPlayers()) do
         for _, obj in pairs(plr.Character:GetDescendants()) do
@@ -378,7 +387,7 @@ local function UndressAll()
     end
 end
 
---// STRIP TOOLS (hapus semua tool di tangan player)
+--// STRIP TOOLS
 local function StripToolsAll()
     for _, plr in pairs(GetPlayers()) do
         local backpack = plr:FindFirstChild("Backpack")
@@ -396,21 +405,18 @@ local function StripToolsAll()
     end
 end
 
---// EXPLODE (bikin player meledak)
-local function ExplodePlayer(plr)
-    local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-    local boom = Instance.new("Explosion")
-    boom.Position = hrp.Position
-    boom.BlastRadius = 15
-    boom.BlastPressure = 500000
-    boom.DestroyJointRadiusPercent = 1
-    boom.Parent = workspace
-end
-
+--// EXPLODE
 local function ExplodeAll()
     for _, plr in pairs(GetPlayers()) do
-        pcall(function() ExplodePlayer(plr) end)
+        local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            local boom = Instance.new("Explosion")
+            boom.Position = hrp.Position
+            boom.BlastRadius = 15
+            boom.BlastPressure = 500000
+            boom.DestroyJointRadiusPercent = 1
+            boom.Parent = workspace
+        end
     end
 end
 
@@ -419,11 +425,9 @@ local function TeleportAllToSky()
     for _, plr in pairs(GetPlayers()) do
         local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
         if hrp then
-            pcall(function()
-                hrp:SetNetworkOwner(nil)
-                hrp.CFrame = CFrame.new(hrp.Position.X, 5000, hrp.Position.Z)
-                hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-            end)
+            pcall(function() hrp:SetNetworkOwner(LocalPlayer) end)
+            hrp.CFrame = CFrame.new(hrp.Position.X, 5000, hrp.Position.Z)
+            hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
         end
     end
 end
@@ -431,7 +435,7 @@ end
 local function FreezeAll()
     for _, plr in pairs(GetPlayers()) do
         local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
-        if hrp then pcall(function() hrp:SetNetworkOwner(nil) hrp.Anchored = true end) end
+        if hrp then pcall(function() hrp:SetNetworkOwner(LocalPlayer) hrp.Anchored = true end) end
     end
     task.delay(5, function()
         for _, plr in pairs(GetPlayers()) do
@@ -471,15 +475,30 @@ local function GravityChaosAll()
     for _, plr in pairs(GetPlayers()) do
         local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
         if hrp then
-            pcall(function() hrp:SetNetworkOwner(nil) end)
-            local bf = Instance.new("BodyForce", hrp)
-            bf.Force = Vector3.new(math.random(-5000,5000), math.random(0,10000), math.random(-5000,5000))
-            task.delay(3, function() bf:Destroy() end)
+            pcall(function() hrp:SetNetworkOwner(LocalPlayer) end)
+            hrp.AssemblyLinearVelocity = Vector3.new(
+                math.random(-500,500),
+                math.random(300,800),
+                math.random(-500,500)
+            )
         end
     end
 end
 
---// ============ SAFE ZONE ============
+-- =========================================================
+-- ==============  SAFE ZONE SECTION  ======================
+-- =========================================================
+
+--// Pahami tiap bencana:
+--// Banjir: air naik → perlu naik ke atas
+--// Gempa: map goyang → perlu anchor
+--// Tsunami: gelombang besar → perlu naik + anti push
+--// Meteor: jatuh dari langit → perlu anti damage + dodge
+--// Badai: angin kencang → perlu anti push
+--// Lava: damage + bakar → perlu heal + hapus fire
+--// Erupsi: ledakan + lontaran → perlu heal + anti push
+--// Topan: angin kuat → perlu anti push keras
+
 local function ToggleSafeZone(state)
     SafeZone = state
     if ConnSafe then ConnSafe:Disconnect() ConnSafe = nil end
@@ -490,20 +509,51 @@ local function ToggleSafeZone(state)
         local hrp = char:FindFirstChild("HumanoidRootPart")
         local hum = char:FindFirstChildOfClass("Humanoid")
         if not hrp then return end
-        pcall(function() hrp:SetNetworkOwner(LocalPlayer) end)
+        
+        -- Anti damage (semua bencana)
         if hum then hum.MaxHealth = 5000 hum.Health = 5000 end
+        
+        -- Anti push (banjir, badai, topan, tsunami, gempa)
         hrp.AssemblyLinearVelocity = Vector3.new(0, hrp.AssemblyLinearVelocity.y, 0)
         hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+        
+        -- Auto TP kalau jatuh ke bawah (banjir / tsunami)
         if hrp.Position.Y < 50 then
             hrp.CFrame = CFrame.new(0, 500, 0)
         end
+        
+        -- Auto TP kalau kena bencana (naik terus ke atas)
+        local minSafeY = 100
+        local findDisaster = false
+        for _, obj in pairs(workspace:GetDescendants()) do
+            if obj:IsA("BasePart") then
+                local n = obj.Name:lower()
+                if n:find("water") or n:find("flood") or n:find("lava") or n:find("tsunami") or n:find("wave") then
+                    local dist = (hrp.Position - obj.Position).Magnitude
+                    if dist < 50 then
+                        findDisaster = true
+                        break
+                    end
+                end
+            end
+        end
+        if findDisaster then
+            hrp.CFrame = hrp.CFrame + Vector3.new(0, 50, 0)
+        end
+        
+        -- Hapus fire/smoke (lava, erupsi)
         for _, obj in pairs(char:GetDescendants()) do
-            if obj:IsA("Fire") or obj:IsA("Smoke") or obj:IsA("Sparkles") then obj:Destroy() end
+            if obj:IsA("Fire") or obj:IsA("Smoke") or obj:IsA("Sparkles") then
+                obj:Destroy()
+            end
         end
     end)
 end
 
---// ============ AUTO ROCKET ============
+-- =========================================================
+-- ==============  AUTO ROCKET SECTION  ====================
+-- =========================================================
+
 local function RunAutoRocket()
     local char = LocalPlayer.Character
     if not char then return end
@@ -578,7 +628,9 @@ local function ToggleAutoRocket(state)
     end)
 end
 
---// ============ UTILITY ============
+-- =========================================================
+-- ================  UTILITY SECTION  ======================
+-- =========================================================
 
 --// ANTI AFK
 local function ToggleAntiAFK(state)
@@ -622,7 +674,7 @@ local function CopyJobID()
     end
 end
 
---// ESP PLAYER
+--// ESP
 local function ToggleESP(state)
     ESPEnabled = state
     for _, obj in pairs(ESPObjects) do
@@ -633,7 +685,7 @@ local function ToggleESP(state)
     
     local function CreateESP(plr)
         if plr == LocalPlayer then return end
-        local function AddHighlight()
+        local function AddHL()
             local char = plr.Character
             if not char then return end
             local hl = Instance.new("Highlight")
@@ -641,43 +693,19 @@ local function ToggleESP(state)
             hl.FillColor = Color3.fromRGB(255, 0, 0)
             hl.OutlineColor = Color3.fromRGB(255, 255, 255)
             hl.FillTransparency = 0.5
-            hl.OutlineTransparency = 0
             hl.Adornee = char
             hl.Parent = char
             table.insert(ESPObjects, hl)
-            
-            local billboard = Instance.new("BillboardGui")
-            billboard.Name = "SYSXHUB_NAME"
-            billboard.Size = UDim2.new(0, 200, 0, 50)
-            billboard.StudsOffset = Vector3.new(0, 3, 0)
-            billboard.AlwaysOnTop = true
-            billboard.Adornee = char:FindFirstChild("Head") or char:FindFirstChild("HumanoidRootPart")
-            billboard.Parent = char
-            
-            local nameLabel = Instance.new("TextLabel")
-            nameLabel.Size = UDim2.new(1, 0, 1, 0)
-            nameLabel.BackgroundTransparency = 1
-            nameLabel.Text = plr.Name .. " [" .. math.floor((LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and (LocalPlayer.Character.HumanoidRootPart.Position - (char:FindFirstChild("HumanoidRootPart") and char.HumanoidRootPart.Position or Vector3.zero)).Magnitude) or 0) .. "]"
-            nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-            nameLabel.TextStrokeTransparency = 0
-            nameLabel.Font = Enum.Font.GothamBold
-            nameLabel.TextSize = 14
-            nameLabel.Parent = billboard
-            table.insert(ESPObjects, billboard)
         end
-        AddHighlight()
+        AddHL()
         plr.CharacterAdded:Connect(function()
             task.wait(0.5)
-            if ESPEnabled then AddHighlight() end
+            if ESPEnabled then AddHL() end
         end)
     end
     
-    for _, plr in pairs(Players:GetPlayers()) do
-        CreateESP(plr)
-    end
-    Players.PlayerAdded:Connect(function(plr)
-        if ESPEnabled then CreateESP(plr) end
-    end)
+    for _, plr in pairs(Players:GetPlayers()) do CreateESP(plr) end
+    Players.PlayerAdded:Connect(function(plr) if ESPEnabled then CreateESP(plr) end end)
 end
 
 --// FULLBRIGHT
@@ -729,15 +757,13 @@ local function SetWalkSpeed(speed)
     end
 end
 
---// FLY (utility)
-local FlyUtilityConn = nil
-local FlyUtility = false
+--// FLY UTILITY
 local function ToggleUtilityFly(state)
     FlyUtility = state
-    if FlyUtilityConn then FlyUtilityConn:Disconnect() FlyUtilityConn = nil end
+    if ConnFlyUtility then ConnFlyUtility:Disconnect() ConnFlyUtility = nil end
     if not state then return end
     local bodyGyro, bodyVel
-    FlyUtilityConn = RunService.RenderStepped:Connect(function()
+    ConnFlyUtility = RunService.RenderStepped:Connect(function()
         local char = LocalPlayer.Character
         if not char then return end
         local hrp = char:FindFirstChild("HumanoidRootPart")
