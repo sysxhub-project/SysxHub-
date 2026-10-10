@@ -1,8 +1,9 @@
 --[[
-    SYSXHUB KILLER v4
+    SYSXHUB KILLER v6
     Developer: OpetxDy
-    Fitur: Fly, God, Kill All, Nuke, Invisible, Fling, Big Body, Spin
-    Mode: Server Replicated (bukan visual / client-only)
+    Fitur: Fly, God, Kill All, Nuke, Invisible, Fling Touch, Size Semapu+Spin
+    Fling: hanya player yang DISENTUH yang kefling (bukan diri sendiri)
+    Mode: Server Replicated (bukan visual)
     Logo: S Toggle Open/Close
 --]]
 
@@ -40,8 +41,8 @@ LogoStroke.Thickness = 2
 
 --// MAIN FRAME
 local Main = Instance.new("Frame")
-Main.Size = UDim2.new(0, 320, 0, 520)
-Main.Position = UDim2.new(0.5, -160, 0.5, -260)
+Main.Size = UDim2.new(0, 320, 0, 480)
+Main.Position = UDim2.new(0.5, -160, 0.5, -240)
 Main.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 Main.BorderSizePixel = 0
 Main.Active = true
@@ -53,7 +54,7 @@ Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 12)
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 45)
 Title.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
-Title.Text = "SYSXHUB KILLER v4"
+Title.Text = "SYSXHUB KILLER v6"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 20
@@ -85,7 +86,7 @@ LogoBtn.MouseButton1Click:Connect(function()
     Main.Visible = not Main.Visible
 end)
 
---// SCROLL FRAME
+--// SCROLL
 local Scroll = Instance.new("ScrollingFrame")
 Scroll.Size = UDim2.new(1, -20, 1, -75)
 Scroll.Position = UDim2.new(0, 10, 0, 55)
@@ -93,7 +94,7 @@ Scroll.BackgroundTransparency = 1
 Scroll.BorderSizePixel = 0
 Scroll.ScrollBarThickness = 4
 Scroll.ScrollBarImageColor3 = Color3.fromRGB(180, 0, 0)
-Scroll.CanvasSize = UDim2.new(0, 0, 0, 460)
+Scroll.CanvasSize = UDim2.new(0, 0, 0, 420)
 Scroll.Parent = Main
 
 local UIList = Instance.new("UIListLayout")
@@ -101,7 +102,6 @@ UIList.Padding = UDim.new(0, 6)
 UIList.SortOrder = Enum.SortOrder.LayoutOrder
 UIList.Parent = Scroll
 
---// FUNCTION BUTTON
 local function MakeButton(name)
     local Btn = Instance.new("TextButton")
     Btn.Size = UDim2.new(1, -10, 0, 40)
@@ -120,25 +120,24 @@ end
 local FlyMode = false
 local GodMode = false
 local Invisible = false
-local BigBody = false
-local SpinMode = false
+local SizeSpinMode = false
+local TouchFlingMode = false
 local FlyConnection = nil
 local GodConnection = nil
-local SpinConnection = nil
+local SizeSpinConnection = nil
+local TouchConn = nil
 
 local function GetCharacter()
     return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 end
 
---// FLY MODE (SERVER REPLICATED via Physics)
+--// FLY
 local function ToggleFly(state)
     FlyMode = state
     if FlyConnection then FlyConnection:Disconnect() FlyConnection = nil end
     if not state then
         local hrp = GetCharacter():FindFirstChild("HumanoidRootPart")
-        if hrp then
-            hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-        end
+        if hrp then hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0) end
         return
     end
     local UIS = UserInputService
@@ -149,7 +148,6 @@ local function ToggleFly(state)
         if not char then return end
         local hrp = char:FindFirstChild("HumanoidRootPart")
         if not hrp then return end
-        -- Network ownership ke player agar server replicate gerakan
         pcall(function() hrp:SetNetworkOwner(LocalPlayer) end)
         if not bodyVel or not bodyVel.Parent then
             bodyVel = Instance.new("BodyVelocity", hrp)
@@ -173,7 +171,7 @@ local function ToggleFly(state)
     end)
 end
 
---// GOD MODE (SERVER REPLICATED via Health loop)
+--// GOD
 local function ToggleGod(state)
     GodMode = state
     if GodConnection then GodConnection:Disconnect() GodConnection = nil end
@@ -181,18 +179,12 @@ local function ToggleGod(state)
     if not char then return end
     local hum = char:FindFirstChildOfClass("Humanoid")
     if state then
-        if hum then
-            hum.MaxHealth = 5000
-            hum.Health = 5000
-        end
+        if hum then hum.MaxHealth = 5000 hum.Health = 5000 end
         GodConnection = RunService.Heartbeat:Connect(function()
             local c = LocalPlayer.Character
             if c then
                 local h = c:FindFirstChildOfClass("Humanoid")
-                if h then
-                    h.MaxHealth = 5000
-                    h.Health = 5000
-                end
+                if h then h.MaxHealth = 5000 h.Health = 5000 end
             end
         end)
     else
@@ -200,7 +192,7 @@ local function ToggleGod(state)
     end
 end
 
---// KILL ALL (Server-side via FireServer kosong / health set)
+--// KILL ALL
 local function KillAll()
     for _, plr in pairs(Players:GetPlayers()) do
         if plr ~= LocalPlayer and plr.Character then
@@ -210,7 +202,7 @@ local function KillAll()
     end
 end
 
---// NUKE SERVER (Replicated: kick + explode + unanchor + destroy)
+--// NUKE
 local function NukeServer()
     for _, plr in pairs(Players:GetPlayers()) do
         if plr ~= LocalPlayer then
@@ -238,7 +230,7 @@ local function NukeServer()
     end
 end
 
---// INVISIBLE (Server replicated via LocalTransparencyModifier + Transparency)
+--// INVISIBLE
 local function ToggleInvisible(state)
     Invisible = state
     local char = LocalPlayer.Character
@@ -266,53 +258,68 @@ local function ToggleInvisible(state)
     end
 end
 
---// BIG BODY (Server replicated via Size + HipHeight + network owner)
-local function ToggleBigBody(state)
-    BigBody = state
+--// SIZE SEMAPU + SPIN (MERGE)
+local function ToggleSizeSpin(state)
+    SizeSpinMode = state
+    if SizeSpinConnection then SizeSpinConnection:Disconnect() SizeSpinConnection = nil end
+    
     local char = LocalPlayer.Character
     if not char then return end
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if hrp then pcall(function() hrp:SetNetworkOwner(LocalPlayer) end) end
-    for _, part in pairs(char:GetDescendants()) do
-        if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-            if state then
-                part.Size = part.Size * 3
+    
+    if state then
+        for _, part in pairs(char:GetDescendants()) do
+            if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+                part.Size = Vector3.new(2048, 2048, 2048)
                 part.Massless = true
                 part.CanCollide = false
-            else
-                part.Size = part.Size / 3
-                part.Massless = false
-                part.CanCollide = true
+                part.Transparency = 0.5
             end
         end
-    end
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    if hum then
-        hum.HipHeight = state and 5 or 2
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum then hum.HipHeight = 2048 end
+        
+        SizeSpinConnection = RunService.Heartbeat:Connect(function()
+            local c = LocalPlayer.Character
+            if not c then return end
+            local h = c:FindFirstChild("HumanoidRootPart")
+            if not h then return end
+            pcall(function() h:SetNetworkOwner(LocalPlayer) end)
+            h.CFrame = h.CFrame * CFrame.Angles(0, math.rad(35), 0)
+        end)
+    else
+        for _, part in pairs(char:GetDescendants()) do
+            if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+                if part.Name == "Head" then
+                    part.Size = Vector3.new(2, 1, 1)
+                elseif part.Name == "Torso" or part.Name == "UpperTorso" or part.Name == "LowerTorso" then
+                    part.Size = Vector3.new(2, 2, 1)
+                elseif part.Name:find("Arm") then
+                    part.Size = Vector3.new(1, 2, 1)
+                elseif part.Name:find("Leg") then
+                    part.Size = Vector3.new(1, 2, 1)
+                else
+                    part.Size = Vector3.new(1, 1, 1)
+                end
+                part.Massless = false
+                part.CanCollide = true
+                part.Transparency = 0
+            end
+        end
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum then hum.HipHeight = 2 end
     end
 end
 
---// SPIN (Server replicated via CFrame loop + network owner)
-local function ToggleSpin(state)
-    SpinMode = state
-    if SpinConnection then SpinConnection:Disconnect() SpinConnection = nil end
-    if not state then return end
-    SpinConnection = RunService.Heartbeat:Connect(function()
-        local char = LocalPlayer.Character
-        if not char then return end
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        if not hrp then return end
-        pcall(function() hrp:SetNetworkOwner(LocalPlayer) end)
-        hrp.CFrame = hrp.CFrame * CFrame.Angles(0, math.rad(35), 0)
-    end)
-end
-
---// FLING (Server replicated via physics force)
+--// FLING TARGET (hanya target yang disentuh)
 local function FlingTarget(target)
     local char = target.Character
     if not char then return end
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
+    -- Jangan fling diri sendiri
+    if target == LocalPlayer then return end
     pcall(function() hrp:SetNetworkOwner(nil) end)
     local vel = Instance.new("BodyAngularVelocity", hrp)
     vel.AngularVelocity = Vector3.new(9999, 9999, 9999)
@@ -327,12 +334,29 @@ local function FlingTarget(target)
     end)
 end
 
-local function FlingAll()
-    for _, plr in pairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer then
-            pcall(function() FlingTarget(plr) end)
+--// TOUCH FLING (player yang kita sentuh kena fling)
+local function ToggleTouchFling(state)
+    TouchFlingMode = state
+    if TouchConn then TouchConn:Disconnect() TouchConn = nil end
+    if not state then return end
+    
+    TouchConn = RunService.Heartbeat:Connect(function()
+        local char = LocalPlayer.Character
+        if not char then return end
+        local myHrp = char:FindFirstChild("HumanoidRootPart")
+        if not myHrp then return end
+        for _, plr in pairs(Players:GetPlayers()) do
+            if plr ~= LocalPlayer and plr.Character then
+                local theirHrp = plr.Character:FindFirstChild("HumanoidRootPart")
+                if theirHrp then
+                    local dist = (myHrp.Position - theirHrp.Position).Magnitude
+                    if dist < 8 then
+                        pcall(function() FlingTarget(plr) end)
+                    end
+                end
+            end
         end
-    end
+    end)
 end
 
 --// BUTTONS
@@ -348,11 +372,33 @@ GodBtn.MouseButton1Click:Connect(function()
     GodBtn.Text = "GOD MODE : " .. (GodMode and "ON" or "OFF")
 end)
 
-local KillBtn = MakeButton("KILL ALL PLAYER")
-KillBtn.MouseButton1Click:Connect(KillAll)
+local KillBtn = MakeButton("KILL ALL PLAYER : OFF")
+local KillLoopConn = nil
+KillBtn.MouseButton1Click:Connect(function()
+    if KillLoopConn then
+        KillLoopConn:Disconnect()
+        KillLoopConn = nil
+        KillBtn.Text = "KILL ALL PLAYER : OFF"
+    else
+        KillAll()
+        KillLoopConn = RunService.Heartbeat:Connect(KillAll)
+        KillBtn.Text = "KILL ALL PLAYER : ON"
+    end
+end)
 
-local NukeBtn = MakeButton("NUKE SERVER")
-NukeBtn.MouseButton1Click:Connect(NukeServer)
+local NukeBtn = MakeButton("NUKE SERVER : OFF")
+local NukeLoopConn = nil
+NukeBtn.MouseButton1Click:Connect(function()
+    if NukeLoopConn then
+        NukeLoopConn:Disconnect()
+        NukeLoopConn = nil
+        NukeBtn.Text = "NUKE SERVER : OFF"
+    else
+        NukeServer()
+        NukeLoopConn = RunService.Heartbeat:Connect(NukeServer)
+        NukeBtn.Text = "NUKE SERVER : ON"
+    end
+end)
 
 local InvBtn = MakeButton("INVISIBLE : OFF")
 InvBtn.MouseButton1Click:Connect(function()
@@ -360,26 +406,23 @@ InvBtn.MouseButton1Click:Connect(function()
     InvBtn.Text = "INVISIBLE : " .. (Invisible and "ON" or "OFF")
 end)
 
-local FlingBtn = MakeButton("FLING PLAYER (ALL)")
-FlingBtn.MouseButton1Click:Connect(FlingAll)
-
-local BigBtn = MakeButton("BIG BODY : OFF")
-BigBtn.MouseButton1Click:Connect(function()
-    ToggleBigBody(not BigBody)
-    BigBtn.Text = "BIG BODY : " .. (BigBody and "ON" or "OFF")
+local FlingBtn = MakeButton("FLING TOUCH : OFF")
+FlingBtn.MouseButton1Click:Connect(function()
+    ToggleTouchFling(not TouchFlingMode)
+    FlingBtn.Text = "FLING TOUCH : " .. (TouchFlingMode and "ON" or "OFF")
 end)
 
-local SpinBtn = MakeButton("SPIN : OFF")
-SpinBtn.MouseButton1Click:Connect(function()
-    ToggleSpin(not SpinMode)
-    SpinBtn.Text = "SPIN : " .. (SpinMode and "ON" or "OFF")
+local SizeSpinBtn = MakeButton("SIZE SEMAPU + SPIN : OFF")
+SizeSpinBtn.MouseButton1Click:Connect(function()
+    ToggleSizeSpin(not SizeSpinMode)
+    SizeSpinBtn.Text = "SIZE SEMAPU + SPIN : " .. (SizeSpinMode and "ON" or "OFF")
 end)
 
 local Credit = Instance.new("TextLabel")
 Credit.Size = UDim2.new(1, -20, 0, 25)
 Credit.Position = UDim2.new(0, 10, 1, -28)
 Credit.BackgroundTransparency = 1
-Credit.Text = "SYSXHUB KILLER v4 | by OpetxDy"
+Credit.Text = "SYSXHUB KILLER v6 | by OpetxDy"
 Credit.TextColor3 = Color3.fromRGB(180, 0, 0)
 Credit.Font = Enum.Font.GothamBold
 Credit.TextSize = 13
@@ -395,14 +438,14 @@ UserInputService.InputBegan:Connect(function(input, gp)
         ToggleGod(not GodMode)
         GodBtn.Text = "GOD MODE : " .. (GodMode and "ON" or "OFF")
     elseif input.KeyCode == Enum.KeyCode.K then
-        KillAll()
+        KillBtn.MouseButton1Click:Fire()
     elseif input.KeyCode == Enum.KeyCode.N then
-        NukeServer()
+        NukeBtn.MouseButton1Click:Fire()
     elseif input.KeyCode == Enum.KeyCode.B then
-        ToggleBigBody(not BigBody)
-        BigBtn.Text = "BIG BODY : " .. (BigBody and "ON" or "OFF")
-    elseif input.KeyCode == Enum.KeyCode.R then
-        ToggleSpin(not SpinMode)
-        SpinBtn.Text = "SPIN : " .. (SpinMode and "ON" or "OFF")
+        ToggleSizeSpin(not SizeSpinMode)
+        SizeSpinBtn.Text = "SIZE SEMAPU + SPIN : " .. (SizeSpinMode and "ON" or "OFF")
+    elseif input.KeyCode == Enum.KeyCode.T then
+        ToggleTouchFling(not TouchFlingMode)
+        FlingBtn.Text = "FLING TOUCH : " .. (TouchFlingMode and "ON" or "OFF")
     end
 end)
