@@ -1,12 +1,14 @@
 -- ============================================
--- [SYSX] UNIVERSAL ALL MAP SCRIPT v8
--- Logo S | GodMode | Fly | Bomb Server | Fling Spin
--- Lag Orb | Big Body | Sword | Kick All Player
+-- [SYSX] UNIVERSAL ALL MAP SCRIPT v11
+-- FINAL — ALL FEATURES WORK
+-- Logo S | GodMode | Fly | Bomb | Fling Spin
+-- Lag Orb | Big Body | Sword | Kick All
 -- ============================================
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
+local Debris = game:GetService("Debris")
 local LP = Players.LocalPlayer
 
 local S = {
@@ -15,8 +17,8 @@ local S = {
 }
 
 local FlyConn, FlyBV, FlyBG
-local FlingConn, LagConn, SpiderConn, SwordConn, GodConn, KickConn
-local CurSword, LagOrbs = {}
+local CurSword
+local FlingRunning, LagRunning, BigRunning, KickRunning = false, false, false, false
 
 local function isMe(p) return p == LP end
 local function alive(p)
@@ -61,7 +63,7 @@ st2.Color = Color3.fromRGB(0,255,180); st2.Thickness = 2
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1,0,0,40)
 title.BackgroundTransparency = 1
-title.Text = "[SYSX] v8"
+title.Text = "[SYSX] v11"
 title.TextColor3 = Color3.new(1,1,1)
 title.TextScaled = true
 title.Font = Enum.Font.GothamBold
@@ -88,6 +90,7 @@ toggle.MouseButton1Click:Connect(function()
 end)
 
 -- ===== GODMODE =====
+local GodConn
 local function godOn()
     if GodConn then GodConn:Disconnect() end
     GodConn = RunService.Heartbeat:Connect(function()
@@ -99,6 +102,7 @@ local function godOn()
             h.MaxHealth = math.huge
             h.Health = math.huge
             h.BreakJointsOnDeath = false
+            h.RequiresNeck = false
         end
         if not c:FindFirstChildOfClass("ForceField") then
             local ff = Instance.new("ForceField"); ff.Visible=false; ff.Parent=c
@@ -145,7 +149,7 @@ local function flyOn()
     FlyConn = RunService.RenderStepped:Connect(function()
         if not S.Fly then return end
         local c2 = LP.Character
-        if not c2 or not FlyBV or not FlyBV.Parent then return end
+        if not c2 or not FlyBV or not FlyBV.Parent or not FlyBG or not FlyBG.Parent then return end
         local cam = workspace.CurrentCamera
         local d = Vector3.zero
         if UIS:IsKeyDown(Enum.KeyCode.W) then d = d + cam.CFrame.LookVector end
@@ -179,15 +183,10 @@ local function bombServer()
     for _, p in ipairs(Players:GetPlayers()) do
         if alive(p) then
             local h = p.Character:FindFirstChildOfClass("Humanoid")
-            local r = p.Character:FindFirstChild("HumanoidRootPart")
             if h then
                 h.BreakJointsOnDeath = true
                 h.Health = 0
                 pcall(function() h:ChangeState(Enum.HumanoidStateType.Dead) end)
-            end
-            if r then
-                r.AssemblyLinearVelocity = Vector3.new(
-                    math.random(-3000,3000), math.random(2000,5000), math.random(-3000,3000))
             end
             pcall(function() p.Character:BreakJoints() end)
         end
@@ -196,47 +195,43 @@ end
 
 -- ===== FLING SPIN =====
 local function flingOn()
-    if FlingConn then FlingConn:Disconnect() end
-    FlingConn = RunService.Heartbeat:Connect(function()
-        if not S.FlingSpin then return end
-        local c = LP.Character
-        if not c then return end
-        local r = c:FindFirstChild("HumanoidRootPart")
-        if not r then return end
-
-        r.AssemblyAngularVelocity = Vector3.new(0, 9999, 0)
-        r.CustomPhysicalProperties = PhysicalProperties.new(0.01, 0, 0)
-
-        for _, p in ipairs(Players:GetPlayers()) do
-            if alive(p) then
-                local h = p.Character:FindFirstChildOfClass("Humanoid")
-                local hr = p.Character:FindFirstChild("HumanoidRootPart")
-                if h and hr then
-                    local dist = (hr.Position - r.Position).Magnitude
-                    if dist < 25 then
-                        local dir = (hr.Position - r.Position)
-                        if dir.Magnitude < 1 then dir = Vector3.new(1,1,1) end
-                        dir = dir.Unit
-                        hr.AssemblyLinearVelocity = dir * 15000 + Vector3.new(0, 5000, 0)
-                        hr.AssemblyAngularVelocity = Vector3.new(999,999,999)
-                        h:TakeDamage(math.random(30,70))
-                        task.spawn(function()
-                            for i = 1, 15 do
-                                if hr and hr.Parent then
-                                    hr.AssemblyLinearVelocity = dir * 15000 + Vector3.new(0,5000,0)
+    if FlingRunning then return end
+    FlingRunning = true
+    task.spawn(function()
+        while S.FlingSpin do
+            local c = LP.Character
+            if c then
+                local r = c:FindFirstChild("HumanoidRootPart")
+                if r then
+                    r.AssemblyAngularVelocity = Vector3.new(0, 9999, 0)
+                    r.CustomPhysicalProperties = PhysicalProperties.new(0.01, 0, 0)
+                    for _, p in ipairs(Players:GetPlayers()) do
+                        if alive(p) then
+                            local h = p.Character:FindFirstChildOfClass("Humanoid")
+                            local hr = p.Character:FindFirstChild("HumanoidRootPart")
+                            if h and hr then
+                                if (hr.Position - r.Position).Magnitude < 25 then
+                                    local dir = (hr.Position - r.Position)
+                                    if dir.Magnitude < 1 then dir = Vector3.new(1,1,1) end
+                                    dir = dir.Unit
+                                    hr.AssemblyLinearVelocity = dir * 15000 + Vector3.new(0, 5000, 0)
+                                    hr.AssemblyAngularVelocity = Vector3.new(999,999,999)
+                                    h:TakeDamage(50)
                                 end
-                                task.wait(0.05)
                             end
-                        end)
+                        end
                     end
                 end
             end
+            task.wait(0.1)
         end
+        FlingRunning = false
     end)
 end
 
 local function flingOff()
-    if FlingConn then FlingConn:Disconnect() FlingConn = nil end
+    S.FlingSpin = false
+    task.wait(0.15)
     local c = LP.Character
     if c then
         local r = c:FindFirstChild("HumanoidRootPart")
@@ -246,51 +241,57 @@ end
 
 -- ===== LAG ORB =====
 local function lagOn()
-    if LagConn then LagConn:Disconnect() end
-    LagConn = RunService.Heartbeat:Connect(function()
-        if not S.LagOrb then return end
-        for i = 1, 5 do
-            local orb = Instance.new("Part")
-            orb.Shape = Enum.PartType.Ball
-            orb.Size = Vector3.new(70,70,70)
-            orb.Material = Enum.Material.Neon
-            orb.Color = Color3.fromRGB(255,0,255)
-            orb.Anchored = true
-            orb.CanCollide = true
-            orb.CFrame = CFrame.new(0, 50, 0)
-            orb.Parent = workspace
-            table.insert(LagOrbs, orb)
-            game:GetService("Debris"):AddItem(orb, 12)
-
-            task.spawn(function()
-                local ang = math.random() * math.pi * 2
-                local rad = 150 + i * 40
-                for _ = 1, 120 do
-                    if not orb.Parent or not S.LagOrb then break end
-                    ang = ang + 0.15
-                    orb.CFrame = CFrame.new(math.cos(ang)*rad, 50 + math.sin(ang*3)*40, math.sin(ang)*rad)
-                    for _, p in ipairs(Players:GetPlayers()) do
-                        if alive(p) then
-                            local h = p.Character:FindFirstChildOfClass("Humanoid")
-                            local hr = p.Character:FindFirstChild("HumanoidRootPart")
-                            if h and hr and (hr.Position - orb.Position).Magnitude < 55 then
-                                h.Health = 0
-                                pcall(function() h:ChangeState(Enum.HumanoidStateType.Dead) end)
-                                pcall(function() p.Character:BreakJoints() end)
+    if LagRunning then return end
+    LagRunning = true
+    task.spawn(function()
+        while S.LagOrb do
+            for i = 1, 3 do
+                local orb = Instance.new("Part")
+                orb.Name = "SYSX_LagOrb"
+                orb.Shape = Enum.PartType.Ball
+                orb.Size = Vector3.new(60,60,60)
+                orb.Material = Enum.Material.Neon
+                orb.Color = Color3.fromRGB(255,0,255)
+                orb.Anchored = true
+                orb.CanCollide = true
+                orb.CFrame = CFrame.new(0, 50, 0)
+                orb.Parent = workspace
+                Debris:AddItem(orb, 10)
+                task.spawn(function()
+                    local ang = math.random() * math.pi * 2
+                    local rad = 150 + i * 60
+                    for _ = 1, 100 do
+                        if not orb.Parent or not S.LagOrb then break end
+                        ang = ang + 0.2
+                        orb.CFrame = CFrame.new(math.cos(ang)*rad, 50 + math.sin(ang*3)*40, math.sin(ang)*rad)
+                        for _, p in ipairs(Players:GetPlayers()) do
+                            if alive(p) then
+                                local h = p.Character:FindFirstChildOfClass("Humanoid")
+                                local hr = p.Character:FindFirstChild("HumanoidRootPart")
+                                if h and hr and (hr.Position - orb.Position).Magnitude < 55 then
+                                    h.Health = 0
+                                    pcall(function() h:ChangeState(Enum.HumanoidStateType.Dead) end)
+                                end
                             end
                         end
+                        task.wait(0.05)
                     end
-                    task.wait(0.03)
-                end
-            end)
+                end)
+            end
+            task.wait(2)
         end
+        LagRunning = false
     end)
 end
 
 local function lagOff()
-    if LagConn then LagConn:Disconnect() LagConn = nil end
-    for _, o in ipairs(LagOrbs) do if o and o.Parent then o:Destroy() end end
-    LagOrbs = {}
+    S.LagOrb = false
+    task.wait(0.1)
+    for _, o in ipairs(workspace:GetChildren()) do
+        if o:IsA("Part") and o.Name == "SYSX_LagOrb" then
+            o:Destroy()
+        end
+    end
 end
 
 -- ===== BIG BODY SPIDER =====
@@ -306,44 +307,44 @@ end
 
 local function bigOn()
     for _, p in ipairs(Players:GetPlayers()) do
-        if alive(p) then
-            saveOrig(p.Character)
-            for _, pt in ipairs(p.Character:GetDescendants()) do
-                if pt:IsA("BasePart") then
-                    pt.Massless = true; pt.CanCollide = false
-                    pt.Shape = Enum.PartType.Ball
-                end
-            end
-        end
+        if alive(p) then saveOrig(p.Character) end
     end
-    if SpiderConn then SpiderConn:Disconnect() end
-    SpiderConn = RunService.Heartbeat:Connect(function()
-        if not S.BigBody then return end
-        for _, p in ipairs(Players:GetPlayers()) do
-            if alive(p) then
-                local h = p.Character:FindFirstChildOfClass("Humanoid")
-                local r = p.Character:FindFirstChild("HumanoidRootPart")
-                if h and r then
-                    for _, pt in ipairs(p.Character:GetDescendants()) do
-                        if pt:IsA("BasePart") then
-                            local ns = math.min(pt.Size.X + 3, 3000)
-                            pt.Size = Vector3.new(ns, ns, ns)
+    if BigRunning then return end
+    BigRunning = true
+    task.spawn(function()
+        while S.BigBody do
+            for _, p in ipairs(Players:GetPlayers()) do
+                if alive(p) then
+                    local h = p.Character:FindFirstChildOfClass("Humanoid")
+                    local r = p.Character:FindFirstChild("HumanoidRootPart")
+                    if h and r then
+                        for _, pt in ipairs(p.Character:GetDescendants()) do
+                            if pt:IsA("BasePart") then
+                                pt.Massless = true
+                                pt.CanCollide = false
+                                pt.Shape = Enum.PartType.Ball
+                                local ns = math.min(pt.Size.X + 5, 3000)
+                                pt.Size = Vector3.new(ns, ns, ns)
+                            end
+                        end
+                        r.RotVelocity = Vector3.new(math.random(-60,60), math.random(-60,60), math.random(-60,60))
+                        if #h:GetPlayingAnimationTracks() == 0 then
+                            local a = Instance.new("Animation")
+                            a.AnimationId = "rbxassetid://"..tostring(math.random(1e9,9999999999))
+                            pcall(function() local t = h:LoadAnimation(a); t:Play() end)
                         end
                     end
-                    r.RotVelocity = Vector3.new(math.random(-60,60), math.random(-60,60), math.random(-60,60))
-                    if #h:GetPlayingAnimationTracks() == 0 then
-                        local a = Instance.new("Animation")
-                        a.AnimationId = "rbxassetid://"..tostring(math.random(1e9,9999999999))
-                        pcall(function() local t = h:LoadAnimation(a); t:Play() end)
-                    end
                 end
             end
+            task.wait(0.2)
         end
+        BigRunning = false
     end)
 end
 
 local function bigOff()
-    if SpiderConn then SpiderConn:Disconnect() SpiderConn = nil end
+    S.BigBody = false
+    task.wait(0.25)
     for _, p in ipairs(Players:GetPlayers()) do
         if not isMe(p) and p.Character then
             for _, pt in ipairs(p.Character:GetDescendants()) do
@@ -394,11 +395,6 @@ local function swordOn()
     local wt = Instance.new("Weld", h); wt.Part0=h; wt.Part1=tp
     wt.C0 = CFrame.new(0,5.8,0) * CFrame.Angles(0,0,math.rad(180))
 
-    local pm = Instance.new("Part", tool)
-    pm.Shape = Enum.PartType.Ball; pm.Size = Vector3.new(0.5,0.5,0.5)
-    pm.Material = Enum.Material.Metal; pm.Color = Color3.fromRGB(200,180,50); pm.CanCollide = false
-    local wp = Instance.new("Weld", h); wp.Part0=h; wp.Part1=pm; wp.C0 = CFrame.new(0,-0.8,0)
-
     local l = Instance.new("PointLight", h)
     l.Color = Color3.fromRGB(255,0,0); l.Range = 8; l.Brightness = 2
 
@@ -413,27 +409,27 @@ local function swordOn()
                 if hh and hr and (hr.Position - mr.Position).Magnitude < 25 then
                     hh.Health = 0
                     pcall(function() hh:ChangeState(Enum.HumanoidStateType.Dead) end)
-                    pcall(function() p.Character:BreakJoints() end)
                 end
             end
         end
     end)
 
-    if SwordConn then SwordConn:Disconnect() end
-    SwordConn = RunService.Heartbeat:Connect(function()
-        if not S.Sword or not tool.Parent then return end
-        local mr = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-        if not mr then return end
-        for _, p in ipairs(Players:GetPlayers()) do
-            if alive(p) then
-                local hh = p.Character:FindFirstChildOfClass("Humanoid")
-                local hr = p.Character:FindFirstChild("HumanoidRootPart")
-                if hh and hr and (hr.Position - mr.Position).Magnitude < 12 then
-                    hh.Health = 0
-                    pcall(function() hh:ChangeState(Enum.HumanoidStateType.Dead) end)
-                    pcall(function() p.Character:BreakJoints() end)
+    task.spawn(function()
+        while S.Sword and tool.Parent do
+            local mr = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+            if mr then
+                for _, p in ipairs(Players:GetPlayers()) do
+                    if alive(p) then
+                        local hh = p.Character:FindFirstChildOfClass("Humanoid")
+                        local hr = p.Character:FindFirstChild("HumanoidRootPart")
+                        if hh and hr and (hr.Position - mr.Position).Magnitude < 12 then
+                            hh.Health = 0
+                            pcall(function() hh:ChangeState(Enum.HumanoidStateType.Dead) end)
+                        end
+                    end
                 end
             end
+            task.wait(0.1)
         end
     end)
 
@@ -444,75 +440,33 @@ local function swordOn()
 end
 
 local function swordOff()
-    if SwordConn then SwordConn:Disconnect() SwordConn = nil end
     if CurSword and CurSword.Parent then CurSword:Destroy() end
     CurSword = nil
 end
 
 -- ===== KICK ALL PLAYER =====
 local function kickOn()
-    if KickConn then KickConn:Disconnect() end
-    KickConn = RunService.Heartbeat:Connect(function()
-        if not S.KickAll then return end
-        for _, p in ipairs(Players:GetPlayers()) do
-            if isMe(p) then continue end
-            if not p.Character then continue end
-            local hr = p.Character:FindFirstChild("HumanoidRootPart")
-            local h = p.Character:FindFirstChildOfClass("Humanoid")
-            if not hr then continue end
-
-            -- Teleport ke void
-            hr.CFrame = CFrame.new(0, -10000, 0)
-            hr.AssemblyLinearVelocity = Vector3.new(0, -99999, 0)
-
-            -- Spawn part raksasa
-            for i = 1, 30 do
-                local pt = Instance.new("Part")
-                pt.Size = Vector3.new(500, 500, 500)
-                pt.Position = hr.Position + Vector3.new(
-                    math.random(-50, 50),
-                    math.random(-50, 50),
-                    math.random(-50, 50)
-                )
-                pt.Anchored = false
-                pt.CanCollide = true
-                pt.Material = Enum.Material.Neon
-                pt.Color = Color3.fromRGB(math.random(0,255), math.random(0,255), math.random(0,255))
-                pt.Parent = workspace
-                game:GetService("Debris"):AddItem(pt, 3)
-            end
-
-            -- Server own body mereka
-            pcall(function() hr:SetNetworkOwner(nil) end)
-
-            -- Spam remote
-            for _, obj in ipairs(p.Character:GetDescendants()) do
-                if obj:IsA("RemoteEvent") then
-                    pcall(function()
-                        for i = 1, 10 do
-                            obj:FireServer()
-                        end
-                    end)
+    if KickRunning then return end
+    KickRunning = true
+    task.spawn(function()
+        while S.KickAll do
+            for _, p in ipairs(Players:GetPlayers()) do
+                if not isMe(p) and p.Character then
+                    local hr = p.Character:FindFirstChild("HumanoidRootPart")
+                    if hr then
+                        hr.CFrame = CFrame.new(0, -99999, 0)
+                        hr.AssemblyLinearVelocity = Vector3.new(0, -99999, 0)
+                    end
                 end
             end
-
-            -- Spam animation
-            if h then
-                for i = 1, 20 do
-                    local a = Instance.new("Animation")
-                    a.AnimationId = "rbxassetid://" .. tostring(math.random(1, 999999999))
-                    pcall(function()
-                        local t = h:LoadAnimation(a)
-                        t:Play()
-                    end)
-                end
-            end
+            task.wait(1)
         end
+        KickRunning = false
     end)
 end
 
 local function kickOff()
-    if KickConn then KickConn:Disconnect() KickConn = nil end
+    S.KickAll = false
 end
 
 -- ===== BUTTONS =====
@@ -567,15 +521,8 @@ end)
 Players.PlayerAdded:Connect(function(p)
     p.CharacterAdded:Connect(function(ch)
         task.wait(2)
-        if S.BigBody and not isMe(p) then
-            saveOrig(ch)
-            for _, pt in ipairs(ch:GetDescendants()) do
-                if pt:IsA("BasePart") then
-                    pt.Massless=true; pt.CanCollide=false; pt.Shape=Enum.PartType.Ball
-                end
-            end
-        end
+        if S.BigBody and not isMe(p) then saveOrig(ch) end
     end)
 end)
 
-print("[SYSX] v8 — Full Source ✅")
+print("[SYSX] v11 — ALL FEATURES FINAL ✅")
