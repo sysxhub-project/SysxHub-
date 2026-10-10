@@ -1,9 +1,9 @@
 --[[
-    SYSXHUB KILLER v6
+    SYSXHUB KILLER v7
     Developer: OpetxDy
     Fitur: Fly, God, Kill All, Nuke, Invisible, Fling Touch, Size Semapu+Spin
     Fling: hanya player yang DISENTUH yang kefling (bukan diri sendiri)
-    Mode: Server Replicated (bukan visual)
+    Mode: FULL SERVER REPLICATED (bukan visual)
     Logo: S Toggle Open/Close
 --]]
 
@@ -54,7 +54,7 @@ Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 12)
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 45)
 Title.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
-Title.Text = "SYSXHUB KILLER v6"
+Title.Text = "SYSXHUB KILLER v7"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 20
@@ -131,13 +131,16 @@ local function GetCharacter()
     return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 end
 
---// FLY
+--// FLY (SERVER REPLICATED)
 local function ToggleFly(state)
     FlyMode = state
     if FlyConnection then FlyConnection:Disconnect() FlyConnection = nil end
     if not state then
         local hrp = GetCharacter():FindFirstChild("HumanoidRootPart")
-        if hrp then hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0) end
+        if hrp then
+            hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            pcall(function() hrp:SetNetworkOwner(LocalPlayer) end)
+        end
         return
     end
     local UIS = UserInputService
@@ -171,7 +174,7 @@ local function ToggleFly(state)
     end)
 end
 
---// GOD
+--// GOD (SERVER REPLICATED - loop Heartbeat set Health)
 local function ToggleGod(state)
     GodMode = state
     if GodConnection then GodConnection:Disconnect() GodConnection = nil end
@@ -192,17 +195,19 @@ local function ToggleGod(state)
     end
 end
 
---// KILL ALL
+--// KILL ALL (loop server replicate)
 local function KillAll()
     for _, plr in pairs(Players:GetPlayers()) do
         if plr ~= LocalPlayer and plr.Character then
             local hum = plr.Character:FindFirstChildOfClass("Humanoid")
-            if hum then hum.Health = 0 end
+            if hum and hum.Health > 0 then
+                hum.Health = 0
+            end
         end
     end
 end
 
---// NUKE
+--// NUKE (loop server replicate)
 local function NukeServer()
     for _, plr in pairs(Players:GetPlayers()) do
         if plr ~= LocalPlayer then
@@ -218,7 +223,7 @@ local function NukeServer()
             end)
         end
     end
-    for i = 1, 10 do
+    for i = 1, 5 do
         task.spawn(function()
             local boom = Instance.new("Explosion")
             boom.Position = Camera.CFrame.Position + Vector3.new(math.random(-100,100), math.random(-50,50), math.random(-100,100))
@@ -230,35 +235,32 @@ local function NukeServer()
     end
 end
 
---// INVISIBLE
+--// INVISIBLE (server replicate via Transparency, bukan LocalTransparencyModifier)
 local function ToggleInvisible(state)
     Invisible = state
     local char = LocalPlayer.Character
     if not char then return end
     for _, part in pairs(char:GetDescendants()) do
-        if part:IsA("BasePart") or part:IsA("Decal") then
+        if part:IsA("BasePart") then
             if state then
-                if part:IsA("BasePart") then
-                    part.Transparency = 1
-                    part.LocalTransparencyModifier = 1
-                else
-                    part.Transparency = 1
-                end
+                part.Transparency = 1
+                part.CanCollide = false
             else
                 if part.Name == "HumanoidRootPart" then
                     part.Transparency = 1
+                    part.CanCollide = false
                 else
                     part.Transparency = 0
-                    if part:IsA("BasePart") then
-                        part.LocalTransparencyModifier = 0
-                    end
+                    part.CanCollide = true
                 end
             end
+        elseif part:IsA("Decal") then
+            part.Transparency = state and 1 or 0
         end
     end
 end
 
---// SIZE SEMAPU + SPIN (MERGE)
+--// SIZE SEMAPU + SPIN (SERVER REPLICATED)
 local function ToggleSizeSpin(state)
     SizeSpinMode = state
     if SizeSpinConnection then SizeSpinConnection:Disconnect() SizeSpinConnection = nil end
@@ -312,14 +314,13 @@ local function ToggleSizeSpin(state)
     end
 end
 
---// FLING TARGET (hanya target yang disentuh)
+--// FLING TARGET
 local function FlingTarget(target)
+    if target == LocalPlayer then return end
     local char = target.Character
     if not char then return end
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
-    -- Jangan fling diri sendiri
-    if target == LocalPlayer then return end
     pcall(function() hrp:SetNetworkOwner(nil) end)
     local vel = Instance.new("BodyAngularVelocity", hrp)
     vel.AngularVelocity = Vector3.new(9999, 9999, 9999)
@@ -334,7 +335,7 @@ local function FlingTarget(target)
     end)
 end
 
---// TOUCH FLING (player yang kita sentuh kena fling)
+--// TOUCH FLING
 local function ToggleTouchFling(state)
     TouchFlingMode = state
     if TouchConn then TouchConn:Disconnect() TouchConn = nil end
@@ -422,7 +423,7 @@ local Credit = Instance.new("TextLabel")
 Credit.Size = UDim2.new(1, -20, 0, 25)
 Credit.Position = UDim2.new(0, 10, 1, -28)
 Credit.BackgroundTransparency = 1
-Credit.Text = "SYSXHUB KILLER v6 | by OpetxDy"
+Credit.Text = "SYSXHUB KILLER v7 | by OpetxDy"
 Credit.TextColor3 = Color3.fromRGB(180, 0, 0)
 Credit.Font = Enum.Font.GothamBold
 Credit.TextSize = 13
