@@ -1,14 +1,15 @@
 --[[
-    SYSXHUB TROLL PANEL v3
+    SYSXHUB TROLL PANEL v4
     Developer: OpetxDy
-    Layout: Tab | Fitur (Sidebar kiri)
+    Fitur Baru: AUTO CAR (SPAWN) & AUTO CAR (SKY DROP)
     Mode: FULL SERVER REPLICATED (bukan visual)
     
     Tab TROLL: Spin, Fling, Drag, Dance, Chaos, Confuse, TP Sky, Freeze,
                Random Size, Invisible, Speed Chaos, Gravity Chaos, Rocket,
-               Slap, Force Sit, Undress, Strip Tools, Explode
-    Tab SAFE ZONE: Auto Safe Zone (anti semua bencana lengkap)
-    Tab ROCKET: Auto Rocket (TP kursi, start, jalanin)
+               Slap, Force Sit, Undress, Strip Tools, Explode,
+               Auto Car (Spawn), Auto Car (Sky Drop)
+    Tab SAFE ZONE: Auto Safe Zone (anti semua bencana)
+    Tab ROCKET: Auto Rocket
     Tab UTILITY: Anti AFK, ESP, Fullbright, No Fog, Infinite Jump, Fly,
                  Walkspeed, Auto Rejoin, Server Hop, Copy Job ID
 --]]
@@ -49,8 +50,8 @@ LogoStroke.Thickness = 2
 
 --// MAIN FRAME
 local Main = Instance.new("Frame")
-Main.Size = UDim2.new(0, 520, 0, 420)
-Main.Position = UDim2.new(0.5, -260, 0.5, -210)
+Main.Size = UDim2.new(0, 520, 0, 440)
+Main.Position = UDim2.new(0.5, -260, 0.5, -220)
 Main.BackgroundColor3 = Color3.fromRGB(20, 10, 25)
 Main.BorderSizePixel = 0
 Main.Active = true
@@ -78,7 +79,7 @@ local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -50, 1, 0)
 Title.Position = UDim2.new(0, 15, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "SYSXHUB TROLL PANEL v3"
+Title.Text = "SYSXHUB TROLL PANEL v4"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 16
@@ -191,8 +192,9 @@ end
 local TrollSpin, TrollFling, TrollDrag, TrollDance, TrollChaos, TrollConfuse = false, false, false, false, false, false
 local SafeZone, AutoRocketMode = false, false
 local AntiAFK, ESPEnabled, Fullbright, NoFog, InfiniteJump, FlyUtility = false, false, false, false, false, false
+local AutoCarSpawn, AutoCarSky = false, false
 local ConnSpin, ConnFling, ConnDrag, ConnDance, ConnChaos, ConnConfuse, ConnSafe, ConnRocket = nil, nil, nil, nil, nil, nil, nil, nil
-local ConnAntiAFK, ConnJump, ConnFlyUtility = nil, nil, nil
+local ConnAntiAFK, ConnJump, ConnFlyUtility, ConnAutoCarSpawn, ConnAutoCarSky = nil, nil, nil, nil, nil
 local ESPObjects = {}
 
 local function GetPlayers()
@@ -203,6 +205,94 @@ local function GetPlayers()
         end
     end
     return list
+end
+
+-- =========================================================
+-- ================  AUTO CAR FUNCTIONS  ===================
+-- =========================================================
+
+--// Kumpulkan semua kendaraan di workspace (Model dengan VehicleSeat atau Seat)
+local function GetAllVehicles()
+    local vehicles = {}
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if obj:IsA("Model") then
+            local hasSeat = false
+            for _, child in pairs(obj:GetDescendants()) do
+                if child:IsA("VehicleSeat") or child:IsA("Seat") then
+                    hasSeat = true
+                    break
+                end
+            end
+            if hasSeat then
+                table.insert(vehicles, obj)
+            end
+        end
+    end
+    return vehicles
+end
+
+--// Ambil kendaraan dari manapun, bawa ke spawn (posisi local player)
+local function AutoCarSpawnLoop()
+    local myHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not myHrp then return end
+    local vehicles = GetAllVehicles()
+    for _, veh in pairs(vehicles) do
+        -- Set network owner ke LocalPlayer agar replikasi server
+        for _, part in pairs(veh:GetDescendants()) do
+            if part:IsA("BasePart") then
+                pcall(function() part:SetNetworkOwner(LocalPlayer) end)
+            end
+        end
+        -- Teleport ke sekitar player
+        local root = veh:FindFirstChild("HumanoidRootPart") or veh:FindFirstChildWhichIsA("BasePart")
+        if root then
+            local offset = Vector3.new(math.random(-15,15), 5, math.random(-15,15))
+            root.CFrame = myHrp.CFrame + offset
+            root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+        end
+    end
+end
+
+--// Jatuhkan kendaraan dari langit ke posisi player lain
+local function AutoCarSkyLoop()
+    local players = GetPlayers()
+    if #players == 0 then return end
+    local vehicles = GetAllVehicles()
+    for i, veh in pairs(vehicles) do
+        local target = players[math.random(1, #players)]
+        local targetHrp = target.Character and target.Character:FindFirstChild("HumanoidRootPart")
+        if targetHrp then
+            -- Set network owner ke LocalPlayer
+            for _, part in pairs(veh:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    pcall(function() part:SetNetworkOwner(LocalPlayer) end)
+                end
+            end
+            local root = veh:FindFirstChild("HumanoidRootPart") or veh:FindFirstChildWhichIsA("BasePart")
+            if root then
+                root.CFrame = targetHrp.CFrame + Vector3.new(0, 200, 0)
+                root.AssemblyLinearVelocity = Vector3.new(0, -500, 0) -- jatuh cepat
+            end
+        end
+    end
+end
+
+local function ToggleAutoCarSpawn(state)
+    AutoCarSpawn = state
+    if ConnAutoCarSpawn then ConnAutoCarSpawn:Disconnect() ConnAutoCarSpawn = nil end
+    if not state then return end
+    ConnAutoCarSpawn = RunService.Heartbeat:Connect(function()
+        pcall(AutoCarSpawnLoop)
+    end)
+end
+
+local function ToggleAutoCarSky(state)
+    AutoCarSky = state
+    if ConnAutoCarSky then ConnAutoCarSky:Disconnect() ConnAutoCarSky = nil end
+    if not state then return end
+    ConnAutoCarSky = RunService.Heartbeat:Connect(function()
+        pcall(AutoCarSkyLoop)
+    end)
 end
 
 -- =========================================================
@@ -218,28 +308,23 @@ local function ToggleTrollSpin(state)
         for _, plr in pairs(GetPlayers()) do
             local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
             if hrp then
-                pcall(function() hrp:SetNetworkOwner(nil) end)
+                pcall(function() hrp:SetNetworkOwner(LocalPlayer) end)
                 hrp.CFrame = hrp.CFrame * CFrame.Angles(0, math.rad(45), math.rad(15))
             end
         end
     end)
 end
 
---// FLING (dengan efek animasi nendang server-replicated)
---// Ganti SetNetworkOwner(nil) jadi SetNetworkOwner(LocalPlayer) supaya client kita jadi owner
---// Terus pake BodyVelocity/BodyAngularVelocity, efek visual nendang muncul karena physics
+--// FLING (dengan efek nendang)
 local function FlingPlayer(plr)
     local char = plr.Character
     if not char then return end
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
-    -- Ambil ownership supaya physics kita yang dominan
     pcall(function() hrp:SetNetworkOwner(LocalPlayer) end)
-    -- Body velocity untuk lempar
     local bv = Instance.new("BodyVelocity", hrp)
     bv.Velocity = Vector3.new(math.random(-300,300), 300, math.random(-300,300))
     bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-    -- Body angular untuk puter
     local bav = Instance.new("BodyAngularVelocity", hrp)
     bav.AngularVelocity = Vector3.new(math.random(-50,50), math.random(-50,50), math.random(-50,50))
     bav.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
@@ -261,7 +346,7 @@ local function ToggleTrollFling(state)
     end)
 end
 
---// DRAG (tarik player)
+--// DRAG
 local function DragPlayer(plr)
     local myHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if not myHrp then return end
@@ -341,7 +426,7 @@ local function ToggleTrollConfuse(state)
     end)
 end
 
---// ROCKET PLAYER (kirim ke angkasa server-replicated)
+--// ROCKET PLAYER
 local function RocketPlayer(plr)
     local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
@@ -349,7 +434,7 @@ local function RocketPlayer(plr)
     hrp.AssemblyLinearVelocity = Vector3.new(0, 800, 0)
 end
 
---// SLAP (dorong + animasi tangan)
+--// SLAP
 local function SlapPlayer(plr)
     local myHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if not myHrp then return end
@@ -358,7 +443,6 @@ local function SlapPlayer(plr)
     local dir = (theirHrp.Position - myHrp.Position).Unit
     pcall(function() theirHrp:SetNetworkOwner(LocalPlayer) end)
     theirHrp.AssemblyLinearVelocity = dir * 300 + Vector3.new(0, 150, 0)
-    -- Mainin animasi wave sebagai slap
     local animator = LocalPlayer.Character:FindFirstChild("Humanoid"):FindFirstChildOfClass("Animator")
     if animator then
         local anim = Instance.new("Animation")
@@ -489,16 +573,6 @@ end
 -- ==============  SAFE ZONE SECTION  ======================
 -- =========================================================
 
---// Pahami tiap bencana:
---// Banjir: air naik → perlu naik ke atas
---// Gempa: map goyang → perlu anchor
---// Tsunami: gelombang besar → perlu naik + anti push
---// Meteor: jatuh dari langit → perlu anti damage + dodge
---// Badai: angin kencang → perlu anti push
---// Lava: damage + bakar → perlu heal + hapus fire
---// Erupsi: ledakan + lontaran → perlu heal + anti push
---// Topan: angin kuat → perlu anti push keras
-
 local function ToggleSafeZone(state)
     SafeZone = state
     if ConnSafe then ConnSafe:Disconnect() ConnSafe = nil end
@@ -510,20 +584,14 @@ local function ToggleSafeZone(state)
         local hum = char:FindFirstChildOfClass("Humanoid")
         if not hrp then return end
         
-        -- Anti damage (semua bencana)
         if hum then hum.MaxHealth = 5000 hum.Health = 5000 end
-        
-        -- Anti push (banjir, badai, topan, tsunami, gempa)
         hrp.AssemblyLinearVelocity = Vector3.new(0, hrp.AssemblyLinearVelocity.y, 0)
         hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
         
-        -- Auto TP kalau jatuh ke bawah (banjir / tsunami)
         if hrp.Position.Y < 50 then
             hrp.CFrame = CFrame.new(0, 500, 0)
         end
         
-        -- Auto TP kalau kena bencana (naik terus ke atas)
-        local minSafeY = 100
         local findDisaster = false
         for _, obj in pairs(workspace:GetDescendants()) do
             if obj:IsA("BasePart") then
@@ -541,7 +609,6 @@ local function ToggleSafeZone(state)
             hrp.CFrame = hrp.CFrame + Vector3.new(0, 50, 0)
         end
         
-        -- Hapus fire/smoke (lava, erupsi)
         for _, obj in pairs(char:GetDescendants()) do
             if obj:IsA("Fire") or obj:IsA("Smoke") or obj:IsA("Sparkles") then
                 obj:Destroy()
@@ -632,7 +699,6 @@ end
 -- ================  UTILITY SECTION  ======================
 -- =========================================================
 
---// ANTI AFK
 local function ToggleAntiAFK(state)
     AntiAFK = state
     if ConnAntiAFK then ConnAntiAFK:Disconnect() ConnAntiAFK = nil end
@@ -645,12 +711,10 @@ local function ToggleAntiAFK(state)
     end)
 end
 
---// AUTO REJOIN
 local function AutoRejoin()
     TeleportService:Teleport(game.PlaceId, LocalPlayer)
 end
 
---// SERVER HOP
 local function ServerHop()
     local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
     local ok, result = pcall(function() return game:HttpGet(url) end)
@@ -667,14 +731,12 @@ local function ServerHop()
     end
 end
 
---// COPY JOB ID
 local function CopyJobID()
     if setclipboard then
         setclipboard(game.JobId)
     end
 end
 
---// ESP
 local function ToggleESP(state)
     ESPEnabled = state
     for _, obj in pairs(ESPObjects) do
@@ -708,7 +770,6 @@ local function ToggleESP(state)
     Players.PlayerAdded:Connect(function(plr) if ESPEnabled then CreateESP(plr) end end)
 end
 
---// FULLBRIGHT
 local function ToggleFullbright(state)
     Fullbright = state
     if state then
@@ -722,7 +783,6 @@ local function ToggleFullbright(state)
     end
 end
 
---// NO FOG
 local function ToggleNoFog(state)
     NoFog = state
     if state then
@@ -734,7 +794,6 @@ local function ToggleNoFog(state)
     end
 end
 
---// INFINITE JUMP
 local function ToggleInfiniteJump(state)
     InfiniteJump = state
     if ConnJump then ConnJump:Disconnect() ConnJump = nil end
@@ -748,7 +807,6 @@ local function ToggleInfiniteJump(state)
     end)
 end
 
---// WALKSPEED
 local function SetWalkSpeed(speed)
     local char = LocalPlayer.Character
     if char then
@@ -757,7 +815,6 @@ local function SetWalkSpeed(speed)
     end
 end
 
---// FLY UTILITY
 local function ToggleUtilityFly(state)
     FlyUtility = state
     if ConnFlyUtility then ConnFlyUtility:Disconnect() ConnFlyUtility = nil end
@@ -844,6 +901,10 @@ local function ShowTab(tab)
         p.MouseButton1Click:Connect(StripToolsAll)
         local q = MakeButton("EXPLODE ALL", 18)
         q.MouseButton1Click:Connect(ExplodeAll)
+        local ac1 = MakeButton("AUTO CAR SPAWN : OFF", 19)
+        ac1.MouseButton1Click:Connect(function() ToggleAutoCarSpawn(not AutoCarSpawn) ac1.Text = "AUTO CAR SPAWN : " .. (AutoCarSpawn and "ON" or "OFF") end)
+        local ac2 = MakeButton("AUTO CAR SKY DROP : OFF", 20)
+        ac2.MouseButton1Click:Connect(function() ToggleAutoCarSky(not AutoCarSky) ac2.Text = "AUTO CAR SKY DROP : " .. (AutoCarSky and "ON" or "OFF") end)
 
     elseif tab == "SAFE" then
         local a = MakeButton("AUTO SAFE ZONE : OFF", 1)
