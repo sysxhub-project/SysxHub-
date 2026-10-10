@@ -1,288 +1,229 @@
 -- ============================================
--- [SYSX] UNIVERSAL ALL MAP SCRIPT v6
--- Logo S = Open/Close Menu
--- GodMode | Fly | Bomb Server | Fling Touch | Lag Orb Killer
--- Big Body Spider | Get Sword
--- Semua TOGGLE, diri sendiri AMAN
+-- [SYSX] UNIVERSAL ALL MAP SCRIPT v8
+-- Logo S | GodMode | Fly | Bomb Server | Fling Spin
+-- Lag Orb | Big Body | Sword | Kick All Player
 -- ============================================
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local LocalPlayer = Players.LocalPlayer
-local Mouse = LocalPlayer:GetMouse()
+local UIS = game:GetService("UserInputService")
+local LP = Players.LocalPlayer
 
-local State = {
-    Fly = false,
-    BigBody = false,
-    FlingTouch = false,
-    LagServer = false,
-    Sword = false,
-    GodMode = false,
+local S = {
+    Fly=false, BigBody=false, FlingSpin=false,
+    LagOrb=false, Sword=false, GodMode=false, KickAll=false
 }
 
-local FlySpeed = 120
-local FlyConn, FlyBodyVel, FlyBodyGyro
-local FlingTouchConn, LagConn, SpiderConn, SwordConn, GodConn
-local CurrentSword
-local LagObjects = {}
+local FlyConn, FlyBV, FlyBG
+local FlingConn, LagConn, SpiderConn, SwordConn, GodConn, KickConn
+local CurSword, LagOrbs = {}
 
-local function isMe(p) return p == LocalPlayer end
-local function isOtherAlive(p)
-    if isMe(p) then return false end
-    if not p.Character then return false end
-    local hum = p.Character:FindFirstChildOfClass("Humanoid")
-    return hum and hum.Health > 0
+local function isMe(p) return p == LP end
+local function alive(p)
+    if isMe(p) or not p.Character then return false end
+    local h = p.Character:FindFirstChildOfClass("Humanoid")
+    return h and h.Health > 0
 end
 
 -- ===== GUI =====
-local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
-ScreenGui.Name = "S_Logo_Menu"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.IgnoreGuiInset = true
+local sg = Instance.new("ScreenGui", game.CoreGui)
+sg.Name = "SYSX_Menu"
+sg.ResetOnSpawn = false
+sg.IgnoreGuiInset = true
 
-local ToggleBtn = Instance.new("TextButton", ScreenGui)
-ToggleBtn.Size = UDim2.new(0, 60, 0, 60)
-ToggleBtn.Position = UDim2.new(0, 20, 0, 20)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-ToggleBtn.Text = "S"
-ToggleBtn.TextColor3 = Color3.fromRGB(0, 255, 180)
-ToggleBtn.TextScaled = true
-ToggleBtn.Font = Enum.Font.GothamBlack
-ToggleBtn.BorderSizePixel = 0
-ToggleBtn.Active = true
-ToggleBtn.Draggable = true
-Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(1, 0)
-local stroke = Instance.new("UIStroke", ToggleBtn)
-stroke.Color = Color3.fromRGB(0, 255, 180)
-stroke.Thickness = 3
+local toggle = Instance.new("TextButton", sg)
+toggle.Size = UDim2.new(0,60,0,60)
+toggle.Position = UDim2.new(0,20,0,20)
+toggle.BackgroundColor3 = Color3.fromRGB(20,20,20)
+toggle.Text = "S"
+toggle.TextColor3 = Color3.fromRGB(0,255,180)
+toggle.TextScaled = true
+toggle.Font = Enum.Font.GothamBlack
+toggle.BorderSizePixel = 0
+toggle.Draggable = true
+toggle.Active = true
+Instance.new("UICorner", toggle).CornerRadius = UDim.new(1,0)
+local st = Instance.new("UIStroke", toggle)
+st.Color = Color3.fromRGB(0,255,180); st.Thickness = 3
 
-local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size = UDim2.new(0, 260, 0, 440)
-MainFrame.Position = UDim2.new(0.5, -130, 0.5, -220)
-MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-MainFrame.BorderSizePixel = 0
-MainFrame.Active = true
-MainFrame.Draggable = true
-MainFrame.Visible = false
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
-local stroke2 = Instance.new("UIStroke", MainFrame)
-stroke2.Color = Color3.fromRGB(0, 255, 180)
-stroke2.Thickness = 2
+local frame = Instance.new("Frame", sg)
+frame.Size = UDim2.new(0,260,0,480)
+frame.Position = UDim2.new(0.5,-130,0.5,-240)
+frame.BackgroundColor3 = Color3.fromRGB(15,15,15)
+frame.BorderSizePixel = 0
+frame.Visible = false
+frame.Active = true
+frame.Draggable = true
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0,12)
+local st2 = Instance.new("UIStroke", frame)
+st2.Color = Color3.fromRGB(0,255,180); st2.Thickness = 2
 
-local Title = Instance.new("TextLabel", MainFrame)
-Title.Size = UDim2.new(1, 0, 0, 40)
-Title.BackgroundTransparency = 1
-Title.Text = "[SYSX] ALL MAP v6"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextScaled = true
-Title.Font = Enum.Font.GothamBold
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1,0,0,40)
+title.BackgroundTransparency = 1
+title.Text = "[SYSX] v8"
+title.TextColor3 = Color3.new(1,1,1)
+title.TextScaled = true
+title.Font = Enum.Font.GothamBold
 
-local function makeButton(name, yPos, callback)
-    local btn = Instance.new("TextButton", MainFrame)
-    btn.Size = UDim2.new(0.9, 0, 0, 40)
-    btn.Position = UDim2.new(0.05, 0, 0, yPos)
-    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    btn.Text = name .. " [OFF]"
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.TextScaled = true
-    btn.Font = Enum.Font.Gotham
-    btn.BorderSizePixel = 0
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
-    local s = Instance.new("UIStroke", btn)
-    s.Color = Color3.fromRGB(0, 255, 180)
-    s.Thickness = 1
-    btn.MouseButton1Click:Connect(function() callback(btn) end)
-    return btn
+local function btn(name, y, cb)
+    local b = Instance.new("TextButton", frame)
+    b.Size = UDim2.new(0.9,0,0,40)
+    b.Position = UDim2.new(0.05,0,0,y)
+    b.BackgroundColor3 = Color3.fromRGB(30,30,30)
+    b.Text = name.." [OFF]"
+    b.TextColor3 = Color3.new(1,1,1)
+    b.TextScaled = true
+    b.Font = Enum.Font.Gotham
+    b.BorderSizePixel = 0
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0,8)
+    local s2 = Instance.new("UIStroke", b)
+    s2.Color = Color3.fromRGB(0,255,180); s2.Thickness = 1
+    b.MouseButton1Click:Connect(function() cb(b) end)
+    return b
 end
 
-ToggleBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = not MainFrame.Visible
+toggle.MouseButton1Click:Connect(function()
+    frame.Visible = not frame.Visible
 end)
 
 -- ===== GODMODE =====
-local function startGodMode()
+local function godOn()
     if GodConn then GodConn:Disconnect() end
     GodConn = RunService.Heartbeat:Connect(function()
-        if not State.GodMode then return end
-        local char = LocalPlayer.Character
-        if not char then return end
-        local hum = char:FindFirstChildOfClass("Humanoid")
-        if hum then
-            hum.MaxHealth = math.huge
-            hum.Health = math.huge
-            hum.BreakJointsOnDeath = false
+        if not S.GodMode then return end
+        local c = LP.Character
+        if not c then return end
+        local h = c:FindFirstChildOfClass("Humanoid")
+        if h then
+            h.MaxHealth = math.huge
+            h.Health = math.huge
+            h.BreakJointsOnDeath = false
         end
-        if not char:FindFirstChildOfClass("ForceField") then
-            local ff = Instance.new("ForceField")
-            ff.Visible = false
-            ff.Parent = char
+        if not c:FindFirstChildOfClass("ForceField") then
+            local ff = Instance.new("ForceField"); ff.Visible=false; ff.Parent=c
         end
     end)
 end
 
-local function stopGodMode()
+local function godOff()
     if GodConn then GodConn:Disconnect() GodConn = nil end
-    local char = LocalPlayer.Character
-    if char then
-        local hum = char:FindFirstChildOfClass("Humanoid")
-        if hum then
-            hum.MaxHealth = 100
-            hum.Health = 100
-            hum.BreakJointsOnDeath = true
-        end
-        local ff = char:FindFirstChildOfClass("ForceField")
+    local c = LP.Character
+    if c then
+        local h = c:FindFirstChildOfClass("Humanoid")
+        if h then h.MaxHealth=100; h.Health=100; h.BreakJointsOnDeath=true end
+        local ff = c:FindFirstChildOfClass("ForceField")
         if ff then ff:Destroy() end
     end
 end
 
 -- ===== FLY =====
-local function startFly()
-    local char = LocalPlayer.Character
-    if not char then return end
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    if not hrp or not hum then return end
+local function flyOn()
+    local c = LP.Character
+    if not c then return end
+    local r = c:FindFirstChild("HumanoidRootPart")
+    local h = c:FindFirstChildOfClass("Humanoid")
+    if not r or not h then return end
 
-    if FlyBodyVel and FlyBodyVel.Parent then FlyBodyVel:Destroy() end
-    if FlyBodyGyro and FlyBodyGyro.Parent then FlyBodyGyro:Destroy() end
+    if FlyBV and FlyBV.Parent then FlyBV:Destroy() end
+    if FlyBG and FlyBG.Parent then FlyBG:Destroy() end
 
-    hum.PlatformStand = true
-    hum:ChangeState(Enum.HumanoidStateType.Physics)
+    h.PlatformStand = true
+    h:ChangeState(Enum.HumanoidStateType.Physics)
 
-    FlyBodyVel = Instance.new("BodyVelocity")
-    FlyBodyVel.Name = "SYSX_FlyVel"
-    FlyBodyVel.MaxForce = Vector3.new(1e5, 1e5, 1e5)
-    FlyBodyVel.Velocity = Vector3.zero
-    FlyBodyVel.P = 1250
-    FlyBodyVel.Parent = hrp
+    FlyBV = Instance.new("BodyVelocity", r)
+    FlyBV.MaxForce = Vector3.new(1e5,1e5,1e5)
+    FlyBV.Velocity = Vector3.zero
+    FlyBV.P = 1250
 
-    FlyBodyGyro = Instance.new("BodyGyro")
-    FlyBodyGyro.Name = "SYSX_FlyGyro"
-    FlyBodyGyro.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
-    FlyBodyGyro.P = 1e4
-    FlyBodyGyro.D = 100
-    FlyBodyGyro.CFrame = hrp.CFrame
-    FlyBodyGyro.Parent = hrp
+    FlyBG = Instance.new("BodyGyro", r)
+    FlyBG.MaxTorque = Vector3.new(1e5,1e5,1e5)
+    FlyBG.P = 1e4; FlyBG.D = 100
+    FlyBG.CFrame = r.CFrame
 
     if FlyConn then FlyConn:Disconnect() end
     FlyConn = RunService.RenderStepped:Connect(function()
-        if not State.Fly then return end
-        local c = LocalPlayer.Character
-        if not c then return end
-        local r = c:FindFirstChild("HumanoidRootPart")
-        if not r then return end
-        if not FlyBodyVel or not FlyBodyVel.Parent then return end
-        if not FlyBodyGyro or not FlyBodyGyro.Parent then return end
-
+        if not S.Fly then return end
+        local c2 = LP.Character
+        if not c2 or not FlyBV or not FlyBV.Parent then return end
         local cam = workspace.CurrentCamera
-        local dir = Vector3.zero
-        if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir = dir + cam.CFrame.LookVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir = dir - cam.CFrame.LookVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir = dir - cam.CFrame.RightVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir = dir + cam.CFrame.RightVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then dir = dir + Vector3.new(0,1,0) end
-        if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) or UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then dir = dir - Vector3.new(0,1,0) end
-        if hum.MoveDirection.Magnitude > 0 then dir = dir + hum.MoveDirection end
-
-        if dir.Magnitude > 0 then
-            FlyBodyVel.Velocity = dir.Unit * FlySpeed
-        else
-            FlyBodyVel.Velocity = Vector3.zero
-        end
-        FlyBodyGyro.CFrame = cam.CFrame
+        local d = Vector3.zero
+        if UIS:IsKeyDown(Enum.KeyCode.W) then d = d + cam.CFrame.LookVector end
+        if UIS:IsKeyDown(Enum.KeyCode.S) then d = d - cam.CFrame.LookVector end
+        if UIS:IsKeyDown(Enum.KeyCode.A) then d = d - cam.CFrame.RightVector end
+        if UIS:IsKeyDown(Enum.KeyCode.D) then d = d + cam.CFrame.RightVector end
+        if UIS:IsKeyDown(Enum.KeyCode.Space) then d = d + Vector3.new(0,1,0) end
+        if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then d = d - Vector3.new(0,1,0) end
+        if h.MoveDirection.Magnitude > 0 then d = d + h.MoveDirection end
+        FlyBV.Velocity = d.Magnitude > 0 and d.Unit * 120 or Vector3.zero
+        FlyBG.CFrame = cam.CFrame
     end)
 end
 
-local function stopFly()
+local function flyOff()
     if FlyConn then FlyConn:Disconnect() FlyConn = nil end
-    if FlyBodyVel and FlyBodyVel.Parent then FlyBodyVel:Destroy() end
-    if FlyBodyGyro and FlyBodyGyro.Parent then FlyBodyGyro:Destroy() end
-    FlyBodyVel = nil
-    FlyBodyGyro = nil
-    local char = LocalPlayer.Character
-    if char then
-        local hum = char:FindFirstChildOfClass("Humanoid")
-        if hum then hum.PlatformStand = false end
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            hrp.AssemblyLinearVelocity = Vector3.zero
-            hrp.RotVelocity = Vector3.zero
-        end
+    if FlyBV and FlyBV.Parent then FlyBV:Destroy() end
+    if FlyBG and FlyBG.Parent then FlyBG:Destroy() end
+    FlyBV, FlyBG = nil, nil
+    local c = LP.Character
+    if c then
+        local h = c:FindFirstChildOfClass("Humanoid")
+        if h then h.PlatformStand = false end
+        local r = c:FindFirstChild("HumanoidRootPart")
+        if r then r.AssemblyLinearVelocity = Vector3.zero; r.RotVelocity = Vector3.zero end
     end
 end
 
 -- ===== BOMB SERVER =====
 local function bombServer()
     for _, p in ipairs(Players:GetPlayers()) do
-        if isOtherAlive(p) then
-            local hum = p.Character:FindFirstChildOfClass("Humanoid")
-            local hrp = p.Character:FindFirstChild("HumanoidRootPart")
-            if hum then
-                hum.BreakJointsOnDeath = true
-                hum.Health = 0
-                pcall(function() hum:ChangeState(Enum.HumanoidStateType.Dead) end)
+        if alive(p) then
+            local h = p.Character:FindFirstChildOfClass("Humanoid")
+            local r = p.Character:FindFirstChild("HumanoidRootPart")
+            if h then
+                h.BreakJointsOnDeath = true
+                h.Health = 0
+                pcall(function() h:ChangeState(Enum.HumanoidStateType.Dead) end)
             end
-            if hrp then
-                hrp.AssemblyLinearVelocity = Vector3.new(
-                    math.random(-3000, 3000),
-                    math.random(2000, 5000),
-                    math.random(-3000, 3000)
-                )
-                hrp.RotVelocity = Vector3.new(
-                    math.random(-500, 500),
-                    math.random(-500, 500),
-                    math.random(-500, 500)
-                )
+            if r then
+                r.AssemblyLinearVelocity = Vector3.new(
+                    math.random(-3000,3000), math.random(2000,5000), math.random(-3000,3000))
             end
             pcall(function() p.Character:BreakJoints() end)
         end
     end
 end
 
--- ===== FLING TOUCH =====
-local function startFlingTouch()
-    if FlingTouchConn then FlingTouchConn:Disconnect() end
-    FlingTouchConn = RunService.Heartbeat:Connect(function()
-        if not State.FlingTouch then return end
-        local myChar = LocalPlayer.Character
-        if not myChar then return end
-        local myHrp = myChar:FindFirstChild("HumanoidRootPart")
-        if not myHrp then return end
+-- ===== FLING SPIN =====
+local function flingOn()
+    if FlingConn then FlingConn:Disconnect() end
+    FlingConn = RunService.Heartbeat:Connect(function()
+        if not S.FlingSpin then return end
+        local c = LP.Character
+        if not c then return end
+        local r = c:FindFirstChild("HumanoidRootPart")
+        if not r then return end
 
-        myHrp.AssemblyLinearVelocity = Vector3.new(myHrp.AssemblyLinearVelocity.X, 0, myHrp.AssemblyLinearVelocity.Z)
-        myHrp.RotVelocity = Vector3.zero
+        r.AssemblyAngularVelocity = Vector3.new(0, 9999, 0)
+        r.CustomPhysicalProperties = PhysicalProperties.new(0.01, 0, 0)
 
         for _, p in ipairs(Players:GetPlayers()) do
-            if isOtherAlive(p) then
-                local hum = p.Character:FindFirstChildOfClass("Humanoid")
-                local hrp = p.Character:FindFirstChild("HumanoidRootPart")
-                if hrp and hum then
-                    local dist = (hrp.Position - myHrp.Position).Magnitude
-                    if dist < 30 then
-                        local dir = (hrp.Position - myHrp.Position)
-                        if dir.Magnitude < 1 then
-                            dir = Vector3.new(math.random(-1,1), 0.5, math.random(-1,1))
-                        end
+            if alive(p) then
+                local h = p.Character:FindFirstChildOfClass("Humanoid")
+                local hr = p.Character:FindFirstChild("HumanoidRootPart")
+                if h and hr then
+                    local dist = (hr.Position - r.Position).Magnitude
+                    if dist < 25 then
+                        local dir = (hr.Position - r.Position)
+                        if dir.Magnitude < 1 then dir = Vector3.new(1,1,1) end
                         dir = dir.Unit
-
-                        hrp.AssemblyLinearVelocity = dir * 20000 + Vector3.new(0, 8000, 0)
-                        hrp.AssemblyAngularVelocity = Vector3.new(
-                            math.random(-999, 999),
-                            math.random(-999, 999),
-                            math.random(-999, 999)
-                        )
-                        hum:TakeDamage(math.random(50, 99))
-
+                        hr.AssemblyLinearVelocity = dir * 15000 + Vector3.new(0, 5000, 0)
+                        hr.AssemblyAngularVelocity = Vector3.new(999,999,999)
+                        h:TakeDamage(math.random(30,70))
                         task.spawn(function()
-                            for i = 1, 20 do
-                                if hrp and hrp.Parent then
-                                    hrp.AssemblyLinearVelocity = dir * 20000 + Vector3.new(0, 8000, 0)
-                                    hrp.AssemblyAngularVelocity = Vector3.new(
-                                        math.random(-999, 999),
-                                        math.random(-999, 999),
-                                        math.random(-999, 999)
-                                    )
+                            for i = 1, 15 do
+                                if hr and hr.Parent then
+                                    hr.AssemblyLinearVelocity = dir * 15000 + Vector3.new(0,5000,0)
                                 end
                                 task.wait(0.05)
                             end
@@ -294,49 +235,47 @@ local function startFlingTouch()
     end)
 end
 
-local function stopFlingTouch()
-    if FlingTouchConn then FlingTouchConn:Disconnect() FlingTouchConn = nil end
+local function flingOff()
+    if FlingConn then FlingConn:Disconnect() FlingConn = nil end
+    local c = LP.Character
+    if c then
+        local r = c:FindFirstChild("HumanoidRootPart")
+        if r then r.AssemblyAngularVelocity = Vector3.zero; r.CustomPhysicalProperties = nil end
+    end
 end
 
--- ===== LAG SERVER (ORB KILLER) =====
-local function startLagServer()
+-- ===== LAG ORB =====
+local function lagOn()
     if LagConn then LagConn:Disconnect() end
     LagConn = RunService.Heartbeat:Connect(function()
-        if not State.LagServer then return end
-        local mapCenter = Vector3.new(0, 50, 0)
-
-        for i = 1, 8 do
+        if not S.LagOrb then return end
+        for i = 1, 5 do
             local orb = Instance.new("Part")
-            orb.Name = "SYSX_LagOrb"
             orb.Shape = Enum.PartType.Ball
-            orb.Size = Vector3.new(60, 60, 60)
+            orb.Size = Vector3.new(70,70,70)
             orb.Material = Enum.Material.Neon
-            orb.Color = Color3.fromRGB(255, 0, 255)
+            orb.Color = Color3.fromRGB(255,0,255)
             orb.Anchored = true
             orb.CanCollide = true
-            orb.Position = mapCenter
+            orb.CFrame = CFrame.new(0, 50, 0)
             orb.Parent = workspace
-            table.insert(LagObjects, orb)
-            game:GetService("Debris"):AddItem(orb, 15)
+            table.insert(LagOrbs, orb)
+            game:GetService("Debris"):AddItem(orb, 12)
 
             task.spawn(function()
-                local angle = math.random() * math.pi * 2
-                local radius = 150 + i * 40
-                for _ = 1, 100 do
-                    if not orb.Parent or not State.LagServer then break end
-                    angle = angle + 0.15
-                    orb.CFrame = CFrame.new(
-                        mapCenter.X + math.cos(angle) * radius,
-                        mapCenter.Y + math.sin(angle * 3) * 40,
-                        mapCenter.Z + math.sin(angle) * radius
-                    )
+                local ang = math.random() * math.pi * 2
+                local rad = 150 + i * 40
+                for _ = 1, 120 do
+                    if not orb.Parent or not S.LagOrb then break end
+                    ang = ang + 0.15
+                    orb.CFrame = CFrame.new(math.cos(ang)*rad, 50 + math.sin(ang*3)*40, math.sin(ang)*rad)
                     for _, p in ipairs(Players:GetPlayers()) do
-                        if isOtherAlive(p) then
-                            local hum = p.Character:FindFirstChildOfClass("Humanoid")
-                            local hrp = p.Character:FindFirstChild("HumanoidRootPart")
-                            if hrp and hum and (hrp.Position - orb.Position).Magnitude < 55 then
-                                hum.Health = 0
-                                pcall(function() hum:ChangeState(Enum.HumanoidStateType.Dead) end)
+                        if alive(p) then
+                            local h = p.Character:FindFirstChildOfClass("Humanoid")
+                            local hr = p.Character:FindFirstChild("HumanoidRootPart")
+                            if h and hr and (hr.Position - orb.Position).Magnitude < 55 then
+                                h.Health = 0
+                                pcall(function() h:ChangeState(Enum.HumanoidStateType.Dead) end)
                                 pcall(function() p.Character:BreakJoints() end)
                             end
                         end
@@ -345,103 +284,57 @@ local function startLagServer()
                 end
             end)
         end
-
-        for _, p in ipairs(Players:GetPlayers()) do
-            if isOtherAlive(p) then
-                local hrp = p.Character:FindFirstChild("HumanoidRootPart")
-                local hum = p.Character:FindFirstChildOfClass("Humanoid")
-                if hrp then
-                    hrp.CFrame = CFrame.new(
-                        math.random(-1000, 1000),
-                        math.random(50, 500),
-                        math.random(-1000, 1000)
-                    )
-                    pcall(function() hrp:SetNetworkOwner(nil) end)
-                end
-                if hum then
-                    for i = 1, 8 do
-                        local attach = Instance.new("Attachment")
-                        attach.Parent = hum.RootPart or hrp
-                        game:GetService("Debris"):AddItem(attach, 1)
-                    end
-                    pcall(function()
-                        hum:ChangeState(Enum.HumanoidStateType.Physics)
-                        hum:ChangeState(Enum.HumanoidStateType.Running)
-                        hum:ChangeState(Enum.HumanoidStateType.Freefall)
-                    end)
-                end
-            end
-        end
     end)
 end
 
-local function stopLagServer()
+local function lagOff()
     if LagConn then LagConn:Disconnect() LagConn = nil end
-    for _, obj in ipairs(LagObjects) do
-        if obj and obj.Parent then obj:Destroy() end
-    end
-    LagObjects = {}
-    for _, p in ipairs(Players:GetPlayers()) do
-        if not isMe(p) and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-            pcall(function() p.Character.HumanoidRootPart:SetNetworkOwner(p) end)
-        end
-    end
+    for _, o in ipairs(LagOrbs) do if o and o.Parent then o:Destroy() end end
+    LagOrbs = {}
 end
 
 -- ===== BIG BODY SPIDER =====
-local function saveOriginal(char)
-    for _, part in ipairs(char:GetDescendants()) do
-        if part:IsA("BasePart") then
-            if not part:GetAttribute("SYSX_OrigSize") then
-                part:SetAttribute("SYSX_OrigSize", part.Size)
-                part:SetAttribute("SYSX_OrigShape", part.Shape.Value)
-                part:SetAttribute("SYSX_OrigCollide", part.CanCollide)
-            end
+local function saveOrig(ch)
+    for _, p in ipairs(ch:GetDescendants()) do
+        if p:IsA("BasePart") and not p:GetAttribute("SYSX_OS") then
+            p:SetAttribute("SYSX_OS", p.Size)
+            p:SetAttribute("SYSX_OSH", p.Shape.Value)
+            p:SetAttribute("SYSX_OC", p.CanCollide)
         end
     end
 end
 
-local function bigBodyON()
+local function bigOn()
     for _, p in ipairs(Players:GetPlayers()) do
-        if isOtherAlive(p) then
-            saveOriginal(p.Character)
-            for _, part in ipairs(p.Character:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.Massless = true
-                    part.CanCollide = false
-                    part.Shape = Enum.PartType.Ball
+        if alive(p) then
+            saveOrig(p.Character)
+            for _, pt in ipairs(p.Character:GetDescendants()) do
+                if pt:IsA("BasePart") then
+                    pt.Massless = true; pt.CanCollide = false
+                    pt.Shape = Enum.PartType.Ball
                 end
             end
         end
     end
-
     if SpiderConn then SpiderConn:Disconnect() end
     SpiderConn = RunService.Heartbeat:Connect(function()
-        if not State.BigBody then return end
+        if not S.BigBody then return end
         for _, p in ipairs(Players:GetPlayers()) do
-            if isOtherAlive(p) then
-                local hum = p.Character:FindFirstChildOfClass("Humanoid")
-                local hrp = p.Character:FindFirstChild("HumanoidRootPart")
-                if hum and hrp then
-                    for _, part in ipairs(p.Character:GetDescendants()) do
-                        if part:IsA("BasePart") then
-                            local newSize = math.min(part.Size.X + 3, 3000)
-                            part.Size = Vector3.new(newSize, newSize, newSize)
+            if alive(p) then
+                local h = p.Character:FindFirstChildOfClass("Humanoid")
+                local r = p.Character:FindFirstChild("HumanoidRootPart")
+                if h and r then
+                    for _, pt in ipairs(p.Character:GetDescendants()) do
+                        if pt:IsA("BasePart") then
+                            local ns = math.min(pt.Size.X + 3, 3000)
+                            pt.Size = Vector3.new(ns, ns, ns)
                         end
                     end
-                    hrp.RotVelocity = Vector3.new(
-                        math.random(-60, 60),
-                        math.random(-60, 60),
-                        math.random(-60, 60)
-                    )
-                    local anims = hum:GetPlayingAnimationTracks()
-                    if #anims == 0 then
-                        local anim = Instance.new("Animation")
-                        anim.AnimationId = "rbxassetid://" .. tostring(math.random(1e9, 9999999999))
-                        pcall(function()
-                            local t = hum:LoadAnimation(anim)
-                            t:Play()
-                        end)
+                    r.RotVelocity = Vector3.new(math.random(-60,60), math.random(-60,60), math.random(-60,60))
+                    if #h:GetPlayingAnimationTracks() == 0 then
+                        local a = Instance.new("Animation")
+                        a.AnimationId = "rbxassetid://"..tostring(math.random(1e9,9999999999))
+                        pcall(function() local t = h:LoadAnimation(a); t:Play() end)
                     end
                 end
             end
@@ -449,106 +342,77 @@ local function bigBodyON()
     end)
 end
 
-local function bigBodyOFF()
+local function bigOff()
     if SpiderConn then SpiderConn:Disconnect() SpiderConn = nil end
     for _, p in ipairs(Players:GetPlayers()) do
         if not isMe(p) and p.Character then
-            for _, part in ipairs(p.Character:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    local origSize = part:GetAttribute("SYSX_OrigSize")
-                    local origShape = part:GetAttribute("SYSX_OrigShape")
-                    local origCollide = part:GetAttribute("SYSX_OrigCollide")
-                    if origSize then part.Size = origSize end
-                    if origShape then part.Shape = Enum.PartType:FromValue(origShape) end
-                    if origCollide ~= nil then part.CanCollide = origCollide end
-                    part.Massless = false
+            for _, pt in ipairs(p.Character:GetDescendants()) do
+                if pt:IsA("BasePart") then
+                    local os = pt:GetAttribute("SYSX_OS")
+                    local osh = pt:GetAttribute("SYSX_OSH")
+                    local oc = pt:GetAttribute("SYSX_OC")
+                    if os then pt.Size = os end
+                    if osh then pt.Shape = Enum.PartType:FromValue(osh) end
+                    if oc ~= nil then pt.CanCollide = oc end
+                    pt.Massless = false
                 end
             end
-            local hum = p.Character:FindFirstChildOfClass("Humanoid")
-            if hum then
-                for _, t in ipairs(hum:GetPlayingAnimationTracks()) do
-                    t:Stop()
-                end
-            end
-            local hrp = p.Character:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                hrp.AssemblyLinearVelocity = Vector3.zero
-                hrp.RotVelocity = Vector3.zero
-            end
+            local h = p.Character:FindFirstChildOfClass("Humanoid")
+            if h then for _, t in ipairs(h:GetPlayingAnimationTracks()) do t:Stop() end end
         end
     end
 end
 
--- ===== GET SWORD =====
-local function createSword()
-    local char = LocalPlayer.Character
-    if not char then return end
-    if CurrentSword and CurrentSword.Parent then CurrentSword:Destroy() end
+-- ===== SWORD =====
+local function swordOn()
+    local c = LP.Character
+    if not c then return end
+    if CurSword and CurSword.Parent then CurSword:Destroy() end
 
     local tool = Instance.new("Tool")
     tool.Name = "SYSX_Sword"
     tool.RequiresHandle = true
     tool.CanBeDropped = false
 
-    local handle = Instance.new("Part")
-    handle.Name = "Handle"
-    handle.Size = Vector3.new(0.4, 1.2, 0.4)
-    handle.Material = Enum.Material.Metal
-    handle.Color = Color3.fromRGB(60, 30, 10)
-    handle.Parent = tool
+    local h = Instance.new("Part", tool)
+    h.Name = "Handle"; h.Size = Vector3.new(0.4,1.2,0.4)
+    h.Material = Enum.Material.Metal; h.Color = Color3.fromRGB(60,30,10)
 
-    local guard = Instance.new("Part")
-    guard.Name = "Guard"
-    guard.Size = Vector3.new(2, 0.3, 0.4)
-    guard.Material = Enum.Material.Metal
-    guard.Color = Color3.fromRGB(200, 180, 50)
-    guard.CanCollide = false
-    guard.Parent = tool
-    local wg = Instance.new("Weld", handle) wg.Part0 = handle wg.Part1 = guard wg.C0 = CFrame.new(0, 0.6, 0)
+    local g = Instance.new("Part", tool)
+    g.Name = "Guard"; g.Size = Vector3.new(2,0.3,0.4)
+    g.Material = Enum.Material.Metal; g.Color = Color3.fromRGB(200,180,50); g.CanCollide = false
+    local wg = Instance.new("Weld", h); wg.Part0=h; wg.Part1=g; wg.C0 = CFrame.new(0,0.6,0)
 
-    local blade = Instance.new("Part")
-    blade.Name = "Blade"
-    blade.Size = Vector3.new(0.15, 5, 1)
-    blade.Material = Enum.Material.Metal
-    blade.Color = Color3.fromRGB(220, 220, 230)
-    blade.CanCollide = false
-    blade.Parent = tool
-    local wb = Instance.new("Weld", handle) wb.Part0 = handle wb.Part1 = blade wb.C0 = CFrame.new(0, 3.1, 0)
+    local b = Instance.new("Part", tool)
+    b.Name = "Blade"; b.Size = Vector3.new(0.15,5,1)
+    b.Material = Enum.Material.Metal; b.Color = Color3.fromRGB(220,220,230); b.CanCollide = false
+    local wb = Instance.new("Weld", h); wb.Part0=h; wb.Part1=b; wb.C0 = CFrame.new(0,3.1,0)
 
-    local tip = Instance.new("WedgePart")
-    tip.Name = "Tip"
-    tip.Size = Vector3.new(0.15, 1, 1)
-    tip.Material = Enum.Material.Metal
-    tip.Color = Color3.fromRGB(230, 230, 240)
-    tip.CanCollide = false
-    tip.Parent = tool
-    local wt = Instance.new("Weld", handle) wt.Part0 = handle wt.Part1 = tip wt.C0 = CFrame.new(0, 5.8, 0) * CFrame.Angles(0,0,math.rad(180))
+    local tp = Instance.new("WedgePart", tool)
+    tp.Name = "Tip"; tp.Size = Vector3.new(0.15,1,1)
+    tp.Material = Enum.Material.Metal; tp.Color = Color3.fromRGB(230,230,240); tp.CanCollide = false
+    local wt = Instance.new("Weld", h); wt.Part0=h; wt.Part1=tp
+    wt.C0 = CFrame.new(0,5.8,0) * CFrame.Angles(0,0,math.rad(180))
 
-    local pommel = Instance.new("Part")
-    pommel.Shape = Enum.PartType.Ball
-    pommel.Size = Vector3.new(0.5, 0.5, 0.5)
-    pommel.Material = Enum.Material.Metal
-    pommel.Color = Color3.fromRGB(200, 180, 50)
-    pommel.CanCollide = false
-    pommel.Parent = tool
-    local wp = Instance.new("Weld", handle) wp.Part0 = handle wp.Part1 = pommel wp.C0 = CFrame.new(0, -0.8, 0)
+    local pm = Instance.new("Part", tool)
+    pm.Shape = Enum.PartType.Ball; pm.Size = Vector3.new(0.5,0.5,0.5)
+    pm.Material = Enum.Material.Metal; pm.Color = Color3.fromRGB(200,180,50); pm.CanCollide = false
+    local wp = Instance.new("Weld", h); wp.Part0=h; wp.Part1=pm; wp.C0 = CFrame.new(0,-0.8,0)
 
-    local light = Instance.new("PointLight", handle)
-    light.Color = Color3.fromRGB(255, 0, 0)
-    light.Range = 8
-    light.Brightness = 2
+    local l = Instance.new("PointLight", h)
+    l.Color = Color3.fromRGB(255,0,0); l.Range = 8; l.Brightness = 2
 
     tool.Activated:Connect(function()
-        if not State.Sword then return end
-        local myHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        if not myHrp then return end
+        if not S.Sword then return end
+        local mr = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+        if not mr then return end
         for _, p in ipairs(Players:GetPlayers()) do
-            if isOtherAlive(p) then
-                local hum = p.Character:FindFirstChildOfClass("Humanoid")
-                local hrp = p.Character:FindFirstChild("HumanoidRootPart")
-                if hrp and hum and (hrp.Position - myHrp.Position).Magnitude < 25 then
-                    hum.Health = 0
-                    pcall(function() hum:ChangeState(Enum.HumanoidStateType.Dead) end)
+            if alive(p) then
+                local hh = p.Character:FindFirstChildOfClass("Humanoid")
+                local hr = p.Character:FindFirstChild("HumanoidRootPart")
+                if hh and hr and (hr.Position - mr.Position).Magnitude < 25 then
+                    hh.Health = 0
+                    pcall(function() hh:ChangeState(Enum.HumanoidStateType.Dead) end)
                     pcall(function() p.Character:BreakJoints() end)
                 end
             end
@@ -557,97 +421,161 @@ local function createSword()
 
     if SwordConn then SwordConn:Disconnect() end
     SwordConn = RunService.Heartbeat:Connect(function()
-        if not State.Sword then return end
-        if not tool.Parent then return end
-        local myHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        if not myHrp then return end
+        if not S.Sword or not tool.Parent then return end
+        local mr = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+        if not mr then return end
         for _, p in ipairs(Players:GetPlayers()) do
-            if isOtherAlive(p) then
-                local hum = p.Character:FindFirstChildOfClass("Humanoid")
-                local hrp = p.Character:FindFirstChild("HumanoidRootPart")
-                if hrp and hum and (hrp.Position - myHrp.Position).Magnitude < 12 then
-                    hum.Health = 0
-                    pcall(function() hum:ChangeState(Enum.HumanoidStateType.Dead) end)
+            if alive(p) then
+                local hh = p.Character:FindFirstChildOfClass("Humanoid")
+                local hr = p.Character:FindFirstChild("HumanoidRootPart")
+                if hh and hr and (hr.Position - mr.Position).Magnitude < 12 then
+                    hh.Health = 0
+                    pcall(function() hh:ChangeState(Enum.HumanoidStateType.Dead) end)
                     pcall(function() p.Character:BreakJoints() end)
                 end
             end
         end
     end)
 
-    tool.Parent = LocalPlayer.Backpack
+    tool.Parent = LP.Backpack
     task.wait(0.1)
-    tool.Parent = LocalPlayer.Character
-    CurrentSword = tool
+    tool.Parent = LP.Character
+    CurSword = tool
 end
 
-local function removeSword()
+local function swordOff()
     if SwordConn then SwordConn:Disconnect() SwordConn = nil end
-    if CurrentSword and CurrentSword.Parent then
-        CurrentSword:Destroy()
-        CurrentSword = nil
-    end
+    if CurSword and CurSword.Parent then CurSword:Destroy() end
+    CurSword = nil
+end
+
+-- ===== KICK ALL PLAYER =====
+local function kickOn()
+    if KickConn then KickConn:Disconnect() end
+    KickConn = RunService.Heartbeat:Connect(function()
+        if not S.KickAll then return end
+        for _, p in ipairs(Players:GetPlayers()) do
+            if isMe(p) then continue end
+            if not p.Character then continue end
+            local hr = p.Character:FindFirstChild("HumanoidRootPart")
+            local h = p.Character:FindFirstChildOfClass("Humanoid")
+            if not hr then continue end
+
+            -- Teleport ke void
+            hr.CFrame = CFrame.new(0, -10000, 0)
+            hr.AssemblyLinearVelocity = Vector3.new(0, -99999, 0)
+
+            -- Spawn part raksasa
+            for i = 1, 30 do
+                local pt = Instance.new("Part")
+                pt.Size = Vector3.new(500, 500, 500)
+                pt.Position = hr.Position + Vector3.new(
+                    math.random(-50, 50),
+                    math.random(-50, 50),
+                    math.random(-50, 50)
+                )
+                pt.Anchored = false
+                pt.CanCollide = true
+                pt.Material = Enum.Material.Neon
+                pt.Color = Color3.fromRGB(math.random(0,255), math.random(0,255), math.random(0,255))
+                pt.Parent = workspace
+                game:GetService("Debris"):AddItem(pt, 3)
+            end
+
+            -- Server own body mereka
+            pcall(function() hr:SetNetworkOwner(nil) end)
+
+            -- Spam remote
+            for _, obj in ipairs(p.Character:GetDescendants()) do
+                if obj:IsA("RemoteEvent") then
+                    pcall(function()
+                        for i = 1, 10 do
+                            obj:FireServer()
+                        end
+                    end)
+                end
+            end
+
+            -- Spam animation
+            if h then
+                for i = 1, 20 do
+                    local a = Instance.new("Animation")
+                    a.AnimationId = "rbxassetid://" .. tostring(math.random(1, 999999999))
+                    pcall(function()
+                        local t = h:LoadAnimation(a)
+                        t:Play()
+                    end)
+                end
+            end
+        end
+    end)
+end
+
+local function kickOff()
+    if KickConn then KickConn:Disconnect() KickConn = nil end
 end
 
 -- ===== BUTTONS =====
-makeButton("GodMode (Anti Mati)", 50, function(btn)
-    State.GodMode = not State.GodMode
-    if State.GodMode then startGodMode() btn.Text = "GodMode [ON]" else stopGodMode() btn.Text = "GodMode [OFF]" end
+btn("GodMode", 50, function(b)
+    S.GodMode = not S.GodMode
+    if S.GodMode then godOn(); b.Text="GodMode [ON]" else godOff(); b.Text="GodMode [OFF]" end
 end)
 
-makeButton("Fly", 100, function(btn)
-    State.Fly = not State.Fly
-    if State.Fly then startFly() btn.Text = "Fly [ON]" else stopFly() btn.Text = "Fly [OFF]" end
+btn("Fly", 100, function(b)
+    S.Fly = not S.Fly
+    if S.Fly then flyOn(); b.Text="Fly [ON]" else flyOff(); b.Text="Fly [OFF]" end
 end)
 
-makeButton("Bomb Server", 150, function(btn)
-    bombServer()
-    btn.Text = "Bomb Server [!!]"
-    task.wait(2)
-    btn.Text = "Bomb Server [OFF]"
+btn("Bomb Server", 150, function(b)
+    bombServer(); b.Text="Bomb [!!]"
+    task.wait(2); b.Text="Bomb Server [OFF]"
 end)
 
-makeButton("Fling Touch", 200, function(btn)
-    State.FlingTouch = not State.FlingTouch
-    if State.FlingTouch then startFlingTouch() btn.Text = "Fling Touch [ON]" else stopFlingTouch() btn.Text = "Fling Touch [OFF]" end
+btn("Fling Spin", 200, function(b)
+    S.FlingSpin = not S.FlingSpin
+    if S.FlingSpin then flingOn(); b.Text="Fling Spin [ON]" else flingOff(); b.Text="Fling Spin [OFF]" end
 end)
 
-makeButton("Lag Server (Orb)", 250, function(btn)
-    State.LagServer = not State.LagServer
-    if State.LagServer then startLagServer() btn.Text = "Lag Server [ON]" else stopLagServer() btn.Text = "Lag Server [OFF]" end
+btn("Lag Orb", 250, function(b)
+    S.LagOrb = not S.LagOrb
+    if S.LagOrb then lagOn(); b.Text="Lag Orb [ON]" else lagOff(); b.Text="Lag Orb [OFF]" end
 end)
 
-makeButton("Big Body Spider", 300, function(btn)
-    State.BigBody = not State.BigBody
-    if State.BigBody then bigBodyON() btn.Text = "Big Body [ON]" else bigBodyOFF() btn.Text = "Big Body [OFF]" end
+btn("Big Body", 300, function(b)
+    S.BigBody = not S.BigBody
+    if S.BigBody then bigOn(); b.Text="Big Body [ON]" else bigOff(); b.Text="Big Body [OFF]" end
 end)
 
-makeButton("Get Sword", 350, function(btn)
-    State.Sword = not State.Sword
-    if State.Sword then createSword() btn.Text = "Sword [ON]" else removeSword() btn.Text = "Sword [OFF]" end
+btn("Sword", 350, function(b)
+    S.Sword = not S.Sword
+    if S.Sword then swordOn(); b.Text="Sword [ON]" else swordOff(); b.Text="Sword [OFF]" end
+end)
+
+btn("Kick All Player", 400, function(b)
+    S.KickAll = not S.KickAll
+    if S.KickAll then kickOn(); b.Text="Kick All [ON]" else kickOff(); b.Text="Kick All [OFF]" end
 end)
 
 -- ===== AUTO RESPAWN =====
-LocalPlayer.CharacterAdded:Connect(function(char)
+LP.CharacterAdded:Connect(function()
     task.wait(1)
-    if State.GodMode then task.wait(0.5) startGodMode() end
-    if State.Fly then task.wait(0.5) startFly() end
-    if State.Sword then task.wait(0.5) createSword() end
+    if S.GodMode then godOn() end
+    if S.Fly then flyOn() end
+    if S.Sword then swordOn() end
 end)
 
 Players.PlayerAdded:Connect(function(p)
-    p.CharacterAdded:Connect(function(char)
+    p.CharacterAdded:Connect(function(ch)
         task.wait(2)
-        if State.BigBody and not isMe(p) then
-            saveOriginal(char)
-            for _, part in ipairs(char:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.Massless = true
-                    part.CanCollide = false
-                    part.Shape = Enum.PartType.Ball
+        if S.BigBody and not isMe(p) then
+            saveOrig(ch)
+            for _, pt in ipairs(ch:GetDescendants()) do
+                if pt:IsA("BasePart") then
+                    pt.Massless=true; pt.CanCollide=false; pt.Shape=Enum.PartType.Ball
                 end
             end
         end
     end)
 end)
 
-print("[SYSX] v6 loaded — Full Fix + Toggle ✅")
+print("[SYSX] v8 — Full Source ✅")
