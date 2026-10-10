@@ -3,15 +3,7 @@
     Developer: OpetxDy
     Fitur Baru: AUTO CAR (SPAWN) & AUTO CAR (SKY DROP)
     Mode: FULL SERVER REPLICATED (bukan visual)
-    
-    Tab TROLL: Spin, Fling, Drag, Dance, Chaos, Confuse, TP Sky, Freeze,
-               Random Size, Invisible, Speed Chaos, Gravity Chaos, Rocket,
-               Slap, Force Sit, Undress, Strip Tools, Explode,
-               Auto Car (Spawn), Auto Car (Sky Drop)
-    Tab SAFE ZONE: Auto Safe Zone (anti semua bencana)
-    Tab ROCKET: Auto Rocket
-    Tab UTILITY: Anti AFK, ESP, Fullbright, No Fog, Infinite Jump, Fly,
-                 Walkspeed, Auto Rejoin, Server Hop, Copy Job ID
+    FIX: Scrolling di tab content
 --]]
 
 local Players = game:GetService("Players")
@@ -160,6 +152,8 @@ Scroll.BorderSizePixel = 0
 Scroll.ScrollBarThickness = 4
 Scroll.ScrollBarImageColor3 = Color3.fromRGB(200, 0, 255)
 Scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+Scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+Scroll.ScrollingEnabled = true
 Scroll.Parent = Content
 
 local UIList = Instance.new("UIListLayout")
@@ -211,7 +205,6 @@ end
 -- ================  AUTO CAR FUNCTIONS  ===================
 -- =========================================================
 
---// Kumpulkan semua kendaraan di workspace (Model dengan VehicleSeat atau Seat)
 local function GetAllVehicles()
     local vehicles = {}
     for _, obj in pairs(workspace:GetDescendants()) do
@@ -231,19 +224,16 @@ local function GetAllVehicles()
     return vehicles
 end
 
---// Ambil kendaraan dari manapun, bawa ke spawn (posisi local player)
 local function AutoCarSpawnLoop()
     local myHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if not myHrp then return end
     local vehicles = GetAllVehicles()
     for _, veh in pairs(vehicles) do
-        -- Set network owner ke LocalPlayer agar replikasi server
         for _, part in pairs(veh:GetDescendants()) do
             if part:IsA("BasePart") then
                 pcall(function() part:SetNetworkOwner(LocalPlayer) end)
             end
         end
-        -- Teleport ke sekitar player
         local root = veh:FindFirstChild("HumanoidRootPart") or veh:FindFirstChildWhichIsA("BasePart")
         if root then
             local offset = Vector3.new(math.random(-15,15), 5, math.random(-15,15))
@@ -253,7 +243,6 @@ local function AutoCarSpawnLoop()
     end
 end
 
---// Jatuhkan kendaraan dari langit ke posisi player lain
 local function AutoCarSkyLoop()
     local players = GetPlayers()
     if #players == 0 then return end
@@ -262,7 +251,6 @@ local function AutoCarSkyLoop()
         local target = players[math.random(1, #players)]
         local targetHrp = target.Character and target.Character:FindFirstChild("HumanoidRootPart")
         if targetHrp then
-            -- Set network owner ke LocalPlayer
             for _, part in pairs(veh:GetDescendants()) do
                 if part:IsA("BasePart") then
                     pcall(function() part:SetNetworkOwner(LocalPlayer) end)
@@ -271,7 +259,7 @@ local function AutoCarSkyLoop()
             local root = veh:FindFirstChild("HumanoidRootPart") or veh:FindFirstChildWhichIsA("BasePart")
             if root then
                 root.CFrame = targetHrp.CFrame + Vector3.new(0, 200, 0)
-                root.AssemblyLinearVelocity = Vector3.new(0, -500, 0) -- jatuh cepat
+                root.AssemblyLinearVelocity = Vector3.new(0, -500, 0)
             end
         end
     end
@@ -299,7 +287,6 @@ end
 -- ================  TROLL SECTION  ========================
 -- =========================================================
 
---// SPIN
 local function ToggleTrollSpin(state)
     TrollSpin = state
     if ConnSpin then ConnSpin:Disconnect() ConnSpin = nil end
@@ -315,7 +302,6 @@ local function ToggleTrollSpin(state)
     end)
 end
 
---// FLING (dengan efek nendang)
 local function FlingPlayer(plr)
     local char = plr.Character
     if not char then return end
@@ -346,7 +332,6 @@ local function ToggleTrollFling(state)
     end)
 end
 
---// DRAG
 local function DragPlayer(plr)
     local myHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if not myHrp then return end
@@ -370,7 +355,6 @@ local function ToggleTrollDrag(state)
     end)
 end
 
---// DANCE
 local function DancePlayer(plr)
     local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
@@ -389,7 +373,6 @@ local function ToggleTrollDance(state)
     end)
 end
 
---// CHAOS
 local function ToggleTrollChaos(state)
     TrollChaos = state
     if ConnChaos then ConnChaos:Disconnect() ConnChaos = nil end
@@ -410,7 +393,6 @@ local function ToggleTrollChaos(state)
     end)
 end
 
---// CONFUSE
 local function ToggleTrollConfuse(state)
     TrollConfuse = state
     if ConnConfuse then ConnConfuse:Disconnect() ConnConfuse = nil end
@@ -426,7 +408,6 @@ local function ToggleTrollConfuse(state)
     end)
 end
 
---// ROCKET PLAYER
 local function RocketPlayer(plr)
     local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
@@ -434,7 +415,6 @@ local function RocketPlayer(plr)
     hrp.AssemblyLinearVelocity = Vector3.new(0, 800, 0)
 end
 
---// SLAP
 local function SlapPlayer(plr)
     local myHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if not myHrp then return end
@@ -452,7 +432,6 @@ local function SlapPlayer(plr)
     end
 end
 
---// FORCE SIT ALL
 local function ForceSitAll()
     for _, plr in pairs(GetPlayers()) do
         local hum = plr.Character and plr.Character:FindFirstChildOfClass("Humanoid")
@@ -460,7 +439,6 @@ local function ForceSitAll()
     end
 end
 
---// UNDRESS
 local function UndressAll()
     for _, plr in pairs(GetPlayers()) do
         for _, obj in pairs(plr.Character:GetDescendants()) do
@@ -471,7 +449,6 @@ local function UndressAll()
     end
 end
 
---// STRIP TOOLS
 local function StripToolsAll()
     for _, plr in pairs(GetPlayers()) do
         local backpack = plr:FindFirstChild("Backpack")
@@ -489,7 +466,6 @@ local function StripToolsAll()
     end
 end
 
---// EXPLODE
 local function ExplodeAll()
     for _, plr in pairs(GetPlayers()) do
         local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
@@ -504,7 +480,6 @@ local function ExplodeAll()
     end
 end
 
---// INSTANT TROLL
 local function TeleportAllToSky()
     for _, plr in pairs(GetPlayers()) do
         local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
