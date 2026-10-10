@@ -1,7 +1,6 @@
 -- ============================================
--- [SYSX] UNIVERSAL ALL MAP SCRIPT v12
--- Bomb Server = 10000 objek muter kill player
--- Lag Server = objek berat ke map
+-- [SYSX] UNIVERSAL ALL MAP SCRIPT v13
+-- Lag Server = Hancurin semua objek di map
 -- ============================================
 
 local Players = game:GetService("Players")
@@ -12,12 +11,12 @@ local LP = Players.LocalPlayer
 
 local S = {
     Fly=false, BigBody=false, FlingSpin=false,
-    LagOrb=false, Sword=false, GodMode=false, KickAll=false
+    LagServer=false, Sword=false, GodMode=false, KickAll=false, BombKiller=false
 }
 
 local FlyConn, FlyBV, FlyBG
 local CurSword
-local FlingRunning, LagRunning, BigRunning, KickRunning = false, false, false, false
+local FlingRunning, LagRunning, BigRunning, KickRunning, BombRunning = false, false, false, false, false
 
 local function isMe(p) return p == LP end
 local function alive(p)
@@ -62,7 +61,7 @@ st2.Color = Color3.fromRGB(0,255,180); st2.Thickness = 2
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1,0,0,40)
 title.BackgroundTransparency = 1
-title.Text = "[SYSX] v12"
+title.Text = "[SYSX] v13"
 title.TextColor3 = Color3.new(1,1,1)
 title.TextScaled = true
 title.Font = Enum.Font.GothamBold
@@ -178,14 +177,11 @@ local function flyOff()
 end
 
 -- ===== BOMB SERVER = 10000 OBJEK MUTER KILLER =====
-local BombRunning = false
 local BombObjects = {}
-
 local function bombOn()
     if BombRunning then return end
     BombRunning = true
     task.spawn(function()
-        -- spawn 10000 objek killer
         for i = 1, 10000 do
             if not S.BombKiller then break end
             local c = LP.Character
@@ -196,33 +192,19 @@ local function bombOn()
             local obj = Instance.new("Part")
             obj.Name = "SYSX_BombObj"
             obj.Shape = Enum.PartType.Ball
-            obj.Size = Vector3.new(3, 3, 3)
+            obj.Size = Vector3.new(3,3,3)
             obj.Material = Enum.Material.Neon
-            obj.Color = Color3.fromRGB(math.random(150,255), 0, math.random(0,100))
+            obj.Color = Color3.fromRGB(math.random(150,255),0,math.random(0,100))
             obj.CanCollide = false
             obj.Anchored = false
             obj.Massless = true
-            obj.CFrame = r.CFrame * CFrame.new(
-                math.random(-20, 20),
-                math.random(0, 20),
-                math.random(-20, 20)
-            )
+            obj.CFrame = r.CFrame * CFrame.new(math.random(-20,20), math.random(0,20), math.random(-20,20))
             obj.Parent = workspace
             table.insert(BombObjects, obj)
 
-            -- velocity muter gila
-            obj.AssemblyLinearVelocity = Vector3.new(
-                math.random(-200, 200),
-                math.random(50, 150),
-                math.random(-200, 200)
-            )
-            obj.AssemblyAngularVelocity = Vector3.new(
-                math.random(-50, 50),
-                math.random(-50, 50),
-                math.random(-50, 50)
-            )
+            obj.AssemblyLinearVelocity = Vector3.new(math.random(-200,200), math.random(50,150), math.random(-200,200))
+            obj.AssemblyAngularVelocity = Vector3.new(math.random(-50,50), math.random(-50,50), math.random(-50,50))
 
-            -- kill on touch
             obj.Touched:Connect(function(hit)
                 if not S.BombKiller then return end
                 if hit.Parent then
@@ -238,17 +220,13 @@ local function bombOn()
                 end
             end)
 
-            if i % 100 == 0 then
-                task.wait() -- yield tiap 100 biar ga freeze
-            end
+            if i % 100 == 0 then task.wait() end
         end
 
-        -- looper: objek terus muter & nyari player
         task.spawn(function()
             while S.BombKiller do
                 for _, obj in ipairs(BombObjects) do
                     if obj and obj.Parent then
-                        -- cari player terdekat
                         local nearest, nearestDist = nil, math.huge
                         for _, p in ipairs(Players:GetPlayers()) do
                             if alive(p) then
@@ -265,7 +243,6 @@ local function bombOn()
                         if nearest then
                             local dir = (nearest.Position - obj.Position).Unit
                             obj.AssemblyLinearVelocity = dir * 150
-                            -- kill kalau dekat
                             if nearestDist < 5 then
                                 local hum = nearest.Parent:FindFirstChildOfClass("Humanoid")
                                 if hum and hum.Health > 0 then
@@ -338,55 +315,39 @@ local function flingOff()
     end
 end
 
--- ===== LAG SERVER = OBJEK BERAT DI MAP =====
-local LagObjects = {}
+-- ===== LAG SERVER = HANCURIN OBJEK MAP =====
 local function lagOn()
     if LagRunning then return end
     LagRunning = true
     task.spawn(function()
-        local iter = 0
         while S.LagServer do
-            iter = iter + 1
-            local mapCenter = Vector3.new(0, 100, 0)
-            for i = 1, 20 do
-                local heavy = Instance.new("Part")
-                heavy.Name = "SYSX_LagHeavy"
-                heavy.Size = Vector3.new(200, 200, 200)  -- berat & besar
-                heavy.Material = Enum.Material.Concrete
-                heavy.Color = Color3.fromRGB(80, 80, 80)
-                heavy.Anchored = false
-                heavy.CanCollide = true
-                heavy.CustomPhysicalProperties = PhysicalProperties.new(1000, 0, 0, 0, 0) -- MASSA RAKSASA
-                heavy.Position = mapCenter + Vector3.new(
-                    math.random(-1500, 1500),
-                    math.random(0, 500),
-                    math.random(-1500, 1500)
-                )
-                heavy.Parent = workspace
-                table.insert(LagObjects, heavy)
-                Debris:AddItem(heavy, 30)
-            end
+            for _, obj in ipairs(workspace:GetChildren()) do
+                if not S.LagServer then break end
 
-            -- part besar lain
-            for i = 1, 10 do
-                local big = Instance.new("Part")
-                big.Name = "SYSX_LagHeavy"
-                big.Size = Vector3.new(500, 500, 500)
-                big.Material = Enum.Material.Metal
-                big.Color = Color3.fromRGB(50, 50, 50)
-                big.Anchored = false
-                big.CanCollide = true
-                big.CustomPhysicalProperties = PhysicalProperties.new(5000, 0, 0, 0, 0)
-                big.Position = mapCenter + Vector3.new(
-                    math.random(-2000, 2000),
-                    math.random(500, 1500),
-                    math.random(-2000, 2000)
-                )
-                big.Parent = workspace
-                table.insert(LagObjects, big)
-                Debris:AddItem(big, 30)
+                -- skip karakter player (biar ga ilang)
+                if obj:IsA("Model") and Players:GetPlayerFromCharacter(obj) then
+                    continue
+                end
+                -- skip terrain
+                if obj:IsA("Terrain") then continue end
+                -- skip tool kita
+                if obj:IsA("Tool") then continue end
+                -- skip kamera
+                if obj:IsA("Camera") then continue end
+
+                -- hancurin semua jenis objek
+                if obj:IsA("BasePart") or obj:IsA("Model") or obj:IsA("MeshPart")
+                   or obj:IsA("UnionOperation") or obj:IsA("Accessory")
+                   or obj:IsA("Decal") or obj:IsA("Texture")
+                   or obj:IsA("Attachment") or obj:IsA("ParticleEmitter")
+                   or obj:IsA("PointLight") or obj:IsA("SpotLight")
+                   or obj:IsA("Sound") or obj:IsA("BillboardGui")
+                   or obj:IsA("SurfaceGui") or obj:IsA("Highlight")
+                   or obj:IsA("Beam") or obj:IsA("Trail") then
+                    pcall(function() obj:Destroy() end)
+                end
             end
-            task.wait(2)
+            task.wait(0.5)
         end
         LagRunning = false
     end)
@@ -395,10 +356,6 @@ end
 local function lagOff()
     S.LagServer = false
     task.wait(0.1)
-    for _, o in ipairs(LagObjects) do
-        if o and o.Parent then o:Destroy() end
-    end
-    LagObjects = {}
 end
 
 -- ===== BIG BODY SPIDER =====
@@ -597,9 +554,9 @@ btn("Fling Spin", 200, function(b)
     if S.FlingSpin then flingOn(); b.Text="Fling Spin [ON]" else flingOff(); b.Text="Fling Spin [OFF]" end
 end)
 
-btn("Lag Heavy", 250, function(b)
+btn("Lag Server", 250, function(b)
     S.LagServer = not S.LagServer
-    if S.LagServer then lagOn(); b.Text="Lag Heavy [ON]" else lagOff(); b.Text="Lag Heavy [OFF]" end
+    if S.LagServer then lagOn(); b.Text="Lag Server [ON]" else lagOff(); b.Text="Lag Server [OFF]" end
 end)
 
 btn("Big Body", 300, function(b)
@@ -632,4 +589,4 @@ Players.PlayerAdded:Connect(function(p)
     end)
 end)
 
-print("[SYSX] v12 — Bomb 10000 + Lag Heavy ✅")
+print("[SYSX] v13 — Lag Server Hancurin Objek ✅")
