@@ -1,30 +1,27 @@
 --[[
-    SYSXHUB KILLER v7
-    Developer: OpetxDy
-    Fitur: Fly, God, Kill All, Nuke, Invisible, Fling Touch, Size Semapu+Spin
-    Fling: hanya player yang DISENTUH yang kefling (bukan diri sendiri)
-    Mode: FULL SERVER REPLICATED (bukan visual)
-    Logo: S Toggle Open/Close
+    SYSXHUB TROLL + SAFE + ROCKET
+    Fitur:
+    - Troll: Spin, Fling, Drag, Dance, Chaos, TP Sky, Freeze, Random Size,
+             Invisible, Speed Chaos, Gravity Chaos
+    - Safe Zone: Anti semua bencana + Auto TP Safe Zone
+    - Auto Rocket: TP ke kursi roket, start, jalankan
 --]]
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
-local Camera = workspace.CurrentCamera
 
 --// GUI
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "SYSXHUB_KILLER"
+ScreenGui.Name = "SYSXHUB_TROLL"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = game.CoreGui
 
---// LOGO S (TOGGLE)
+--// LOGO S
 local LogoBtn = Instance.new("TextButton")
-LogoBtn.Name = "LogoBtn"
 LogoBtn.Size = UDim2.new(0, 55, 0, 55)
 LogoBtn.Position = UDim2.new(0, 20, 0.5, -27)
-LogoBtn.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
+LogoBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 200)
 LogoBtn.Text = "S"
 LogoBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 LogoBtn.Font = Enum.Font.GothamBlack
@@ -36,14 +33,14 @@ LogoBtn.Parent = ScreenGui
 Instance.new("UICorner", LogoBtn).CornerRadius = UDim.new(1, 0)
 
 local LogoStroke = Instance.new("UIStroke", LogoBtn)
-LogoStroke.Color = Color3.fromRGB(255, 50, 50)
+LogoStroke.Color = Color3.fromRGB(200, 0, 255)
 LogoStroke.Thickness = 2
 
 --// MAIN FRAME
 local Main = Instance.new("Frame")
-Main.Size = UDim2.new(0, 320, 0, 480)
-Main.Position = UDim2.new(0.5, -160, 0.5, -240)
-Main.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+Main.Size = UDim2.new(0, 340, 0, 520)
+Main.Position = UDim2.new(0.5, -170, 0.5, -260)
+Main.BackgroundColor3 = Color3.fromRGB(20, 10, 25)
 Main.BorderSizePixel = 0
 Main.Active = true
 Main.Draggable = true
@@ -53,8 +50,8 @@ Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 12)
 
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 45)
-Title.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
-Title.Text = "SYSXHUB KILLER v7"
+Title.BackgroundColor3 = Color3.fromRGB(150, 0, 200)
+Title.Text = "SYSXHUB TROLL"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 20
@@ -65,7 +62,7 @@ Instance.new("UICorner", Title).CornerRadius = UDim.new(0, 12)
 local TitleFix = Instance.new("Frame")
 TitleFix.Size = UDim2.new(1, 0, 0, 15)
 TitleFix.Position = UDim2.new(0, 0, 1, -15)
-TitleFix.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
+TitleFix.BackgroundColor3 = Color3.fromRGB(150, 0, 200)
 TitleFix.BorderSizePixel = 0
 TitleFix.Parent = Title
 
@@ -86,15 +83,47 @@ LogoBtn.MouseButton1Click:Connect(function()
     Main.Visible = not Main.Visible
 end)
 
+--// TAB BUTTONS
+local TabContainer = Instance.new("Frame")
+TabContainer.Size = UDim2.new(1, -20, 0, 30)
+TabContainer.Position = UDim2.new(0, 10, 0, 55)
+TabContainer.BackgroundTransparency = 1
+TabContainer.Parent = Main
+
+local TabLayout = Instance.new("UIListLayout")
+TabLayout.FillDirection = Enum.FillDirection.Horizontal
+TabLayout.Padding = UDim.new(0, 4)
+TabLayout.SortOrder = Enum.SortOrder.LayoutOrder
+TabLayout.Parent = TabContainer
+
+local function MakeTab(name, order)
+    local Tab = Instance.new("TextButton")
+    Tab.Size = UDim2.new(0, 96, 0, 28)
+    Tab.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+    Tab.Text = name
+    Tab.TextColor3 = Color3.fromRGB(200, 200, 200)
+    Tab.Font = Enum.Font.GothamBold
+    Tab.TextSize = 12
+    Tab.BorderSizePixel = 0
+    Tab.LayoutOrder = order
+    Tab.Parent = TabContainer
+    Instance.new("UICorner", Tab).CornerRadius = UDim.new(0, 6)
+    return Tab
+end
+
+local TabTroll = MakeTab("TROLL", 1)
+local TabSafe = MakeTab("SAFE ZONE", 2)
+local TabRocket = MakeTab("ROCKET", 3)
+
 --// SCROLL
 local Scroll = Instance.new("ScrollingFrame")
-Scroll.Size = UDim2.new(1, -20, 1, -75)
-Scroll.Position = UDim2.new(0, 10, 0, 55)
+Scroll.Size = UDim2.new(1, -20, 1, -145)
+Scroll.Position = UDim2.new(0, 10, 0, 90)
 Scroll.BackgroundTransparency = 1
 Scroll.BorderSizePixel = 0
 Scroll.ScrollBarThickness = 4
-Scroll.ScrollBarImageColor3 = Color3.fromRGB(180, 0, 0)
-Scroll.CanvasSize = UDim2.new(0, 0, 0, 420)
+Scroll.ScrollBarImageColor3 = Color3.fromRGB(200, 0, 255)
+Scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 Scroll.Parent = Main
 
 local UIList = Instance.new("UIListLayout")
@@ -102,222 +131,61 @@ UIList.Padding = UDim.new(0, 6)
 UIList.SortOrder = Enum.SortOrder.LayoutOrder
 UIList.Parent = Scroll
 
-local function MakeButton(name)
+local function MakeButton(name, order)
     local Btn = Instance.new("TextButton")
     Btn.Size = UDim2.new(1, -10, 0, 40)
-    Btn.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+    Btn.BackgroundColor3 = Color3.fromRGB(40, 20, 50)
     Btn.Text = name
     Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     Btn.Font = Enum.Font.GothamMedium
-    Btn.TextSize = 15
+    Btn.TextSize = 14
     Btn.BorderSizePixel = 0
+    Btn.LayoutOrder = order or 0
     Btn.Parent = Scroll
     Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 8)
     return Btn
 end
 
---// STATE
-local FlyMode = false
-local GodMode = false
-local Invisible = false
-local SizeSpinMode = false
-local TouchFlingMode = false
-local FlyConnection = nil
-local GodConnection = nil
-local SizeSpinConnection = nil
-local TouchConn = nil
-
-local function GetCharacter()
-    return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local function ClearButtons()
+    for _, v in pairs(Scroll:GetChildren()) do
+        if v:IsA("TextButton") then v:Destroy() end
+    end
 end
 
---// FLY (SERVER REPLICATED)
-local function ToggleFly(state)
-    FlyMode = state
-    if FlyConnection then FlyConnection:Disconnect() FlyConnection = nil end
-    if not state then
-        local hrp = GetCharacter():FindFirstChild("HumanoidRootPart")
-        if hrp then
-            hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-            pcall(function() hrp:SetNetworkOwner(LocalPlayer) end)
+--// STATE
+local TrollSpin, TrollFling, TrollDrag, TrollDance, TrollChaos = false, false, false, false, false
+local SafeZone, AutoRocketMode = false, false
+local ConnSpin, ConnFling, ConnDrag, ConnDance, ConnChaos, ConnSafe, ConnRocket = nil, nil, nil, nil, nil, nil, nil
+
+local function GetPlayers()
+    local list = {}
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer and plr.Character then
+            table.insert(list, plr)
         end
-        return
     end
-    local UIS = UserInputService
-    local speed = 80
-    local bodyGyro, bodyVel
-    FlyConnection = RunService.RenderStepped:Connect(function()
-        local char = LocalPlayer.Character
-        if not char then return end
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        if not hrp then return end
-        pcall(function() hrp:SetNetworkOwner(LocalPlayer) end)
-        if not bodyVel or not bodyVel.Parent then
-            bodyVel = Instance.new("BodyVelocity", hrp)
-            bodyVel.MaxForce = Vector3.new(1e5, 1e5, 1e5)
-            bodyVel.Velocity = Vector3.new(0, 0, 0)
+    return list
+end
+
+--// SPIN
+local function ToggleTrollSpin(state)
+    TrollSpin = state
+    if ConnSpin then ConnSpin:Disconnect() ConnSpin = nil end
+    if not state then return end
+    ConnSpin = RunService.Heartbeat:Connect(function()
+        for _, plr in pairs(GetPlayers()) do
+            local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                pcall(function() hrp:SetNetworkOwner(nil) end)
+                hrp.CFrame = hrp.CFrame * CFrame.Angles(0, math.rad(45), math.rad(15))
+            end
         end
-        if not bodyGyro or not bodyGyro.Parent then
-            bodyGyro = Instance.new("BodyGyro", hrp)
-            bodyGyro.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
-            bodyGyro.P = 1e4
-        end
-        bodyGyro.CFrame = Camera.CFrame
-        local move = Vector3.new(0, 0, 0)
-        if UIS:IsKeyDown(Enum.KeyCode.W) then move += Camera.CFrame.LookVector end
-        if UIS:IsKeyDown(Enum.KeyCode.S) then move -= Camera.CFrame.LookVector end
-        if UIS:IsKeyDown(Enum.KeyCode.A) then move -= Camera.CFrame.RightVector end
-        if UIS:IsKeyDown(Enum.KeyCode.D) then move += Camera.CFrame.RightVector end
-        if UIS:IsKeyDown(Enum.KeyCode.Space) then move += Vector3.new(0, 1, 0) end
-        if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then move -= Vector3.new(0, 1, 0) end
-        bodyVel.Velocity = move * speed
     end)
 end
 
---// GOD (SERVER REPLICATED - loop Heartbeat set Health)
-local function ToggleGod(state)
-    GodMode = state
-    if GodConnection then GodConnection:Disconnect() GodConnection = nil end
-    local char = LocalPlayer.Character
-    if not char then return end
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    if state then
-        if hum then hum.MaxHealth = 5000 hum.Health = 5000 end
-        GodConnection = RunService.Heartbeat:Connect(function()
-            local c = LocalPlayer.Character
-            if c then
-                local h = c:FindFirstChildOfClass("Humanoid")
-                if h then h.MaxHealth = 5000 h.Health = 5000 end
-            end
-        end)
-    else
-        if hum then hum.MaxHealth = 100 hum.Health = 100 end
-    end
-end
-
---// KILL ALL (loop server replicate)
-local function KillAll()
-    for _, plr in pairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer and plr.Character then
-            local hum = plr.Character:FindFirstChildOfClass("Humanoid")
-            if hum and hum.Health > 0 then
-                hum.Health = 0
-            end
-        end
-    end
-end
-
---// NUKE (loop server replicate)
-local function NukeServer()
-    for _, plr in pairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer then
-            pcall(function() plr:Kick("SYSXHUB KILLER - NUKED") end)
-        end
-    end
-    for _, obj in pairs(workspace:GetDescendants()) do
-        if obj:IsA("BasePart") then
-            pcall(function()
-                obj.Anchored = false
-                obj.CanCollide = true
-                obj.AssemblyLinearVelocity = Vector3.new(math.random(-800,800), math.random(300,1000), math.random(-800,800))
-            end)
-        end
-    end
-    for i = 1, 5 do
-        task.spawn(function()
-            local boom = Instance.new("Explosion")
-            boom.Position = Camera.CFrame.Position + Vector3.new(math.random(-100,100), math.random(-50,50), math.random(-100,100))
-            boom.BlastRadius = 500
-            boom.BlastPressure = 500000
-            boom.DestroyJointRadiusPercent = 1
-            boom.Parent = workspace
-        end)
-    end
-end
-
---// INVISIBLE (server replicate via Transparency, bukan LocalTransparencyModifier)
-local function ToggleInvisible(state)
-    Invisible = state
-    local char = LocalPlayer.Character
-    if not char then return end
-    for _, part in pairs(char:GetDescendants()) do
-        if part:IsA("BasePart") then
-            if state then
-                part.Transparency = 1
-                part.CanCollide = false
-            else
-                if part.Name == "HumanoidRootPart" then
-                    part.Transparency = 1
-                    part.CanCollide = false
-                else
-                    part.Transparency = 0
-                    part.CanCollide = true
-                end
-            end
-        elseif part:IsA("Decal") then
-            part.Transparency = state and 1 or 0
-        end
-    end
-end
-
---// SIZE SEMAPU + SPIN (SERVER REPLICATED)
-local function ToggleSizeSpin(state)
-    SizeSpinMode = state
-    if SizeSpinConnection then SizeSpinConnection:Disconnect() SizeSpinConnection = nil end
-    
-    local char = LocalPlayer.Character
-    if not char then return end
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    if hrp then pcall(function() hrp:SetNetworkOwner(LocalPlayer) end) end
-    
-    if state then
-        for _, part in pairs(char:GetDescendants()) do
-            if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-                part.Size = Vector3.new(2048, 2048, 2048)
-                part.Massless = true
-                part.CanCollide = false
-                part.Transparency = 0.5
-            end
-        end
-        local hum = char:FindFirstChildOfClass("Humanoid")
-        if hum then hum.HipHeight = 2048 end
-        
-        SizeSpinConnection = RunService.Heartbeat:Connect(function()
-            local c = LocalPlayer.Character
-            if not c then return end
-            local h = c:FindFirstChild("HumanoidRootPart")
-            if not h then return end
-            pcall(function() h:SetNetworkOwner(LocalPlayer) end)
-            h.CFrame = h.CFrame * CFrame.Angles(0, math.rad(35), 0)
-        end)
-    else
-        for _, part in pairs(char:GetDescendants()) do
-            if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-                if part.Name == "Head" then
-                    part.Size = Vector3.new(2, 1, 1)
-                elseif part.Name == "Torso" or part.Name == "UpperTorso" or part.Name == "LowerTorso" then
-                    part.Size = Vector3.new(2, 2, 1)
-                elseif part.Name:find("Arm") then
-                    part.Size = Vector3.new(1, 2, 1)
-                elseif part.Name:find("Leg") then
-                    part.Size = Vector3.new(1, 2, 1)
-                else
-                    part.Size = Vector3.new(1, 1, 1)
-                end
-                part.Massless = false
-                part.CanCollide = true
-                part.Transparency = 0
-            end
-        end
-        local hum = char:FindFirstChildOfClass("Humanoid")
-        if hum then hum.HipHeight = 2 end
-    end
-end
-
---// FLING TARGET
-local function FlingTarget(target)
-    if target == LocalPlayer then return end
-    local char = target.Character
+--// FLING
+local function FlingPlayer(plr)
+    local char = plr.Character
     if not char then return end
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
@@ -335,118 +203,285 @@ local function FlingTarget(target)
     end)
 end
 
---// TOUCH FLING
-local function ToggleTouchFling(state)
-    TouchFlingMode = state
-    if TouchConn then TouchConn:Disconnect() TouchConn = nil end
+local function ToggleTrollFling(state)
+    TrollFling = state
+    if ConnFling then ConnFling:Disconnect() ConnFling = nil end
     if not state then return end
-    
-    TouchConn = RunService.Heartbeat:Connect(function()
-        local char = LocalPlayer.Character
-        if not char then return end
-        local myHrp = char:FindFirstChild("HumanoidRootPart")
-        if not myHrp then return end
-        for _, plr in pairs(Players:GetPlayers()) do
-            if plr ~= LocalPlayer and plr.Character then
-                local theirHrp = plr.Character:FindFirstChild("HumanoidRootPart")
-                if theirHrp then
-                    local dist = (myHrp.Position - theirHrp.Position).Magnitude
-                    if dist < 8 then
-                        pcall(function() FlingTarget(plr) end)
-                    end
-                end
+    ConnFling = RunService.Heartbeat:Connect(function()
+        for _, plr in pairs(GetPlayers()) do
+            pcall(function() FlingPlayer(plr) end)
+        end
+    end)
+end
+
+--// DRAG
+local function DragPlayer(plr)
+    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    local theirHrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+    if not theirHrp then return end
+    if (hrp.Position - theirHrp.Position).Magnitude > 5 then
+        pcall(function() theirHrp:SetNetworkOwner(LocalPlayer) end)
+        theirHrp.CFrame = theirHrp.CFrame + (hrp.Position - theirHrp.Position).Unit * 2
+    end
+end
+
+local function ToggleTrollDrag(state)
+    TrollDrag = state
+    if ConnDrag then ConnDrag:Disconnect() ConnDrag = nil end
+    if not state then return end
+    ConnDrag = RunService.Heartbeat:Connect(function()
+        for _, plr in pairs(GetPlayers()) do
+            pcall(function() DragPlayer(plr) end)
+        end
+    end)
+end
+
+--// DANCE
+local function DancePlayer(plr)
+    local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    pcall(function() hrp:SetNetworkOwner(LocalPlayer) end)
+    hrp.CFrame = hrp.CFrame * CFrame.Angles(math.rad(20), 0, math.rad(20))
+end
+
+local function ToggleTrollDance(state)
+    TrollDance = state
+    if ConnDance then ConnDance:Disconnect() ConnDance = nil end
+    if not state then return end
+    ConnDance = RunService.Heartbeat:Connect(function()
+        for _, plr in pairs(GetPlayers()) do
+            pcall(function() DancePlayer(plr) end)
+        end
+    end)
+end
+
+--// CHAOS
+local function ToggleTrollChaos(state)
+    TrollChaos = state
+    if ConnChaos then ConnChaos:Disconnect() ConnChaos = nil end
+    if not state then return end
+    ConnChaos = RunService.Heartbeat:Connect(function()
+        for _, plr in pairs(GetPlayers()) do
+            local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                pcall(function() hrp:SetNetworkOwner(LocalPlayer) end)
+                hrp.CFrame = hrp.CFrame * CFrame.Angles(
+                    math.rad(math.random(-30,30)),
+                    math.rad(math.random(-30,30)),
+                    math.rad(math.random(-30,30))
+                )
+                hrp.AssemblyLinearVelocity = Vector3.new(math.random(-100,100), math.random(50,200), math.random(-100,100))
             end
         end
     end)
 end
 
---// BUTTONS
-local FlyBtn = MakeButton("FLY MODE : OFF")
-FlyBtn.MouseButton1Click:Connect(function()
-    ToggleFly(not FlyMode)
-    FlyBtn.Text = "FLY MODE : " .. (FlyMode and "ON" or "OFF")
-end)
-
-local GodBtn = MakeButton("GOD MODE : OFF")
-GodBtn.MouseButton1Click:Connect(function()
-    ToggleGod(not GodMode)
-    GodBtn.Text = "GOD MODE : " .. (GodMode and "ON" or "OFF")
-end)
-
-local KillBtn = MakeButton("KILL ALL PLAYER : OFF")
-local KillLoopConn = nil
-KillBtn.MouseButton1Click:Connect(function()
-    if KillLoopConn then
-        KillLoopConn:Disconnect()
-        KillLoopConn = nil
-        KillBtn.Text = "KILL ALL PLAYER : OFF"
-    else
-        KillAll()
-        KillLoopConn = RunService.Heartbeat:Connect(KillAll)
-        KillBtn.Text = "KILL ALL PLAYER : ON"
+--// INSTANT TROLL
+local function TeleportAllToSky()
+    for _, plr in pairs(GetPlayers()) do
+        local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            pcall(function()
+                hrp:SetNetworkOwner(nil)
+                hrp.CFrame = CFrame.new(hrp.Position.X, 5000, hrp.Position.Z)
+                hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            end)
+        end
     end
-end)
+end
 
-local NukeBtn = MakeButton("NUKE SERVER : OFF")
-local NukeLoopConn = nil
-NukeBtn.MouseButton1Click:Connect(function()
-    if NukeLoopConn then
-        NukeLoopConn:Disconnect()
-        NukeLoopConn = nil
-        NukeBtn.Text = "NUKE SERVER : OFF"
-    else
-        NukeServer()
-        NukeLoopConn = RunService.Heartbeat:Connect(NukeServer)
-        NukeBtn.Text = "NUKE SERVER : ON"
+local function FreezeAll()
+    for _, plr in pairs(GetPlayers()) do
+        local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+        if hrp then pcall(function() hrp:SetNetworkOwner(nil) hrp.Anchored = true end) end
     end
-end)
+    task.delay(5, function()
+        for _, plr in pairs(GetPlayers()) do
+            local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then pcall(function() hrp.Anchored = false end) end
+        end
+    end)
+end
 
-local InvBtn = MakeButton("INVISIBLE : OFF")
-InvBtn.MouseButton1Click:Connect(function()
-    ToggleInvisible(not Invisible)
-    InvBtn.Text = "INVISIBLE : " .. (Invisible and "ON" or "OFF")
-end)
-
-local FlingBtn = MakeButton("FLING TOUCH : OFF")
-FlingBtn.MouseButton1Click:Connect(function()
-    ToggleTouchFling(not TouchFlingMode)
-    FlingBtn.Text = "FLING TOUCH : " .. (TouchFlingMode and "ON" or "OFF")
-end)
-
-local SizeSpinBtn = MakeButton("SIZE SEMAPU + SPIN : OFF")
-SizeSpinBtn.MouseButton1Click:Connect(function()
-    ToggleSizeSpin(not SizeSpinMode)
-    SizeSpinBtn.Text = "SIZE SEMAPU + SPIN : " .. (SizeSpinMode and "ON" or "OFF")
-end)
-
-local Credit = Instance.new("TextLabel")
-Credit.Size = UDim2.new(1, -20, 0, 25)
-Credit.Position = UDim2.new(0, 10, 1, -28)
-Credit.BackgroundTransparency = 1
-Credit.Text = "SYSXHUB KILLER v7 | by OpetxDy"
-Credit.TextColor3 = Color3.fromRGB(180, 0, 0)
-Credit.Font = Enum.Font.GothamBold
-Credit.TextSize = 13
-Credit.Parent = Main
-
---// HOTKEY
-UserInputService.InputBegan:Connect(function(input, gp)
-    if gp then return end
-    if input.KeyCode == Enum.KeyCode.F then
-        ToggleFly(not FlyMode)
-        FlyBtn.Text = "FLY MODE : " .. (FlyMode and "ON" or "OFF")
-    elseif input.KeyCode == Enum.KeyCode.G then
-        ToggleGod(not GodMode)
-        GodBtn.Text = "GOD MODE : " .. (GodMode and "ON" or "OFF")
-    elseif input.KeyCode == Enum.KeyCode.K then
-        KillBtn.MouseButton1Click:Fire()
-    elseif input.KeyCode == Enum.KeyCode.N then
-        NukeBtn.MouseButton1Click:Fire()
-    elseif input.KeyCode == Enum.KeyCode.B then
-        ToggleSizeSpin(not SizeSpinMode)
-        SizeSpinBtn.Text = "SIZE SEMAPU + SPIN : " .. (SizeSpinMode and "ON" or "OFF")
-    elseif input.KeyCode == Enum.KeyCode.T then
-        ToggleTouchFling(not TouchFlingMode)
-        FlingBtn.Text = "FLING TOUCH : " .. (TouchFlingMode and "ON" or "OFF")
+local function RandomSizeAll()
+    for _, plr in pairs(GetPlayers()) do
+        for _, part in pairs(plr.Character:GetDescendants()) do
+            if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+                local scale = math.random(1, 5)
+                pcall(function() part.Size = part.Size * scale part.Massless = true end)
+            end
+        end
     end
-end)
+end
+
+local function InvisibleAll()
+    for _, plr in pairs(GetPlayers()) do
+        for _, part in pairs(plr.Character:GetDescendants()) do
+            if part:IsA("BasePart") then pcall(function() part.Transparency = 1 end) end
+        end
+    end
+end
+
+local function SpeedChaosAll()
+    for _, plr in pairs(GetPlayers()) do
+        local hum = plr.Character and plr.Character:FindFirstChildOfClass("Humanoid")
+        if hum then hum.WalkSpeed = math.random(1, 500) hum.JumpPower = math.random(1, 500) end
+    end
+end
+
+local function GravityChaosAll()
+    for _, plr in pairs(GetPlayers()) do
+        local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            pcall(function() hrp:SetNetworkOwner(nil) end)
+            local bf = Instance.new("BodyForce", hrp)
+            bf.Force = Vector3.new(math.random(-5000,5000), math.random(0,10000), math.random(-5000,5000))
+            task.delay(3, function() bf:Destroy() end)
+        end
+    end
+end
+
+--// SAFE ZONE
+local function ToggleSafeZone(state)
+    SafeZone = state
+    if ConnSafe then ConnSafe:Disconnect() ConnSafe = nil end
+    if not state then return end
+    ConnSafe = RunService.Heartbeat:Connect(function()
+        local char = LocalPlayer.Character
+        if not char then return end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if not hrp then return end
+        pcall(function() hrp:SetNetworkOwner(LocalPlayer) end)
+        if hum then hum.MaxHealth = 5000 hum.Health = 5000 end
+        hrp.AssemblyLinearVelocity = Vector3.new(0, hrp.AssemblyLinearVelocity.y, 0)
+        hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+        if hrp.Position.Y < 50 then
+            hrp.CFrame = CFrame.new(0, 500, 0)
+        end
+        for _, obj in pairs(char:GetDescendants()) do
+            if obj:IsA("Fire") or obj:IsA("Smoke") or obj:IsA("Sparkles") then obj:Destroy() end
+        end
+    end)
+end
+
+--// AUTO ROCKET
+local function RunAutoRocket()
+    local char = LocalPlayer.Character
+    if not char then return end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp or not hum then return end
+    pcall(function() hrp:SetNetworkOwner(LocalPlayer) end)
+
+    local rocket, seat = nil, nil
+    for _, obj in pairs(workspace:GetDescendants()) do
+        local n = obj.Name:lower()
+        if obj:IsA("Model") and (n:find("rocket") or n:find("roket")) then
+            rocket = obj
+            break
+        end
+    end
+    if not rocket then
+        for _, obj in pairs(workspace:GetDescendants()) do
+            if obj:IsA("VehicleSeat") then
+                if obj.Name:lower():find("rocket") or obj.Name:lower():find("roket") or obj.Parent.Name:lower():find("rocket") then
+                    rocket = obj.Parent
+                    seat = obj
+                    break
+                end
+            end
+        end
+    end
+    if not rocket then return end
+    if not seat then
+        for _, obj in pairs(rocket:GetDescendants()) do
+            if obj:IsA("VehicleSeat") or obj:IsA("Seat") then
+                seat = obj
+                break
+            end
+        end
+    end
+    if not seat then return end
+
+    hrp.CFrame = seat.CFrame + Vector3.new(0, 3, 0)
+    task.wait(0.2)
+    hum.Sit = true
+    seat:Sit(hum)
+    task.wait(0.3)
+
+    for _, obj in pairs(rocket:GetDescendants()) do
+        if obj:IsA("BasePart") then
+            pcall(function() obj:SetNetworkOwner(LocalPlayer) end)
+            pcall(function()
+                firetouchinterest(hrp, obj, 0)
+                firetouchinterest(hrp, obj, 1)
+            end)
+            if obj:IsA("VehicleSeat") then
+                pcall(function() obj.Throttle = 1 obj.Steer = 0 end)
+            end
+        elseif obj:IsA("ClickDetector") then
+            pcall(function() fireclickdetector(obj) end)
+        elseif obj:IsA("RemoteEvent") then
+            pcall(function() obj:FireServer() end)
+        elseif obj:IsA("ProximityPrompt") then
+            pcall(function() fireproximityprompt(obj) end)
+        end
+    end
+end
+
+local function ToggleAutoRocket(state)
+    AutoRocketMode = state
+    if ConnRocket then ConnRocket:Disconnect() ConnRocket = nil end
+    if not state then return end
+    RunAutoRocket()
+    ConnRocket = RunService.Heartbeat:Connect(function()
+        if AutoRocketMode then pcall(RunAutoRocket) end
+    end)
+end
+
+--// TAB SWITCH
+local function ShowTab(tab)
+    ClearButtons()
+    Scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+
+    if tab == "TROLL" then
+        local a = MakeButton("SPIN PLAYER : OFF", 1)
+        a.MouseButton1Click:Connect(function() ToggleTrollSpin(not TrollSpin) a.Text = "SPIN PLAYER : " .. (TrollSpin and "ON" or "OFF") end)
+        local b = MakeButton("FLING PLAYER : OFF", 2)
+        b.MouseButton1Click:Connect(function() ToggleTrollFling(not TrollFling) b.Text = "FLING PLAYER : " .. (TrollFling and "ON" or "OFF") end)
+        local c = MakeButton("DRAG PLAYER : OFF", 3)
+        c.MouseButton1Click:Connect(function() ToggleTrollDrag(not TrollDrag) c.Text = "DRAG PLAYER : " .. (TrollDrag and "ON" or "OFF") end)
+        local d = MakeButton("DANCE : OFF", 4)
+        d.MouseButton1Click:Connect(function() ToggleTrollDance(not TrollDance) d.Text = "DANCE : " .. (TrollDance and "ON" or "OFF") end)
+        local e = MakeButton("CHAOS MODE : OFF", 5)
+        e.MouseButton1Click:Connect(function() ToggleTrollChaos(not TrollChaos) e.Text = "CHAOS MODE : " .. (TrollChaos and "ON" or "OFF") end)
+        local f = MakeButton("TELEPORT ALL TO SKY", 6)
+        f.MouseButton1Click:Connect(TeleportAllToSky)
+        local g = MakeButton("FREEZE ALL (5 detik)", 7)
+        g.MouseButton1Click:Connect(FreezeAll)
+        local h = MakeButton("RANDOM SIZE ALL", 8)
+        h.MouseButton1Click:Connect(RandomSizeAll)
+        local i = MakeButton("INVISIBLE ALL", 9)
+        i.MouseButton1Click:Connect(InvisibleAll)
+        local j = MakeButton("SPEED CHAOS", 10)
+        j.MouseButton1Click:Connect(SpeedChaosAll)
+        local k = MakeButton("GRAVITY CHAOS", 11)
+        k.MouseButton1Click:Connect(GravityChaosAll)
+
+    elseif tab == "SAFE" then
+        local a = MakeButton("AUTO SAFE ZONE : OFF", 1)
+        a.MouseButton1Click:Connect(function() ToggleSafeZone(not SafeZone) a.Text = "AUTO SAFE ZONE : " .. (SafeZone and "ON" or "OFF") end)
+
+    elseif tab == "ROCKET" then
+        local a = MakeButton("AUTO ROCKET : OFF", 1)
+        a.MouseButton1Click:Connect(function() ToggleAutoRocket(not AutoRocketMode) a.Text = "AUTO ROCKET : " .. (AutoRocketMode and "ON" or "OFF") end)
+    end
+end
+
+TabTroll.MouseButton1Click:Connect(function() ShowTab("TROLL") end)
+TabSafe.MouseButton1Click:Connect(function() ShowTab("SAFE") end)
+TabRocket.MouseButton1Click:Connect(function() ShowTab("ROCKET") end)
+
+ShowTab("TROLL")
