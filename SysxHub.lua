@@ -1,9 +1,8 @@
 -- ============================================
--- [SYSX] UNIVERSAL ALL MAP SCRIPT v4
--- Sword = model pedang REAL (bukan kotak)
--- Lag Server = bawa objek muter map + kill player
--- Fling = fix total, mental beneran
--- Diri sendiri AMAN semua fitur
+-- [SYSX] UNIVERSAL ALL MAP SCRIPT v5
+-- Logo S = Open/Close Menu
+-- GodMode | Fly | Bomb Server | Fling Touch | Lag Server Orb | Big Body Spider | Get Sword
+-- Semua fitur TOGGLE, diri sendiri AMAN (GodMode)
 -- ============================================
 
 local Players = game:GetService("Players")
@@ -18,15 +17,14 @@ local State = {
     FlingTouch = false,
     LagServer = false,
     Sword = false,
+    GodMode = false,
 }
 
 local FlySpeed = 120
 local FlyConn, FlyBodyVel, FlyBodyGyro
-local FlingTouchConn
-local LagConn
-local SpiderConn
-local SwordConn
+local FlingTouchConn, LagConn, SpiderConn, SwordConn, GodConn
 local CurrentSword
+local LagObjects = {}
 
 local function isMe(p) return p == LocalPlayer end
 local function isOtherAlive(p)
@@ -59,8 +57,8 @@ stroke.Color = Color3.fromRGB(0, 255, 180)
 stroke.Thickness = 3
 
 local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size = UDim2.new(0, 260, 0, 400)
-MainFrame.Position = UDim2.new(0.5, -130, 0.5, -200)
+MainFrame.Size = UDim2.new(0, 260, 0, 440)
+MainFrame.Position = UDim2.new(0.5, -130, 0.5, -220)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -74,7 +72,7 @@ stroke2.Thickness = 2
 local Title = Instance.new("TextLabel", MainFrame)
 Title.Size = UDim2.new(1, 0, 0, 40)
 Title.BackgroundTransparency = 1
-Title.Text = "[SYSX] ALL MAP v4"
+Title.Text = "[SYSX] ALL MAP v5"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextScaled = true
 Title.Font = Enum.Font.GothamBold
@@ -100,6 +98,42 @@ end
 ToggleBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
 end)
+
+-- ===== GODMODE =====
+local function startGodMode()
+    if GodConn then GodConn:Disconnect() end
+    GodConn = RunService.Heartbeat:Connect(function()
+        if not State.GodMode then return end
+        local char = LocalPlayer.Character
+        if not char then return end
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum.MaxHealth = math.huge
+            hum.Health = math.huge
+            hum.BreakJointsOnDeath = false
+        end
+        if not char:FindFirstChildOfClass("ForceField") then
+            local ff = Instance.new("ForceField")
+            ff.Visible = false
+            ff.Parent = char
+        end
+    end)
+end
+
+local function stopGodMode()
+    if GodConn then GodConn:Disconnect() GodConn = nil end
+    local char = LocalPlayer.Character
+    if char then
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum.MaxHealth = 100
+            hum.Health = 100
+            hum.BreakJointsOnDeath = true
+        end
+        local ff = char:FindFirstChildOfClass("ForceField")
+        if ff then ff:Destroy() end
+    end
+end
 
 -- ===== FLY =====
 local function startFly()
@@ -142,7 +176,6 @@ local function startFly()
 
         local cam = workspace.CurrentCamera
         local dir = Vector3.zero
-
         if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir = dir + cam.CFrame.LookVector end
         if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir = dir - cam.CFrame.LookVector end
         if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir = dir - cam.CFrame.RightVector end
@@ -185,6 +218,7 @@ local function bombServer()
             local hum = p.Character:FindFirstChildOfClass("Humanoid")
             local hrp = p.Character:FindFirstChild("HumanoidRootPart")
             if hum then
+                hum.BreakJointsOnDeath = true
                 hum.Health = 0
                 pcall(function() hum:ChangeState(Enum.HumanoidStateType.Dead) end)
             end
@@ -205,7 +239,7 @@ local function bombServer()
     end
 end
 
--- ===== FLING TOUCH (FIX TOTAL) =====
+-- ===== FLING TOUCH =====
 local function startFlingTouch()
     if FlingTouchConn then FlingTouchConn:Disconnect() end
     FlingTouchConn = RunService.Heartbeat:Connect(function()
@@ -215,10 +249,8 @@ local function startFlingTouch()
         local myHrp = myChar:FindFirstChild("HumanoidRootPart")
         if not myHrp then return end
 
-        -- KUNCI DIRI SENDIRI TOTAL
         myHrp.AssemblyLinearVelocity = Vector3.new(myHrp.AssemblyLinearVelocity.X, 0, myHrp.AssemblyLinearVelocity.Z)
         myHrp.RotVelocity = Vector3.zero
-        myHrp.CustomPhysicalProperties = PhysicalProperties.new(100, 0, 0)
 
         for _, p in ipairs(Players:GetPlayers()) do
             if isOtherAlive(p) then
@@ -226,33 +258,25 @@ local function startFlingTouch()
                 local hrp = p.Character:FindFirstChild("HumanoidRootPart")
                 if hrp and hum then
                     local dist = (hrp.Position - myHrp.Position).Magnitude
-                    if dist < 25 then
-                        -- arah mental dari kita ke mereka
+                    if dist < 30 then
                         local dir = (hrp.Position - myHrp.Position)
                         if dir.Magnitude < 1 then
                             dir = Vector3.new(math.random(-1,1), 0.5, math.random(-1,1))
                         end
                         dir = dir.Unit
 
-                        -- MENTAL REAL (velocity + angular)
-                        hrp.AssemblyLinearVelocity = dir * 15000 + Vector3.new(0, 5000, 0)
+                        hrp.AssemblyLinearVelocity = dir * 20000 + Vector3.new(0, 8000, 0)
                         hrp.AssemblyAngularVelocity = Vector3.new(
                             math.random(-999, 999),
                             math.random(-999, 999),
                             math.random(-999, 999)
                         )
-                        hrp.RotVelocity = Vector3.new(
-                            math.random(-999, 999),
-                            math.random(-999, 999),
-                            math.random(-999, 999)
-                        )
-                        hum:TakeDamage(math.random(40, 90))
+                        hum:TakeDamage(math.random(50, 99))
 
-                        -- extra loop biar mental jauh & ga balik
                         task.spawn(function()
-                            for i = 1, 15 do
+                            for i = 1, 20 do
                                 if hrp and hrp.Parent then
-                                    hrp.AssemblyLinearVelocity = dir * 15000 + Vector3.new(0, 5000, 0)
+                                    hrp.AssemblyLinearVelocity = dir * 20000 + Vector3.new(0, 8000, 0)
                                     hrp.AssemblyAngularVelocity = Vector3.new(
                                         math.random(-999, 999),
                                         math.random(-999, 999),
@@ -271,28 +295,20 @@ end
 
 local function stopFlingTouch()
     if FlingTouchConn then FlingTouchConn:Disconnect() FlingTouchConn = nil end
-    local myChar = LocalPlayer.Character
-    if myChar then
-        local myHrp = myChar:FindFirstChild("HumanoidRootPart")
-        if myHrp then myHrp.CustomPhysicalProperties = nil end
-    end
 end
 
--- ===== LAG SERVER = OBJEK MUTER MAP + KILL PLAYER =====
-local LagObjects = {}
-
+-- ===== LAG SERVER ORB =====
 local function startLagServer()
     if LagConn then LagConn:Disconnect() end
     LagConn = RunService.Heartbeat:Connect(function()
         if not State.LagServer then return end
         local mapCenter = Vector3.new(0, 50, 0)
 
-        -- spawn objek besar yang muter di map
-        for i = 1, 5 do
+        for i = 1, 8 do
             local orb = Instance.new("Part")
             orb.Name = "SYSX_LagOrb"
             orb.Shape = Enum.PartType.Ball
-            orb.Size = Vector3.new(80, 80, 80)
+            orb.Size = Vector3.new(60, 60, 60)
             orb.Material = Enum.Material.Neon
             orb.Color = Color3.fromRGB(255, 0, 255)
             orb.Anchored = true
@@ -300,48 +316,35 @@ local function startLagServer()
             orb.Position = mapCenter
             orb.Parent = workspace
             table.insert(LagObjects, orb)
-            game:GetService("Debris"):AddItem(orb, 20)
+            game:GetService("Debris"):AddItem(orb, 15)
 
-            -- bikin objek muter map
             task.spawn(function()
-                local angle = 0
-                local radius = 200 + i * 50
-                for _ = 1, 200 do
+                local angle = math.random() * math.pi * 2
+                local radius = 150 + i * 40
+                for _ = 1, 100 do
                     if not orb.Parent or not State.LagServer then break end
-                    angle = angle + 0.1
+                    angle = angle + 0.15
                     orb.CFrame = CFrame.new(
                         mapCenter.X + math.cos(angle) * radius,
-                        mapCenter.Y + math.sin(angle * 2) * 30,
+                        mapCenter.Y + math.sin(angle * 3) * 40,
                         mapCenter.Z + math.sin(angle) * radius
                     )
-                    task.wait(0.03)
-                end
-            end)
-
-            -- objek kill player yang dekat
-            task.spawn(function()
-                for _ = 1, 200 do
-                    if not orb.Parent or not State.LagServer then break end
                     for _, p in ipairs(Players:GetPlayers()) do
                         if isOtherAlive(p) then
                             local hum = p.Character:FindFirstChildOfClass("Humanoid")
                             local hrp = p.Character:FindFirstChild("HumanoidRootPart")
-                            if hrp and hum then
-                                local dist = (hrp.Position - orb.Position).Magnitude
-                                if dist < 60 then
-                                    hum.Health = 0
-                                    pcall(function() hum:ChangeState(Enum.HumanoidStateType.Dead) end)
-                                    pcall(function() p.Character:BreakJoints() end)
-                                end
+                            if hrp and hum and (hrp.Position - orb.Position).Magnitude < 55 then
+                                hum.Health = 0
+                                pcall(function() hum:ChangeState(Enum.HumanoidStateType.Dead) end)
+                                pcall(function() p.Character:BreakJoints() end)
                             end
                         end
                     end
-                    task.wait(0.05)
+                    task.wait(0.03)
                 end
             end)
         end
 
-        -- lag real: teleport spam + attachment spam ke player lain
         for _, p in ipairs(Players:GetPlayers()) do
             if isOtherAlive(p) then
                 local hrp = p.Character:FindFirstChild("HumanoidRootPart")
@@ -475,30 +478,24 @@ local function bigBodyOFF()
     end
 end
 
--- ===== GET SWORD (MODEL PEDANG REAL) =====
+-- ===== GET SWORD =====
 local function createSword()
     local char = LocalPlayer.Character
     if not char then return end
-
     if CurrentSword and CurrentSword.Parent then CurrentSword:Destroy() end
 
     local tool = Instance.new("Tool")
     tool.Name = "SYSX_Sword"
     tool.RequiresHandle = true
     tool.CanBeDropped = false
-    tool.GripPos = Vector3.new(0, 0, 0)
 
-    -- HANDLE (pegangan)
     local handle = Instance.new("Part")
     handle.Name = "Handle"
     handle.Size = Vector3.new(0.4, 1.2, 0.4)
     handle.Material = Enum.Material.Metal
     handle.Color = Color3.fromRGB(60, 30, 10)
-    handle.TopSurface = Enum.SurfaceType.Smooth
-    handle.BottomSurface = Enum.SurfaceType.Smooth
     handle.Parent = tool
 
-    -- GUARD (pelindung tangan)
     local guard = Instance.new("Part")
     guard.Name = "Guard"
     guard.Size = Vector3.new(2, 0.3, 0.4)
@@ -506,31 +503,17 @@ local function createSword()
     guard.Color = Color3.fromRGB(200, 180, 50)
     guard.CanCollide = false
     guard.Parent = tool
+    local wg = Instance.new("Weld", handle) wg.Part0 = handle wg.Part1 = guard wg.C0 = CFrame.new(0, 0.6, 0)
 
-    local weldGuard = Instance.new("Weld")
-    weldGuard.Part0 = handle
-    weldGuard.Part1 = guard
-    weldGuard.C0 = CFrame.new(0, 0.6, 0)
-    weldGuard.Parent = handle
-
-    -- BLADE (mata pedang) — panjang & runcing
     local blade = Instance.new("Part")
     blade.Name = "Blade"
-    blade.Size = Vector3.new(0.15, 5, 1) -- tipis & panjang
+    blade.Size = Vector3.new(0.15, 5, 1)
     blade.Material = Enum.Material.Metal
     blade.Color = Color3.fromRGB(220, 220, 230)
     blade.CanCollide = false
-    blade.TopSurface = Enum.SurfaceType.Smooth
-    blade.BottomSurface = Enum.SurfaceType.Smooth
     blade.Parent = tool
+    local wb = Instance.new("Weld", handle) wb.Part0 = handle wb.Part1 = blade wb.C0 = CFrame.new(0, 3.1, 0)
 
-    local weldBlade = Instance.new("Weld")
-    weldBlade.Part0 = handle
-    weldBlade.Part1 = blade
-    weldBlade.C0 = CFrame.new(0, 3.1, 0)
-    weldBlade.Parent = handle
-
-    -- TIP (ujung runcing)
     local tip = Instance.new("WedgePart")
     tip.Name = "Tip"
     tip.Size = Vector3.new(0.15, 1, 1)
@@ -538,75 +521,53 @@ local function createSword()
     tip.Color = Color3.fromRGB(230, 230, 240)
     tip.CanCollide = false
     tip.Parent = tool
+    local wt = Instance.new("Weld", handle) wt.Part0 = handle wt.Part1 = tip wt.C0 = CFrame.new(0, 5.8, 0) * CFrame.Angles(0,0,math.rad(180))
 
-    local weldTip = Instance.new("Weld")
-    weldTip.Part0 = handle
-    weldTip.Part1 = tip
-    weldTip.C0 = CFrame.new(0, 5.8, 0) * CFrame.Angles(0, 0, math.rad(180))
-    weldTip.Parent = handle
-
-    -- POMMEL (ujung bawah)
     local pommel = Instance.new("Part")
-    pommel.Name = "Pommel"
     pommel.Shape = Enum.PartType.Ball
     pommel.Size = Vector3.new(0.5, 0.5, 0.5)
     pommel.Material = Enum.Material.Metal
     pommel.Color = Color3.fromRGB(200, 180, 50)
     pommel.CanCollide = false
     pommel.Parent = tool
+    local wp = Instance.new("Weld", handle) wp.Part0 = handle wp.Part1 = pommel wp.C0 = CFrame.new(0, -0.8, 0)
 
-    local weldPommel = Instance.new("Weld")
-    weldPommel.Part0 = handle
-    weldPommel.Part1 = pommel
-    weldPommel.C0 = CFrame.new(0, -0.8, 0)
-    weldPommel.Parent = handle
-
-    -- GLOW effect (PointLight)
     local light = Instance.new("PointLight", handle)
     light.Color = Color3.fromRGB(255, 0, 0)
     light.Range = 8
     light.Brightness = 2
 
-    -- Trail di blade
-    local a0 = Instance.new("Attachment", blade)
-    a0.Position = Vector3.new(0, 2.5, 0)
-    local a1 = Instance.new("Attachment", blade)
-    a1.Position = Vector3.new(0, -2.5, 0)
-
-    local trail = Instance.new("Trail", blade)
-    trail.Attachment0 = a0
-    trail.Attachment1 = a1
-    trail.Color = ColorSequence.new(Color3.fromRGB(255, 0, 0), Color3.fromRGB(255, 255, 0))
-    trail.Lifetime = 0.4
-    trail.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.2),
-        NumberSequenceKeypoint.new(1, 1)
-    })
-
-    -- ONE HIT KILL saat klik
     tool.Activated:Connect(function()
         if not State.Sword then return end
-        local myChar = LocalPlayer.Character
-        if not myChar then return end
-        local myHrp = myChar:FindFirstChild("HumanoidRootPart")
+        local myHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
         if not myHrp then return end
-
         for _, p in ipairs(Players:GetPlayers()) do
             if isOtherAlive(p) then
                 local hum = p.Character:FindFirstChildOfClass("Humanoid")
                 local hrp = p.Character:FindFirstChild("HumanoidRootPart")
-                if hrp and hum then
-                    local dist = (hrp.Position - myHrp.Position).Magnitude
-                    if dist < 20 then
-                        hum.Health = 0
-                        pcall(function() hum:ChangeState(Enum.HumanoidStateType.Dead) end)
-                        pcall(function() p.Character:BreakJoints() end)
-                        local explode = Instance.new("Explosion")
-                        explode.BlastRadius = 8
-                        explode.BlastPressure = 30000
-                        explode.Position = hrp.Position
-                        explode.Parent = workspace
-                    end
+                if hrp and hum and (hrp.Position - myHrp.Position).Magnitude < 25 then
+                    hum.Health = 0
+                    pcall(function() hum:ChangeState(Enum.HumanoidStateType.Dead) end)
+                    pcall(function() p.Character:BreakJoints() end)
+                end
+            end
+        end
+    end)
+
+    if SwordConn then SwordConn:Disconnect() end
+    SwordConn = RunService.Heartbeat:Connect(function()
+        if not State.Sword then return end
+        if not tool.Parent then return end
+        local myHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if not myHrp then return end
+        for _, p in ipairs(Players:GetPlayers()) do
+            if isOtherAlive(p) then
+                local hum = p.Character:FindFirstChildOfClass("Humanoid")
+                local hrp = p.Character:FindFirstChild("HumanoidRootPart")
+                if hrp and hum and (hrp.Position - myHrp.Position).Magnitude < 12 then
+                    hum.Health = 0
+                    pcall(function() hum:ChangeState(Enum.HumanoidStateType.Dead) end)
+                    pcall(function() p.Character:BreakJoints() end)
                 end
             end
         end
@@ -627,43 +588,49 @@ local function removeSword()
 end
 
 -- ===== BUTTONS =====
-makeButton("Fly", 50, function(btn)
+makeButton("GodMode (Anti Mati)", 50, function(btn)
+    State.GodMode = not State.GodMode
+    if State.GodMode then startGodMode() btn.Text = "GodMode [ON]" else stopGodMode() btn.Text = "GodMode [OFF]" end
+end)
+
+makeButton("Fly", 100, function(btn)
     State.Fly = not State.Fly
     if State.Fly then startFly() btn.Text = "Fly [ON]" else stopFly() btn.Text = "Fly [OFF]" end
 end)
 
-makeButton("Bomb Server", 100, function(btn)
+makeButton("Bomb Server", 150, function(btn)
     bombServer()
     btn.Text = "Bomb Server [!!]"
     task.wait(2)
     btn.Text = "Bomb Server [OFF]"
 end)
 
-makeButton("Fling Touch", 150, function(btn)
+makeButton("Fling Touch", 200, function(btn)
     State.FlingTouch = not State.FlingTouch
     if State.FlingTouch then startFlingTouch() btn.Text = "Fling Touch [ON]" else stopFlingTouch() btn.Text = "Fling Touch [OFF]" end
 end)
 
-makeButton("Lag Server (Orb Killer)", 200, function(btn)
+makeButton("Lag Server (Orb)", 250, function(btn)
     State.LagServer = not State.LagServer
     if State.LagServer then startLagServer() btn.Text = "Lag Server [ON]" else stopLagServer() btn.Text = "Lag Server [OFF]" end
 end)
 
-makeButton("Big Body Spider", 250, function(btn)
+makeButton("Big Body Spider", 300, function(btn)
     State.BigBody = not State.BigBody
     if State.BigBody then bigBodyON() btn.Text = "Big Body [ON]" else bigBodyOFF() btn.Text = "Big Body [OFF]" end
 end)
 
-makeButton("Get Sword (Real)", 300, function(btn)
+makeButton("Get Sword", 350, function(btn)
     State.Sword = not State.Sword
-    if State.Sword then giveSword() btn.Text = "Sword [ON]" else removeSword() btn.Text = "Sword [OFF]" end
+    if State.Sword then createSword() btn.Text = "Sword [ON]" else removeSword() btn.Text = "Sword [OFF]" end
 end)
 
 -- ===== AUTO RESPAWN =====
 LocalPlayer.CharacterAdded:Connect(function(char)
     task.wait(1)
-    if State.Fly then task.wait(1) startFly() end
-    if State.Sword then task.wait(1) createSword() end
+    if State.GodMode then task.wait(0.5) startGodMode() end
+    if State.Fly then task.wait(0.5) startFly() end
+    if State.Sword then task.wait(0.5) createSword() end
 end)
 
 Players.PlayerAdded:Connect(function(p)
@@ -682,4 +649,4 @@ Players.PlayerAdded:Connect(function(p)
     end)
 end)
 
-print("[SYSX] v4 — Real Sword + Lag Orb Killer + Fling Fix ✅")
+print("[SYSX] v5 loaded — GodMode + Toggle + All Fix ✅")
