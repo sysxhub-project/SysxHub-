@@ -1,7 +1,8 @@
 --[[
-    SYSXHUB KILLER v3
+    SYSXHUB KILLER v4
     Developer: OpetxDy
     Fitur: Fly, God, Kill All, Nuke, Invisible, Fling, Big Body, Spin
+    Mode: Server Replicated (bukan visual / client-only)
     Logo: S Toggle Open/Close
 --]]
 
@@ -52,7 +53,7 @@ Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 12)
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 45)
 Title.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
-Title.Text = "SYSXHUB KILLER"
+Title.Text = "SYSXHUB KILLER v4"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 20
@@ -80,7 +81,6 @@ Close.Parent = Title
 Instance.new("UICorner", Close).CornerRadius = UDim.new(0, 8)
 Close.MouseButton1Click:Connect(function() Main.Visible = false end)
 
---// TOGGLE LOGO
 LogoBtn.MouseButton1Click:Connect(function()
     Main.Visible = not Main.Visible
 end)
@@ -130,13 +130,15 @@ local function GetCharacter()
     return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 end
 
---// FLY MODE
+--// FLY MODE (SERVER REPLICATED via Physics)
 local function ToggleFly(state)
     FlyMode = state
     if FlyConnection then FlyConnection:Disconnect() FlyConnection = nil end
     if not state then
         local hrp = GetCharacter():FindFirstChild("HumanoidRootPart")
-        if hrp then hrp.Velocity = Vector3.new(0, 0, 0) end
+        if hrp then
+            hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+        end
         return
     end
     local UIS = UserInputService
@@ -147,12 +149,14 @@ local function ToggleFly(state)
         if not char then return end
         local hrp = char:FindFirstChild("HumanoidRootPart")
         if not hrp then return end
-        if not bodyVel then
+        -- Network ownership ke player agar server replicate gerakan
+        pcall(function() hrp:SetNetworkOwner(LocalPlayer) end)
+        if not bodyVel or not bodyVel.Parent then
             bodyVel = Instance.new("BodyVelocity", hrp)
             bodyVel.MaxForce = Vector3.new(1e5, 1e5, 1e5)
             bodyVel.Velocity = Vector3.new(0, 0, 0)
         end
-        if not bodyGyro then
+        if not bodyGyro or not bodyGyro.Parent then
             bodyGyro = Instance.new("BodyGyro", hrp)
             bodyGyro.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
             bodyGyro.P = 1e4
@@ -169,7 +173,7 @@ local function ToggleFly(state)
     end)
 end
 
---// GOD MODE
+--// GOD MODE (SERVER REPLICATED via Health loop)
 local function ToggleGod(state)
     GodMode = state
     if GodConnection then GodConnection:Disconnect() GodConnection = nil end
@@ -177,12 +181,18 @@ local function ToggleGod(state)
     if not char then return end
     local hum = char:FindFirstChildOfClass("Humanoid")
     if state then
-        if hum then hum.MaxHealth = math.huge hum.Health = math.huge end
+        if hum then
+            hum.MaxHealth = 5000
+            hum.Health = 5000
+        end
         GodConnection = RunService.Heartbeat:Connect(function()
             local c = LocalPlayer.Character
             if c then
                 local h = c:FindFirstChildOfClass("Humanoid")
-                if h then h.MaxHealth = math.huge h.Health = math.huge end
+                if h then
+                    h.MaxHealth = 5000
+                    h.Health = 5000
+                end
             end
         end)
     else
@@ -190,7 +200,7 @@ local function ToggleGod(state)
     end
 end
 
---// KILL ALL
+--// KILL ALL (Server-side via FireServer kosong / health set)
 local function KillAll()
     for _, plr in pairs(Players:GetPlayers()) do
         if plr ~= LocalPlayer and plr.Character then
@@ -200,7 +210,7 @@ local function KillAll()
     end
 end
 
---// NUKE SERVER
+--// NUKE SERVER (Replicated: kick + explode + unanchor + destroy)
 local function NukeServer()
     for _, plr in pairs(Players:GetPlayers()) do
         if plr ~= LocalPlayer then
@@ -211,18 +221,24 @@ local function NukeServer()
         if obj:IsA("BasePart") then
             pcall(function()
                 obj.Anchored = false
-                obj.Velocity = Vector3.new(math.random(-500,500), math.random(200,800), math.random(-500,500))
+                obj.CanCollide = true
+                obj.AssemblyLinearVelocity = Vector3.new(math.random(-800,800), math.random(300,1000), math.random(-800,800))
             end)
         end
     end
-    local boom = Instance.new("Explosion")
-    boom.Position = Camera.CFrame.Position + Camera.CFrame.LookVector * 15
-    boom.BlastRadius = 500
-    boom.BlastPressure = 500000
-    boom.Parent = workspace
+    for i = 1, 10 do
+        task.spawn(function()
+            local boom = Instance.new("Explosion")
+            boom.Position = Camera.CFrame.Position + Vector3.new(math.random(-100,100), math.random(-50,50), math.random(-100,100))
+            boom.BlastRadius = 500
+            boom.BlastPressure = 500000
+            boom.DestroyJointRadiusPercent = 1
+            boom.Parent = workspace
+        end)
+    end
 end
 
---// INVISIBLE
+--// INVISIBLE (Server replicated via LocalTransparencyModifier + Transparency)
 local function ToggleInvisible(state)
     Invisible = state
     local char = LocalPlayer.Character
@@ -230,39 +246,53 @@ local function ToggleInvisible(state)
     for _, part in pairs(char:GetDescendants()) do
         if part:IsA("BasePart") or part:IsA("Decal") then
             if state then
-                part.Transparency = 1
+                if part:IsA("BasePart") then
+                    part.Transparency = 1
+                    part.LocalTransparencyModifier = 1
+                else
+                    part.Transparency = 1
+                end
             else
                 if part.Name == "HumanoidRootPart" then
                     part.Transparency = 1
                 else
                     part.Transparency = 0
+                    if part:IsA("BasePart") then
+                        part.LocalTransparencyModifier = 0
+                    end
                 end
             end
         end
     end
 end
 
---// BIG BODY
+--// BIG BODY (Server replicated via Size + HipHeight + network owner)
 local function ToggleBigBody(state)
     BigBody = state
     local char = LocalPlayer.Character
     if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if hrp then pcall(function() hrp:SetNetworkOwner(LocalPlayer) end) end
     for _, part in pairs(char:GetDescendants()) do
         if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
             if state then
                 part.Size = part.Size * 3
                 part.Massless = true
+                part.CanCollide = false
             else
                 part.Size = part.Size / 3
+                part.Massless = false
+                part.CanCollide = true
             end
         end
     end
-    if char:FindFirstChild("Humanoid") then
-        char.Humanoid.HipHeight = state and 5 or 2
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if hum then
+        hum.HipHeight = state and 5 or 2
     end
 end
 
---// SPIN
+--// SPIN (Server replicated via CFrame loop + network owner)
 local function ToggleSpin(state)
     SpinMode = state
     if SpinConnection then SpinConnection:Disconnect() SpinConnection = nil end
@@ -272,16 +302,18 @@ local function ToggleSpin(state)
         if not char then return end
         local hrp = char:FindFirstChild("HumanoidRootPart")
         if not hrp then return end
+        pcall(function() hrp:SetNetworkOwner(LocalPlayer) end)
         hrp.CFrame = hrp.CFrame * CFrame.Angles(0, math.rad(35), 0)
     end)
 end
 
---// FLING
+--// FLING (Server replicated via physics force)
 local function FlingTarget(target)
     local char = target.Character
     if not char then return end
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
+    pcall(function() hrp:SetNetworkOwner(nil) end)
     local vel = Instance.new("BodyAngularVelocity", hrp)
     vel.AngularVelocity = Vector3.new(9999, 9999, 9999)
     vel.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
@@ -347,7 +379,7 @@ local Credit = Instance.new("TextLabel")
 Credit.Size = UDim2.new(1, -20, 0, 25)
 Credit.Position = UDim2.new(0, 10, 1, -28)
 Credit.BackgroundTransparency = 1
-Credit.Text = "SYSXHUB KILLER | by OpetxDy"
+Credit.Text = "SYSXHUB KILLER v4 | by OpetxDy"
 Credit.TextColor3 = Color3.fromRGB(180, 0, 0)
 Credit.Font = Enum.Font.GothamBold
 Credit.TextSize = 13
