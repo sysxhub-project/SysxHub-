@@ -1,8 +1,9 @@
 -- ============================================
--- [SYSX] UNIVERSAL ALL MAP SCRIPT v5
+-- [SYSX] UNIVERSAL ALL MAP SCRIPT v6
 -- Logo S = Open/Close Menu
--- GodMode | Fly | Bomb Server | Fling Touch | Lag Server Orb | Big Body Spider | Get Sword
--- Semua fitur TOGGLE, diri sendiri AMAN (GodMode)
+-- GodMode | Fly | Bomb Server | Fling Touch | Lag Orb Killer
+-- Big Body Spider | Get Sword
+-- Semua TOGGLE, diri sendiri AMAN
 -- ============================================
 
 local Players = game:GetService("Players")
@@ -72,7 +73,7 @@ stroke2.Thickness = 2
 local Title = Instance.new("TextLabel", MainFrame)
 Title.Size = UDim2.new(1, 0, 0, 40)
 Title.BackgroundTransparency = 1
-Title.Text = "[SYSX] ALL MAP v5"
+Title.Text = "[SYSX] ALL MAP v6"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextScaled = true
 Title.Font = Enum.Font.GothamBold
@@ -297,7 +298,7 @@ local function stopFlingTouch()
     if FlingTouchConn then FlingTouchConn:Disconnect() FlingTouchConn = nil end
 end
 
--- ===== LAG SERVER ORB =====
+-- ===== LAG SERVER (ORB KILLER) =====
 local function startLagServer()
     if LagConn then LagConn:Disconnect() end
     LagConn = RunService.Heartbeat:Connect(function()
@@ -649,4 +650,4 @@ Players.PlayerAdded:Connect(function(p)
     end)
 end)
 
-print("[SYSX] v5 loaded — GodMode + Toggle + All Fix ✅")
+print("[SYSX] v6 loaded — Full Fix + Toggle ✅")
