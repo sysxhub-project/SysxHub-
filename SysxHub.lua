@@ -1,6 +1,7 @@
 -- ============================================================
--- AUTO FARM LEVEL 1 - 2800 + TOGGLE UI
+-- FARM LEVEL ONLY (dari VxezeHub_Fixed.lua)
 -- Alur: Take Quest → Attack Mob → Quest Done → Take Quest
+-- Range: Level 1 - 2800
 -- ============================================================
 
 repeat task.wait() until game:IsLoaded()
@@ -8,201 +9,78 @@ repeat task.wait() until game.Players.LocalPlayer:FindFirstChild("DataLoaded")
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TweenService = game:GetService("TweenService")
-local VirtualUser = game:GetService("VirtualUser")
 local LocalPlayer = Players.LocalPlayer
 local CommF_ = ReplicatedStorage.Remotes.CommF_
 
 -- ============================================================
--- 1. MODUL ASLI GAME
+-- QUEST SYSTEM
 -- ============================================================
-local GuideModule = require(ReplicatedStorage:WaitForChild("GuideModule"))
-local NPCList = GuideModule.Data.NPCList
-local Quests = require(ReplicatedStorage:WaitForChild("Quests"))
-
-local BLACKLIST = {
-    BartiloQuest = true, CitizenQuest = true, Trainees = true,
-    MarineQuest = true,  ImpelQuest = true,
+local QuestSys = {
+    CurrentLevel = 3,
+    CurrentQuests = {},
+    BlacklistedQuestIds = {
+        BartiloQuest = 1, CitizenQuest = 1, Trainees = 1,
+        MarineQuest = 1,  ImpelQuest = 1,
+    },
+    Quests = require(ReplicatedStorage.Quests),
+    NPCList = require(ReplicatedStorage.GuideModule).Data.NPCList,
 }
 
--- ============================================================
--- 2. STATE
--- ============================================================
-getgenv().FarmLevelEnabled = false
-
--- ============================================================
--- 3. UI TOGGLE
--- ============================================================
-local function CreateUI()
-    local CoreGui = game:GetService("CoreGui")
-    local existing = CoreGui:FindFirstChild("FarmLevelUI")
-    if existing then existing:Destroy() end
-
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "FarmLevelUI"
-    screenGui.ResetOnSpawn = false
-    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    screenGui.Parent = CoreGui
-
-    -- Main frame
-    local main = Instance.new("Frame")
-    main.Name = "Main"
-    main.Size = UDim2.new(0, 220, 0, 130)
-    main.Position = UDim2.new(0, 20, 0, 100)
-    main.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-    main.BorderSizePixel = 0
-    main.Active = true
-    main.Draggable = true
-    main.Parent = screenGui
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 8)
-    corner.Parent = main
-
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(80, 120, 200)
-    stroke.Thickness = 1.5
-    stroke.Parent = main
-
-    -- Title
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, 0, 0, 32)
-    title.Position = UDim2.new(0, 0, 0, 0)
-    title.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
-    title.BorderSizePixel = 0
-    title.Text = "Farm Level 1-2800"
-    title.TextColor3 = Color3.fromRGB(200, 220, 255)
-    title.Font = Enum.Font.GothamBold
-    title.TextSize = 14
-    title.Parent = main
-
-    local titleCorner = Instance.new("UICorner")
-    titleCorner.CornerRadius = UDim.new(0, 8)
-    titleCorner.Parent = title
-
-    -- Status label
-    local status = Instance.new("TextLabel")
-    status.Name = "Status"
-    status.Size = UDim2.new(1, -20, 0, 20)
-    status.Position = UDim2.new(0, 10, 0, 40)
-    status.BackgroundTransparency = 1
-    status.Text = "Status: OFF"
-    status.TextColor3 = Color3.fromRGB(255, 100, 100)
-    status.Font = Enum.Font.Gotham
-    status.TextSize = 12
-    status.TextXAlignment = Enum.TextXAlignment.Left
-    status.Parent = main
-
-    -- Info label (level + quest)
-    local info = Instance.new("TextLabel")
-    info.Name = "Info"
-    info.Size = UDim2.new(1, -20, 0, 20)
-    info.Position = UDim2.new(0, 10, 0, 62)
-    info.BackgroundTransparency = 1
-    info.Text = "Lv: - | Quest: -"
-    info.TextColor3 = Color3.fromRGB(180, 180, 200)
-    info.Font = Enum.Font.Gotham
-    info.TextSize = 11
-    info.TextXAlignment = Enum.TextXAlignment.Left
-    info.Parent = main
-
-    -- Toggle button
-    local toggle = Instance.new("TextButton")
-    toggle.Name = "Toggle"
-    toggle.Size = UDim2.new(1, -20, 0, 32)
-    toggle.Position = UDim2.new(0, 10, 1, -42)
-    toggle.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
-    toggle.BorderSizePixel = 0
-    toggle.Text = "ENABLE FARM"
-    toggle.TextColor3 = Color3.fromRGB(200, 220, 255)
-    toggle.Font = Enum.Font.GothamBold
-    toggle.TextSize = 13
-    toggle.Parent = main
-
-    local btnCorner = Instance.new("UICorner")
-    btnCorner.CornerRadius = UDim.new(0, 6)
-    btnCorner.Parent = toggle
-
-    return {
-        ScreenGui = screenGui,
-        Main = main,
-        Status = status,
-        Info = info,
-        Toggle = toggle,
-    }
-end
-
-local UI = CreateUI()
-
--- ============================================================
--- 4. TOGGLE LOGIC
--- ============================================================
-UI.Toggle.MouseButton1Click:Connect(function()
-    getgenv().FarmLevelEnabled = not getgenv().FarmLevelEnabled
-    if getgenv().FarmLevelEnabled then
-        UI.Toggle.Text = "DISABLE FARM"
-        UI.Toggle.BackgroundColor3 = Color3.fromRGB(40, 100, 60)
-        UI.Status.Text = "Status: ON"
-        UI.Status.TextColor3 = Color3.fromRGB(100, 255, 130)
-    else
-        UI.Toggle.Text = "ENABLE FARM"
-        UI.Toggle.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
-        UI.Status.Text = "Status: OFF"
-        UI.Status.TextColor3 = Color3.fromRGB(255, 100, 100)
-    end
-end)
-
--- ============================================================
--- 5. CARI QUEST SESUAI LEVEL
--- ============================================================
-local function GetCurrentQuest()
+function QuestSys:RefreshQuest()
+    while not LocalPlayer.Data.Level.Value do task.wait(1) end
     local lvl = LocalPlayer.Data.Level.Value
-    local bestReq, bestData = 0, nil
-
-    for questId, questChain in pairs(Quests) do
-        if not BLACKLIST[questId] and type(questChain) == "table" then
-            for idx, questInfo in pairs(questChain) do
-                if type(questInfo) == "table"
-                    and questInfo.LevelReq
-                    and questInfo.LevelReq <= lvl
-                    and questInfo.LevelReq >= bestReq
-                    and type(questInfo.Task) == "table" then
-                    for mobName, killReq in pairs(questInfo.Task) do
-                        if killReq > 1 then
-                            bestReq  = questInfo.LevelReq
-                            bestData = {
-                                QuestId   = questId,
-                                QuestName = questId,
-                                Index     = idx,
-                                MobName   = mobName,
-                                Level     = questInfo.LevelReq,
-                                NPC       = nil,
-                            }
-                        end
-                    end
-                end
+    local bestReq, bestQuests = 0
+    for qid, chain in pairs(self.Quests) do
+        if not self.BlacklistedQuestIds[qid] then
+            if chain[1].LevelReq >= bestReq and chain[1].LevelReq <= lvl then
+                bestReq = chain[1].LevelReq
+                bestQuests = chain
+                self.CurrentQuestId = qid
             end
         end
     end
-
-    if bestData then
-        for _, npcData in pairs(NPCList) do
-            if npcData.InternalQuestName == bestData.QuestName then
-                for _, lv in ipairs(npcData.Levels) do
-                    if lv == bestData.Level then
-                        bestData.NPC = npcData.CFrame
-                    end
-                end
+    if not bestQuests then return end
+    for _, v in bestQuests[#bestQuests].Task do
+        if v == 1 then table.remove(bestQuests, #bestQuests) end
+    end
+    for _, npcData in pairs(self.NPCList) do
+        for _, lv in ipairs(npcData.Levels) do
+            if lv == bestQuests[#bestQuests].LevelReq then
+                self.CurrentNpc = npcData.CFrame
             end
         end
     end
+    self.CurrentQuests = bestQuests
+end
 
-    return bestData
+function QuestSys:GetCurrentQuest()
+    local idx = (self.CurrentQuests[self.CurrentLevel]
+        and self.CurrentQuests[self.CurrentLevel].LevelReq <= LocalPlayer.Data.Level.Value)
+        and self.CurrentLevel or 1
+    for mobName in self.CurrentQuests[idx].Task do
+        return mobName, self.CurrentNpc, self.CurrentQuestId, idx, self.CurrentQuests[idx].Name
+    end
+end
+
+function QuestSys:MarkAsCompleted()
+    self.CurrentLevel = self.CurrentLevel % 3 + 1
+end
+
+function QuestSys:AbandonQuest()
+    CommF_:InvokeServer("AbandonQuest")
+end
+
+function QuestSys:StartQuest(questName, idx)
+    CommF_:InvokeServer("ColorsDealer", "2")
+    return CommF_:InvokeServer("StartQuest", questName, idx)
 end
 
 -- ============================================================
--- 6. UTIL
+-- UTIL
 -- ============================================================
+local TweenService = game:GetService("TweenService")
+local TweenInstance
+
 local function Distance(pos)
     local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if not hrp then return math.huge end
@@ -210,20 +88,15 @@ local function Distance(pos)
     return (pos - hrp.Position).Magnitude
 end
 
--- ============================================================
--- 7. TWEEN
--- ============================================================
-local TweenInstance
 local function TweenTo(cf, speed)
     local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if not hrp or not cf then return end
     if TweenInstance then pcall(function() TweenInstance:Cancel() end) end
-
     for _, v in ipairs(LocalPlayer.Character:GetDescendants()) do
         if v:IsA("BasePart") then v.CanCollide = false end
     end
-
     if typeof(cf) == "Vector3" then cf = CFrame.new(cf) end
+    cf = CFrame.new(cf.Position)
     local dist = (hrp.Position - cf.Position).Magnitude
     TweenInstance = TweenService:Create(
         hrp,
@@ -235,13 +108,12 @@ local function TweenTo(cf, speed)
 end
 
 -- ============================================================
--- 8. FIND & ATTACK MOB
+-- FIND & ATTACK MOB
 -- ============================================================
 local function FindMob(name)
     local closest, closestDist = nil, math.huge
     local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if not hrp then return nil end
-
     for _, mob in ipairs(workspace.Enemies:GetChildren()) do
         if mob.Name == name
             and mob:FindFirstChild("HumanoidRootPart")
@@ -275,9 +147,16 @@ local function IsQuestActive()
     return ok and vis
 end
 
+local function GetCurrentClaimQuest()
+    local visible = LocalPlayer.PlayerGui.Main.Quest.Visible
+    if not visible then return nil end
+    local title = LocalPlayer.PlayerGui.Main.Quest.Container.QuestTitle.Title.Text
+    return title
+end
+
 local function AttackMobUntilDone(mobName)
     local noMobTimer = 0
-    while IsQuestActive() and getgenv().FarmLevelEnabled do
+    while IsQuestActive() do
         EquipMelee()
         local mob = FindMob(mobName)
         if not mob then
@@ -291,15 +170,14 @@ local function AttackMobUntilDone(mobName)
             noMobTimer = 0
             local mobHrp = mob:FindFirstChild("HumanoidRootPart")
             if mobHrp and mob.Humanoid.Health > 0 then
-                local myHrp = LocalPlayer.Character.HumanoidRootPart
-                myHrp.CFrame = mobHrp.CFrame * CFrame.new(0, 15, 0)
+                LocalPlayer.Character.HumanoidRootPart.CFrame = mobHrp.CFrame * CFrame.new(0, 15, 0)
                 local tool = LocalPlayer.Character:FindFirstChildOfClass("Tool")
                 if tool then
                     tool:Activate()
                     tool:Activate()
                     tool:Activate()
                 else
-                    VirtualUser:Button1Down(Vector2.new(0, 0))
+                    game:GetService("VirtualUser"):Button1Down(Vector2.new(0, 0))
                 end
             end
             task.wait(0.08)
@@ -308,24 +186,19 @@ local function AttackMobUntilDone(mobName)
 end
 
 -- ============================================================
--- 9. MAIN LOOP
+-- MAIN LOOP
 -- ============================================================
+QuestSys:RefreshQuest()
+
 task.spawn(function()
     while task.wait(0.5) do
         pcall(function()
-            if not getgenv().FarmLevelEnabled then return end
-
-            local q = GetCurrentQuest()
-            if not q or not q.NPC then
-                task.wait(2)
-                return
-            end
+            local q = QuestSys:GetCurrentQuest()
+            if not q then return end
+            local mobName, npcPos, questId, idx, questName = q
 
             local char = LocalPlayer.Character
             if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-
-            -- Update info UI
-            UI.Info.Text = string.format("Lv: %d | Quest: %s", LocalPlayer.Data.Level.Value, q.MobName)
 
             -- STEP 1: TAKE QUEST
             if IsQuestActive() then
@@ -333,27 +206,39 @@ task.spawn(function()
                 task.wait(0.3)
             end
 
-            TweenTo(q.NPC * CFrame.new(0, 5, 5))
-            task.wait(0.3)
-            CommF_:InvokeServer("StartQuest", q.QuestName, q.Index)
-            task.wait(0.5)
+            if npcPos then
+                TweenTo(npcPos * CFrame.new(0, 5, 5))
+                task.wait(0.3)
+                CommF_:InvokeServer("StartQuest", questId, idx)
+                task.wait(0.5)
+            end
 
             -- STEP 2: ATTACK MOB SAMPAI DONE
-            AttackMobUntilDone(q.MobName)
+            AttackMobUntilDone(mobName)
 
-            -- STEP 3: DONE — loop balik ke atas
+            -- STEP 3: DONE → loop balik ke atas
             task.wait(0.3)
         end)
     end
 end)
 
--- ============================================================
--- 10. ANTI AFK
--- ============================================================
+-- Auto refresh quest kalau selesai
+local Notification = require(ReplicatedStorage.Notification)
+local oldNew = Notification.new
+Notification.new = function(...)
+    local text = tostring(...) 
+    if string.find(string.lower(text), "quest completed") then
+        QuestSys:RefreshQuest()
+        if not IsQuestActive() then QuestSys:MarkAsCompleted() end
+    end
+    return oldNew(...)
+end
+
+-- Anti AFK
 LocalPlayer.Idled:Connect(function()
-    VirtualUser:Button2Down(Vector2.new(0, 0))
+    game:GetService("VirtualUser"):Button2Down(Vector2.new(0, 0))
     task.wait(1)
-    VirtualUser:Button2Up(Vector2.new(0, 0))
+    game:GetService("VirtualUser"):Button2Up(Vector2.new(0, 0))
 end)
 
-print("[Farm Level] Script loaded — klik tombol untuk enable")
+print("[Farm Level] Started - auto quest 1-2800")
